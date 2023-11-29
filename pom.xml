@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.2.0</version>
+    <version>3.1.5</version>
     <relativePath /> <!-- lookup parent from repository -->
   </parent>
 
@@ -21,7 +21,15 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <marc-migrations.yaml.file>${project.basedir}/src/main/resources/swagger.api/marc-migrations.yaml</marc-migrations.yaml.file>
 
-    <folio-spring-support.version>7.2.2</folio-spring-support.version>
+    <sonar.exclusions>
+      <!-- define sonar exclusions here -->
+      src/main/java/org/folio/marc/migrations/MarcMigrationsApplication.java
+    </sonar.exclusions>
+
+    <folio-spring-support.version>7.3.0-SNAPSHOT</folio-spring-support.version>
+
+    <folio-service-tools.version>4.0.0-SNAPSHOT</folio-service-tools.version>
+    <testcontainers.version>1.19.3</testcontainers.version>
 
     <checkstyle.version>10.12.5</checkstyle.version>
     <maven-openapi-generator-plugin.version>7.1.0</maven-openapi-generator-plugin.version>
@@ -32,6 +40,18 @@
     <maven-failsafe-plugin.version>3.2.2</maven-failsafe-plugin.version>
     <maven-release-plugin.version>3.0.1</maven-release-plugin.version>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>testcontainers-bom</artifactId>
+        <version>${testcontainers.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>
@@ -44,6 +64,11 @@
       <groupId>org.folio</groupId>
       <artifactId>folio-spring-system-user</artifactId>
       <version>${folio-spring-support.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.hibernate.validator</groupId>
+      <artifactId>hibernate-validator</artifactId>
     </dependency>
 
     <dependency>
@@ -69,6 +94,30 @@
       </exclusions>
     </dependency>
 
+    <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>folio-service-tools-spring-test</artifactId>
+      <version>${folio-service-tools.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
 
@@ -86,6 +135,22 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <layers>
+            <enabled>true</enabled>
+          </layers>
+          <excludes>
+            <exclude>
+              <groupId>org.springframework.boot</groupId>
+              <artifactId>spring-boot-configuration-processor</artifactId>
+            </exclude>
+          </excludes>
+        </configuration>
       </plugin>
 
       <plugin>

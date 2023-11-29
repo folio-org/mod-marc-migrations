@@ -1,0 +1,21 @@
+folio:
+  logging:
+    request:
+      enabled: true
+      level: full
+    feign:
+      enabled: true
+      level: full
+  environment: folio
+  okapi-url: http://localhost:9130
+spring:
+  application:
+    name: mod-marc-migrations
+  liquibase:
+    changeLog: classpath:db/changelog/changelog-master.xml
+    enabled: true
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
