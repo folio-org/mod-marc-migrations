@@ -23,7 +23,7 @@
 
     <sonar.exclusions>
       <!-- define sonar exclusions here -->
-      src/main/java/org.folio.marc.migrations/MarcMigrationsApplication.java
+      src/main/java/org/folio/marc/migrations/MarcMigrationsApplication.java
     </sonar.exclusions>
 
     <folio-spring-support.version>7.3.0-SNAPSHOT</folio-spring-support.version>
