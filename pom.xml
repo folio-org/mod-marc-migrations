@@ -147,53 +147,53 @@
         </executions>
       </plugin>
 
-<!--      <plugin>-->
-<!--        <groupId>org.openapitools</groupId>-->
-<!--        <artifactId>openapi-generator-maven-plugin</artifactId>-->
-<!--        <version>${maven-openapi-generator-plugin.version}</version>-->
-<!--        <executions>-->
-<!--          <execution>-->
-<!--            <id>records-editor</id>-->
-<!--            <goals>-->
-<!--              <goal>generate</goal>-->
-<!--            </goals>-->
-<!--            <configuration>-->
-<!--              <inputSpec>${marc-migrations.yaml.file}</inputSpec>-->
-<!--              <output>${project.build.directory}/generated-sources</output>-->
-<!--              <generatorName>spring</generatorName>-->
-<!--              <modelPackage>${project.groupId}.entlinks.domain.dto</modelPackage>-->
-<!--              <apiPackage>${project.groupId}.entlinks.rest.resource</apiPackage>-->
-<!--              <generateApis>true</generateApis>-->
-<!--              <generateApiTests>true</generateApiTests>-->
-<!--              <generateApiDocumentation>true</generateApiDocumentation>-->
-<!--              <generateModels>true</generateModels>-->
-<!--              <generateModelTests>false</generateModelTests>-->
-<!--              <generateSupportingFiles>true</generateSupportingFiles>-->
-<!--              <supportingFilesToGenerate>ApiUtil.java</supportingFilesToGenerate>-->
-<!--              <generateModelDocumentation>true</generateModelDocumentation>-->
-<!--              <importMappings>-->
-<!--                <importMapping>error=org.folio.tenant.domain.dto.Errors</importMapping>-->
-<!--              </importMappings>-->
-<!--              <configOptions>-->
-<!--                <useTags>true</useTags>-->
-<!--                <dateLibrary>java8</dateLibrary>-->
-<!--                <interfaceOnly>true</interfaceOnly>-->
-<!--                <useSpringBoot3>true</useSpringBoot3>-->
-<!--              </configOptions>-->
-<!--            </configuration>-->
-<!--          </execution>-->
-<!--          <execution>-->
-<!--            <goals>-->
-<!--              <goal>generate</goal>-->
-<!--            </goals>-->
-<!--            <configuration>-->
-<!--              <inputSpec>${marc-migrations.yaml.file}</inputSpec>-->
-<!--              <output>${project.build.directory}/docs/mod-marc-migrations</output>-->
-<!--              <generatorName>html2</generatorName>-->
-<!--            </configuration>-->
-<!--          </execution>-->
-<!--        </executions>-->
-<!--      </plugin>-->
+      <plugin>
+        <groupId>org.openapitools</groupId>
+        <artifactId>openapi-generator-maven-plugin</artifactId>
+        <version>${maven-openapi-generator-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>records-editor</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <inputSpec>${marc-migrations.yaml.file}</inputSpec>
+              <output>${project.build.directory}/generated-sources</output>
+              <generatorName>spring</generatorName>
+              <modelPackage>${project.groupId}.entlinks.domain.dto</modelPackage>
+              <apiPackage>${project.groupId}.entlinks.rest.resource</apiPackage>
+              <generateApis>true</generateApis>
+              <generateApiTests>true</generateApiTests>
+              <generateApiDocumentation>true</generateApiDocumentation>
+              <generateModels>true</generateModels>
+              <generateModelTests>false</generateModelTests>
+              <generateSupportingFiles>true</generateSupportingFiles>
+              <supportingFilesToGenerate>ApiUtil.java</supportingFilesToGenerate>
+              <generateModelDocumentation>true</generateModelDocumentation>
+              <importMappings>
+                <importMapping>error=org.folio.tenant.domain.dto.Errors</importMapping>
+              </importMappings>
+              <configOptions>
+                <useTags>true</useTags>
+                <dateLibrary>java8</dateLibrary>
+                <interfaceOnly>true</interfaceOnly>
+                <useSpringBoot3>true</useSpringBoot3>
+              </configOptions>
+            </configuration>
+          </execution>
+          <execution>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <inputSpec>${marc-migrations.yaml.file}</inputSpec>
+              <output>${project.build.directory}/docs/mod-marc-migrations</output>
+              <generatorName>html2</generatorName>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -239,10 +239,6 @@
                 <fileSet>
                   <sourceFile>${project.build.directory}/DeploymentDescriptor-template.json</sourceFile>
                   <destinationFile>${project.build.directory}/DeploymentDescriptor.json</destinationFile>
-                </fileSet>
-                <fileSet>
-                  <sourceFile>${project.build.directory}/docs/mod-entities-links/index.html</sourceFile>
-                  <destinationFile>${project.build.directory}/apidocs/mod-entities-links.html</destinationFile>
                 </fileSet>
               </fileSets>
             </configuration>
