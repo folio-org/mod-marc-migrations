@@ -1,0 +1,14 @@
+openapi: 3.0.0
+info:
+  title: MARC Migrations API
+  version: v1.0
+
+servers:
+  - url: https://localhost:8081
+
+paths:
+  /stub:
+    get:
+      responses:
+        '200':
+          description: OK
