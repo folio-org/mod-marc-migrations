@@ -21,6 +21,11 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <marc-migrations.yaml.file>${project.basedir}/src/main/resources/swagger.api/marc-migrations.yaml</marc-migrations.yaml.file>
 
+    <sonar.exclusions>
+      <!-- define sonar exclusions here -->
+      src/main/java/org.folio.marc.migrations/MarcMigrationsApplication.java
+    </sonar.exclusions>
+
     <folio-spring-support.version>7.3.0-SNAPSHOT</folio-spring-support.version>
 
     <folio-service-tools.version>4.0.0-SNAPSHOT</folio-service-tools.version>

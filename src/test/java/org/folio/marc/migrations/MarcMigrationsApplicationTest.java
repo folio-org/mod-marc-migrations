@@ -7,7 +7,6 @@ import org.folio.spring.test.type.IntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.ApplicationContext;
 
 @IntegrationTest
 @SpringBootTest
@@ -15,10 +14,10 @@ import org.springframework.context.ApplicationContext;
 class MarcMigrationsApplicationTest {
 
   @Autowired
-  private ApplicationContext applicationContext;
+  private MarcMigrationsApplication marcMigrationsApplication;
 
   @Test
   void contextLoads() {
-    assertNotNull(applicationContext);
+    assertNotNull(marcMigrationsApplication);
   }
 }

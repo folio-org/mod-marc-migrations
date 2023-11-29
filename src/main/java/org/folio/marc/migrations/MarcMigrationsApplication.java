@@ -9,5 +9,4 @@ public class MarcMigrationsApplication {
   public static void main(String[] args) {
     SpringApplication.run(MarcMigrationsApplication.class, args);
   }
-
 }
