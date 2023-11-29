@@ -27,9 +27,9 @@ public class ModuleTenantService extends TenantService {
 
   @Override
   protected void afterTenantUpdate(TenantAttributes tenantAttributes) {
-    log.info("afterTenantUpdate::Initiating additional setup for the tenant: [{}]", context.getTenantId());
+    log.info("afterTenantUpdate::Initiating additional setup [tenant: {}]", context.getTenantId());
     super.afterTenantUpdate(tenantAttributes);
     systemUserService.setupSystemUser();
-    log.info("afterTenantUpdate::Completed additional setup for the tenant: [{}]", context.getTenantId());
+    log.info("afterTenantUpdate::Completed additional setup [tenant: {}]", context.getTenantId());
   }
 }

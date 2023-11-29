@@ -1,6 +1,6 @@
 package org.folio.marc.migrations;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import org.folio.spring.test.extension.EnablePostgres;
 import org.folio.spring.test.type.IntegrationTest;

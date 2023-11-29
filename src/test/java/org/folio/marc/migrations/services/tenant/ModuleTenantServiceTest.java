@@ -1,7 +1,7 @@
 package org.folio.marc.migrations.services.tenant;
 
 import static org.folio.support.TestConstants.TENANT_ID;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
