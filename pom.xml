@@ -31,7 +31,7 @@
     <folio-service-tools.version>4.0.0-SNAPSHOT</folio-service-tools.version>
     <testcontainers.version>1.19.3</testcontainers.version>
 
-    <checkstyle.version>10.12.5</checkstyle.version>
+    <checkstyle.version>10.12.6</checkstyle.version>
     <maven-openapi-generator-plugin.version>7.1.0</maven-openapi-generator-plugin.version>
     <maven-copy-rename-plugin.version>1.0.1</maven-copy-rename-plugin.version>
     <maven-checkstyle-plugin.version>3.3.1</maven-checkstyle-plugin.version>
