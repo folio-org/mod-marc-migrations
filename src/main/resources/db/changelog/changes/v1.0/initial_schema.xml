@@ -4,4 +4,42 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
                    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
+
+  <changeSet id="MODMARCMIG-5@@create-operation-table" author="pavlo_smahin">
+    <preConditions>
+      <not>
+        <tableExists tableName="operation"/>
+      </not>
+    </preConditions>
+
+    <comment>Create operation table</comment>
+
+    <createTable tableName="operation">
+        <column name="id" type="UUID">
+            <constraints nullable="false" primaryKey="true" primaryKeyName="pk_operation"/>
+        </column>
+        <column name="user_id" type="UUID">
+            <constraints nullable="false"/>
+        </column>
+        <column name="entity_type" type="VARCHAR(20)">
+            <constraints nullable="false"/>
+        </column>
+        <column name="operation_type" type="VARCHAR(20)">
+            <constraints nullable="false"/>
+        </column>
+        <column name="status" type="VARCHAR(50)">
+            <constraints nullable="false"/>
+        </column>
+        <column name="total_num_of_records" type="INT">
+            <constraints nullable="false"/>
+        </column>
+        <column name="processed_num_of_records" type="INT">
+            <constraints nullable="false"/>
+        </column>
+        <column name="start_time_mapping" type="DATETIME"/>
+        <column name="end_time_mapping" type="DATETIME"/>
+        <column name="start_time_saving" type="DATETIME"/>
+        <column name="end_time_saving" type="DATETIME"/>
+    </createTable>
+  </changeSet>
 </databaseChangeLog>

@@ -17,6 +17,21 @@
   ],
   "provides": [
     {
+      "id": "marc-migrations",
+      "version": "1.0",
+      "handlers": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "pathPattern": "/marc-migrations",
+          "permissionsRequired": [
+            "marc-migrations.operations.item.post"
+          ]
+        }
+      ]
+    },
+    {
       "id": "_tenant",
       "version": "2.0",
       "interfaceType": "system",
@@ -49,7 +64,21 @@
       ]
     }
   ],
-  "permissionSets": [],
+  "permissionSets": [
+    {
+      "permissionName": "marc-migrations.operations.item.post",
+      "displayName": "MARC Migrations - Create operation",
+      "description": "Create MARC Migrations Operation"
+    },
+    {
+      "permissionName": "marc-migrations.all",
+      "displayName": "MARC Migrations - all permissions",
+      "description": "Entire set of permissions needed to use MARC migrations",
+      "subPermissions": [
+        "marc-migrations.operations.item.post"
+      ]
+    }
+  ],
   "launchDescriptor": {
     "dockerImage": "@artifactId@:@version@",
     "dockerPull": false,
