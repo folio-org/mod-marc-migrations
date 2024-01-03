@@ -61,6 +61,7 @@ public class JdbcService {
   }
 
   public Integer countNumOfRecords() {
+    log.info("countNumOfRecords::Counting number of records in 'marc_authority_view'");
     return jdbcTemplate.queryForObject(COUNT_AUTHORITY_RECORDS.formatted(getSchemaName()), Integer.class);
   }
 

@@ -88,7 +88,7 @@ public class ApiErrorHandler {
   }
 
   private static void logException(Level logLevel, Exception e) {
-    log.log(logLevel, "Handling e", e);
+    log.log(logLevel, "Handling exception", e);
   }
 
   private static Error buildError(Exception e, List<Parameter> parameters) {
