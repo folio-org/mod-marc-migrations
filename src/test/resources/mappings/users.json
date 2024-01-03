@@ -1,0 +1,42 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "/users?query=username%3D%3Dmod-marc-migrations"
+      },
+      "response": {
+        "status": 200,
+        "body": "{\n \"users\": [\n {\n \"id\": \"38d3a441-c100-5e8d-bd12-71bde492b723\",\n \"username\": \"mod-marc-migrations\",\n \"personal\": {\n \"firstName\": \"John\",\n \"lastName\": \"Doe\"\n }\n }\n ],\n \"totalRecords\": 1\n}",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/users?query=id%3D%2838d3a441-c100-5e8d-bd12-71bde492b723%29"
+      },
+      "response": {
+        "status": 200,
+        "body": "{\n \"users\": [\n {\n \"id\": \"38d3a441-c100-5e8d-bd12-71bde492b723\",\n \"username\": \"mod-marc-migrations\",\n \"personal\": {\n \"firstName\": \"John\",\n \"lastName\": \"Doe\"\n }\n }\n ],\n \"totalRecords\": 1\n}",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "/users"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    }
+  ]
+}

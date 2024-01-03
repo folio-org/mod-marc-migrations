@@ -1,14 +1,191 @@
 openapi: 3.0.0
 info:
-  title: MARC Migrations API
-  version: v1.0
-
-servers:
-  - url: https://localhost:8081
+  version: 1.0.0
+  title: MARC migrations API
+  description: Manage MARC migrations
 
 paths:
-  /stub:
-    get:
+  /marc-migrations:
+    post:
+      summary: Register new MARC migration
+      operationId: createMarcMigrations
+      tags:
+        - marc-migrations
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewMigrationOperation'
+            examples:
+              ValidBody:
+                value:
+                  entityType: authority
+                  operationType: remapping
       responses:
-        '200':
-          description: OK
+        '201':
+          description: New MARC migration successfuly registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MigrationOperation'
+              examples:
+                Valid:
+                  value:
+                    id: 474d0af6-028f-4d15-8354-d2fc10c71a68
+                    userId: 0db8f753-6864-452c-9b49-5362a20188b5
+                    entityType: authority
+                    operationType: remapping
+                    status: new
+                    totalNumOfRecords: 10000
+        '422':
+          description: Unexpected request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                InvalidEntityType:
+                  value:
+                    message: 'Unexpected entityType'
+                    type: 'IllegalArgumentException'
+                    parameters:
+                      - key: 'entityType'
+                        value: 'holdings'
+        '500':
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                UnexpectedError:
+                  value:
+                    message: 'Unexpected error'
+                    type: 'NullPointerException'
+
+components:
+  schemas:
+    NewMigrationOperation:
+      type: object
+      required:
+        - entityType
+        - operationType
+      properties:
+        entityType:
+          $ref: '#/components/schemas/EntityType'
+        operationType:
+          $ref: '#/components/schemas/OperationType'
+
+    MigrationOperation:
+      type: object
+      properties:
+        id:
+          description: ID of migration operation
+          type: string
+          format: uuid
+        userId:
+          description: ID of user that created the migration operation
+          type: string
+          format: uuid
+        entityType:
+          $ref: '#/components/schemas/EntityType'
+        operationType:
+          $ref: '#/components/schemas/OperationType'
+        status:
+          $ref: '#/components/schemas/MigrationOperationStatus'
+        totalNumOfRecords:
+          description: Total number of records that will be migrated
+          type: integer
+        processedNumOfRecords:
+          description: Total number of migrated records
+          type: integer
+        startTimeMapping:
+          description: Start time of mapping step of migration
+          type: string
+          format: date-time
+        endTimeMapping:
+          description: End time of mapping step of migration
+          type: string
+          format: date-time
+        startTimeSaving:
+          description: Start time of saving step of migration
+          type: string
+          format: date-time
+        endTimeSaving:
+          description: End time of saving step of migration
+          type: string
+          format: date-time
+
+    EntityType:
+      description: Type of entity for migration
+      type: string
+      enum:
+        - authority
+        - instance
+
+    OperationType:
+      description: Type of migration
+      type: string
+      enum:
+        - remapping
+        - import
+
+    MigrationOperationStatus:
+      description: Migration status
+      type: string
+      enum:
+        - new
+        - data_mapping
+        - data_mapping_completed
+        - data_mapping_failed
+        - data_saving
+        - data_saving_completed
+        - data_saving_failed
+
+    Error:
+      description: Error object
+      type: object
+      properties:
+        message:
+          description: Error message
+          type: string
+        type:
+          description: Error type
+          type: string
+        code:
+          description: Error code
+          type: string
+        parameters:
+          description: Error parameters
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorParameter'
+
+    ErrorParameter:
+      description: Error parameter object
+      type: object
+      properties:
+        key:
+          description: Parameter key
+          type: string
+        value:
+          description: Parameter value
+          type: string
+  parameters:
+    TenantId:
+      name: X-Okapi-Tenant
+      in: header
+      description: Tenant ID
+      required: true
+      schema:
+        type: string
+        example: diku
+  securitySchemes:
+    ApiKey:
+      type: apiKey
+      in: header
+      name: X-Okapi-Token
+security:
+  - ApiKey: []

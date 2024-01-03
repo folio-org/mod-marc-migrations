@@ -36,6 +36,7 @@ folio:
   system-user:
     username: ${SYSTEM_USER_USERNAME:mod-marc-migrations}
     password: ${SYSTEM_USER_PASSWORD}
+    lastname: MARC Migrations
     permissionsFilePath: permissions/mod-marc-migrations-permissions.csv
   tenant:
     validation:
