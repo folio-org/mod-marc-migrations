@@ -10,8 +10,10 @@ import java.time.Instant;
 import java.time.Month;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
 
+@UnitTest
 class DateUtilsTest {
 
   @Test
