@@ -1,0 +1,3 @@
+DELETE FROM test_tenant_mod_entities_links.authority;
+DELETE FROM test_tenant_mod_source_record_storage.marc_records_lb;
+DELETE FROM test_tenant_mod_source_record_storage.records_lb;

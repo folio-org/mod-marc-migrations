@@ -1,0 +1,85 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "/authn/login-with-expiry"
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/json",
+          "Set-Cookie": ["folioAccessToken=accessToken","folioRefreshToken=refreshToken"]
+        },
+        "jsonBody": {
+          "accessTokenExpiration":  "{{now offset='1 days'}}",
+          "refreshTokenExpiration": "{{now offset='1 days'}}"
+        },
+        "transformers": ["response-template"]
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "/perms/users"
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/perms/users/38d3a441-c100-5e8d-bd12-71bde492b723/permissions?indexField=userId"
+      },
+      "response": {
+        "status": 200,
+        "body": "{\n \"permissions\": [],\n \"totalRecords\": 0\n}",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "/perms/users/38d3a441-c100-5e8d-bd12-71bde492b723/permissions?indexField=userId"
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "/authn/credentials"
+      },
+      "response": {
+        "status": 201,
+        "body": "",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "DELETE",
+        "url": "/authn/credentials?userId=38d3a441-c100-5e8d-bd12-71bde492b723"
+      },
+      "response": {
+        "status": 204,
+        "body": "",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    }
+  ]
+}

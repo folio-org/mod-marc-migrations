@@ -9,25 +9,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import lombok.SneakyThrows;
 import org.folio.spring.integration.XOkapiHeaders;
-import org.folio.spring.test.extension.EnablePostgres;
-import org.folio.spring.test.type.IntegrationTest;
+import org.folio.spring.testing.type.IntegrationTest;
+import org.folio.support.IntegrationTestBase;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 @IntegrationTest
-@SpringBootTest
-@EnablePostgres
-@AutoConfigureMockMvc
-class MarcMigrationsApplicationTest {
+class MarcMigrationsApplicationIT extends IntegrationTestBase {
 
   @Autowired
   private MarcMigrationsApplication marcMigrationsApplication;
-  @Autowired
-  private MockMvc mockMvc;
+  @Value("${folio.okapi-url}")
+  private String okapiUrl;
 
   @Test
   void contextLoads() {
@@ -48,6 +43,7 @@ class MarcMigrationsApplicationTest {
     mockMvc.perform(MockMvcRequestBuilders.post("/_/tenant")
             .contentType(APPLICATION_JSON)
             .header(XOkapiHeaders.TENANT, TENANT_ID)
+            .header(XOkapiHeaders.URL, okapiUrl)
             .content("{\"module_to\": \"mod-1.0.0\"}"))
         .andExpect(status().is2xxSuccessful());
   }
