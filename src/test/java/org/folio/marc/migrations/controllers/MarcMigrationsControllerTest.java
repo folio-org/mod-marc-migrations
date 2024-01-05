@@ -3,9 +3,10 @@ package org.folio.marc.migrations.controllers;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 
-import org.folio.entlinks.domain.dto.MigrationOperation;
-import org.folio.entlinks.domain.dto.NewMigrationOperation;
+import java.util.UUID;
 import org.folio.marc.migrations.controllers.delegates.MarcMigrationsService;
+import org.folio.marc.migrations.domain.dto.MigrationOperation;
+import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,7 +23,7 @@ class MarcMigrationsControllerTest {
   private @InjectMocks MarcMigrationsController migrationsController;
 
   @Test
-  void createMarcMigrations_ValidInput_ReturnsOkResponse() {
+  void createMarcMigrations_ReturnsCreatedResponse() {
     // Arrange
     NewMigrationOperation validOperation = new NewMigrationOperation();
     MigrationOperation result = new MigrationOperation();
@@ -37,4 +38,18 @@ class MarcMigrationsControllerTest {
 
   }
 
+  @Test
+  void getMarcMigrationById_ReturnsOkResponse() {
+    // Arrange
+    MigrationOperation result = new MigrationOperation();
+    UUID operationId = UUID.randomUUID();
+    when(migrationsService.getMarcMigrationById(operationId)).thenReturn(result);
+
+    // Act
+    var response = migrationsController.getMarcMigrationById(operationId, "tenantId");
+
+    // Assert
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals(result, response.getBody());
+  }
 }

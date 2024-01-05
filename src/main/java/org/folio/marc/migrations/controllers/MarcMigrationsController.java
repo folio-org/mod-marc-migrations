@@ -1,9 +1,10 @@
 package org.folio.marc.migrations.controllers;
 
-import org.folio.entlinks.domain.dto.MigrationOperation;
-import org.folio.entlinks.domain.dto.NewMigrationOperation;
-import org.folio.entlinks.rest.resource.MarcMigrationsApi;
+import java.util.UUID;
 import org.folio.marc.migrations.controllers.delegates.MarcMigrationsService;
+import org.folio.marc.migrations.domain.dto.MigrationOperation;
+import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
+import org.folio.marc.migrations.rest.resource.MarcMigrationsApi;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -24,5 +25,10 @@ public class MarcMigrationsController implements MarcMigrationsApi {
                                                                  NewMigrationOperation newMigrationOperation) {
     MigrationOperation operation = migrationsService.createNewMigration(newMigrationOperation);
     return ResponseEntity.status(HttpStatus.CREATED).body(operation);
+  }
+
+  @Override
+  public ResponseEntity<MigrationOperation> getMarcMigrationById(UUID operationId, String tenantId) {
+    return ResponseEntity.ok(migrationsService.getMarcMigrationById(operationId));
   }
 }

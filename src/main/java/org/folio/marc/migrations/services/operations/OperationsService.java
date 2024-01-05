@@ -1,5 +1,7 @@
 package org.folio.marc.migrations.services.operations;
 
+import java.util.Optional;
+import java.util.UUID;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
@@ -25,7 +27,7 @@ public class OperationsService {
   }
 
   public Operation createOperation(Operation operation) {
-    log.info("createOperation::Creating new operation: {}", operation);
+    log.info("createOperation::Preparing new operation: {}", operation);
     var numOfRecords = jdbcService.countNumOfRecords();
     operation.setUserId(context.getUserId());
     operation.setStatus(OperationStatusType.NEW);
@@ -33,5 +35,10 @@ public class OperationsService {
     operation.setProcessedNumOfRecords(0);
     log.info("createOperation::Saving new operation: {}", operation);
     return operationRepository.save(operation);
+  }
+
+  public Optional<Operation> getOperation(UUID operationId) {
+    log.info("getOperation::Get operation by ID: {}", operationId);
+    return operationRepository.findById(operationId);
   }
 }

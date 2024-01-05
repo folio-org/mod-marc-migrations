@@ -35,6 +35,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlConfig;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -217,8 +218,14 @@ public class IntegrationTestBase {
   }
 
   @SneakyThrows
-  private static String asJson(Object value) {
+  protected static String asJson(Object value) {
     return objectMapper.writeValueAsString(value);
+  }
+
+  @SneakyThrows
+  protected static <T> T contentAsObj(MvcResult result, Class<T> objectClass) {
+    var contentAsBytes = result.getResponse().getContentAsByteArray();
+    return objectMapper.readValue(contentAsBytes, objectClass);
   }
 
 }

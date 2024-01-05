@@ -2,9 +2,11 @@ package org.folio.marc.migrations.controllers;
 
 import static java.util.Collections.emptyList;
 import static org.apache.logging.log4j.Level.DEBUG;
+import static org.apache.logging.log4j.Level.TRACE;
 import static org.apache.logging.log4j.Level.WARN;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY;
 
 import java.util.List;
@@ -12,6 +14,7 @@ import java.util.Optional;
 import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.Level;
 import org.folio.marc.migrations.exceptions.ApiValidationException;
+import org.folio.spring.exception.NotFoundException;
 import org.folio.tenant.domain.dto.Error;
 import org.folio.tenant.domain.dto.Parameter;
 import org.springframework.http.HttpStatus;
@@ -32,6 +35,12 @@ public class ApiErrorHandler {
   public ResponseEntity<Error> handleGlobalExceptions(Exception e) {
     logException(WARN, e);
     return buildResponseEntity(e, INTERNAL_SERVER_ERROR);
+  }
+
+  @ExceptionHandler(NotFoundException.class)
+  public ResponseEntity<Error> handleNotFoundExceptions(NotFoundException e) {
+    logException(TRACE, e);
+    return buildResponseEntity(e, NOT_FOUND);
   }
 
   @ExceptionHandler(ApiValidationException.class)

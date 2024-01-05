@@ -234,8 +234,8 @@
               <inputSpec>${marc-migrations.yaml.file}</inputSpec>
               <output>${project.build.directory}/generated-sources</output>
               <generatorName>spring</generatorName>
-              <modelPackage>${project.groupId}.entlinks.domain.dto</modelPackage>
-              <apiPackage>${project.groupId}.entlinks.rest.resource</apiPackage>
+              <modelPackage>${project.groupId}.marc.migrations.domain.dto</modelPackage>
+              <apiPackage>${project.groupId}.marc.migrations.rest.resource</apiPackage>
               <generateApis>true</generateApis>
               <generateApiTests>true</generateApiTests>
               <generateApiDocumentation>true</generateApiDocumentation>
@@ -359,7 +359,7 @@
           <failOnViolation>true</failOnViolation>
           <logViolationsToConsole>true</logViolationsToConsole>
           <configLocation>checkstyle/checkstyle.xml</configLocation>
-          <cacheFile>${basedir}/target/cachefile</cacheFile>
+          <cacheFile>${basedir}/target/cacheFile</cacheFile>
         </configuration>
       </plugin>
 
