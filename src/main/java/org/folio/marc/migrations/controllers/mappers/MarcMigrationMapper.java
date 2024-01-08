@@ -2,8 +2,8 @@ package org.folio.marc.migrations.controllers.mappers;
 
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
-import org.folio.entlinks.domain.dto.MigrationOperation;
-import org.folio.entlinks.domain.dto.NewMigrationOperation;
+import org.folio.marc.migrations.domain.dto.MigrationOperation;
+import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.utils.DateUtils;
 import org.mapstruct.Mapper;
@@ -28,7 +28,7 @@ public interface MarcMigrationMapper {
   @Mapping(target = "endTimeMapping", ignore = true)
   Operation toEntity(NewMigrationOperation migrationOperation);
 
-  MigrationOperation toDto(Operation newOperation);
+  MigrationOperation toDto(Operation operation);
 
   default OffsetDateTime map(Timestamp value) {
     return DateUtils.fromTimestamp(value);

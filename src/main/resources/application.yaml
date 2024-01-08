@@ -30,6 +30,9 @@ spring:
     openfeign:
       okhttp:
         enabled: true
+  jackson:
+    default-property-inclusion: non_empty
+
 folio:
   environment: ${ENV:folio}
   okapi-url: ${OKAPI_URL:http://localhost:9130}

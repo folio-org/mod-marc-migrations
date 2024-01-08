@@ -6,6 +6,7 @@ import static org.mockito.ArgumentCaptor.captor;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Optional;
 import java.util.UUID;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
@@ -50,5 +51,19 @@ class OperationsServiceTest {
     assertEquals(OperationStatusType.NEW, captor.getValue().getStatus());
     assertEquals(10, captor.getValue().getTotalNumOfRecords());
     assertEquals(0, captor.getValue().getProcessedNumOfRecords());
+  }
+
+  @Test
+  void getOperation_ReturnsOperation() {
+    // Arrange
+    var operationId = UUID.randomUUID();
+    var fetchedOperation = Optional.of(new Operation());
+    when(operationRepository.findById(operationId)).thenReturn(fetchedOperation);
+
+    // Act
+    var result = operationsService.getOperation(operationId);
+
+    // Assert
+    assertEquals(fetchedOperation, result);
   }
 }

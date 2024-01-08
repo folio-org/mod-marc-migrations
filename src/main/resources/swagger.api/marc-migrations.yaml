@@ -7,7 +7,7 @@ info:
 paths:
   /marc-migrations:
     post:
-      summary: Register new MARC migration
+      summary: Register new MARC migration operation
       operationId: createMarcMigrations
       tags:
         - marc-migrations
@@ -25,7 +25,7 @@ paths:
                   operationType: remapping
       responses:
         '201':
-          description: New MARC migration successfuly registered
+          description: New MARC migration operation successfully registered
           content:
             application/json:
               schema:
@@ -53,6 +53,65 @@ paths:
                     parameters:
                       - key: 'entityType'
                         value: 'holdings'
+        '500':
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                UnexpectedError:
+                  value:
+                    message: 'Unexpected error'
+                    type: 'NullPointerException'
+  /marc-migrations/{operationId}:
+    get:
+      summary: Get MARC migration operation by ID
+      operationId: getMarcMigrationById
+      tags:
+        - marc-migrations
+      parameters:
+        - in: path
+          name: operationId
+          description: The UUID of a MARC migration operation
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 474d0af6-028f-4d15-8354-d2fc10c71a68
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Retrieved MARC migration operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MigrationOperation'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                InvalidUUIDFormat:
+                  value:
+                    message: 'Invalid UUID format'
+                    type: 'IllegalArgumentException'
+                    parameters:
+                      - key: 'entityType'
+                        value: 'holdings'
+        '404':
+          description: MARC migration operation was not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                InvalidUUIDFormat:
+                  value:
+                    message: 'MARC migration operation was not found [id: 474d0af6-028f-4d15-8354-d2fc10c71a68]'
+                    type: 'NotFoundException'
         '500':
           description: Unexpected error
           content:

@@ -7,11 +7,13 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.github.tomakehurst.wiremock.admin.NotFoundException;
 import java.util.UUID;
-import org.folio.entlinks.domain.dto.EntityType;
-import org.folio.entlinks.domain.dto.MigrationOperationStatus;
-import org.folio.entlinks.domain.dto.NewMigrationOperation;
-import org.folio.entlinks.domain.dto.OperationType;
+import org.folio.marc.migrations.domain.dto.EntityType;
+import org.folio.marc.migrations.domain.dto.MigrationOperation;
+import org.folio.marc.migrations.domain.dto.MigrationOperationStatus;
+import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
+import org.folio.marc.migrations.domain.dto.OperationType;
 import org.folio.marc.migrations.exceptions.ApiValidationException;
 import org.folio.spring.testing.type.IntegrationTest;
 import org.folio.support.IntegrationTestBase;
@@ -43,8 +45,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
       .andExpect(jsonPath("entityType", is(EntityType.AUTHORITY.getValue())))
       .andExpect(jsonPath("status", is(MigrationOperationStatus.NEW.getValue())))
       .andExpect(jsonPath("totalNumOfRecords", is(87)))
-      .andExpect(jsonPath("processedNumOfRecords", is(0)))
-      .andExpect(jsonPath("id", notNullValue(UUID.class)));
+      .andExpect(jsonPath("processedNumOfRecords", is(0)));
   }
 
   @Test
@@ -105,5 +106,38 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
       .andExpect(errorTypeMatches(ApiValidationException.class))
       .andExpect(errorParameterKeyMatches(is("entityType")))
       .andExpect(errorParameterValueMatches(is("instance")));
+  }
+
+  @Test
+  void getMigrationById_positive() throws Exception {
+    // Arrange
+    var migrationOperation = new NewMigrationOperation()
+      .operationType(OperationType.REMAPPING)
+      .entityType(EntityType.AUTHORITY);
+    var postResult = doPost("/marc-migrations", migrationOperation).andReturn();
+    var operationId = contentAsObj(postResult, MigrationOperation.class).getId();
+
+    // Act & Assert
+    tryGet("/marc-migrations/{operationId}", operationId)
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("id", is(operationId.toString())))
+      .andExpect(jsonPath("userId", is(USER_ID)))
+      .andExpect(jsonPath("operationType", is(OperationType.REMAPPING.getValue())))
+      .andExpect(jsonPath("entityType", is(EntityType.AUTHORITY.getValue())))
+      .andExpect(jsonPath("status", is(MigrationOperationStatus.NEW.getValue())))
+      .andExpect(jsonPath("totalNumOfRecords", is(87)))
+      .andExpect(jsonPath("processedNumOfRecords", is(0)));
+  }
+
+  @Test
+  void getMigrationById_negative_operationNotExists() throws Exception {
+    // Arrange
+    var randomId = UUID.randomUUID();
+
+    // Act & Assert
+    tryGet("/marc-migrations/{operationId}", randomId)
+      .andExpect(status().isNotFound())
+      .andExpect(errorMessageMatches(containsString("MARC migration operation was not found")))
+      .andExpect(errorTypeMatches(NotFoundException.class));
   }
 }
