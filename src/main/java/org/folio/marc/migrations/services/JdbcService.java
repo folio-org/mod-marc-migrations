@@ -1,6 +1,8 @@
 package org.folio.marc.migrations.services;
 
+import java.util.UUID;
 import lombok.extern.log4j.Log4j2;
+import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.spring.FolioExecutionContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -43,6 +45,12 @@ public class JdbcService {
     FROM %s.marc_authority_view;
     """;
 
+  private static final String UPDATE_OPERATION_STATUS = """
+    UPDATE %s_mod_marc_migrations.operation
+    SET status = '%s'
+    WHERE id = '%s';
+    """;
+
   private final JdbcTemplate jdbcTemplate;
   private final FolioExecutionContext context;
 
@@ -63,6 +71,13 @@ public class JdbcService {
   public Integer countNumOfRecords() {
     log.info("countNumOfRecords::Counting number of records in 'marc_authority_view'");
     return jdbcTemplate.queryForObject(COUNT_AUTHORITY_RECORDS.formatted(getSchemaName()), Integer.class);
+  }
+
+  public void updateOperationStatus(UUID id, OperationStatusType status) {
+    var tenantId = context.getTenantId();
+    log.info("updateOperationStatus::For tenant {}. Operation {} status {}", tenantId, id, status);
+    var sql = UPDATE_OPERATION_STATUS.formatted(tenantId, status, id);
+    jdbcTemplate.execute(sql);
   }
 
   private void createView(String tenantId, String query) {

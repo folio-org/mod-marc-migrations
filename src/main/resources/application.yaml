@@ -49,6 +49,11 @@ folio:
       enabled: true
     feign:
       enabled: true
+  migration:
+    chunk-size: ${RECORDS_CHUNK_SIZE:50}
+    chunk-fetch-ids-count: ${CHUNK_FETCH_IDS_COUNT:500}
+    chunk-persist-count: ${CHUNK_PERSIST_COUNT:1000}
+    chunk-processing-max-parallelism: ${CHUNK_PROCESSING_MAX_PARALLELISM:4}
 
 management:
   endpoints:

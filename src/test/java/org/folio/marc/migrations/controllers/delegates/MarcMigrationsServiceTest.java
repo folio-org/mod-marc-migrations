@@ -17,6 +17,7 @@ import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
 import org.folio.marc.migrations.domain.dto.OperationType;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.exceptions.ApiValidationException;
+import org.folio.marc.migrations.services.MigrationOrchestrator;
 import org.folio.marc.migrations.services.operations.OperationsService;
 import org.folio.spring.exception.NotFoundException;
 import org.folio.spring.testing.type.UnitTest;
@@ -32,6 +33,7 @@ class MarcMigrationsServiceTest {
 
   private @Mock MarcMigrationMapper mapper;
   private @Mock OperationsService operationsService;
+  private @Mock MigrationOrchestrator migrationOrchestrator;
   private @InjectMocks MarcMigrationsService migrationsService;
 
   @Test
@@ -51,6 +53,7 @@ class MarcMigrationsServiceTest {
     // Assert
     assertNotNull(result);
     verify(operationsService).createOperation(operation);
+    verify(migrationOrchestrator).submitMappingTask(operation);
   }
 
   @Test

@@ -1,5 +1,7 @@
 package org.folio.marc.migrations.controllers;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.folio.support.TestConstants.TENANT_ID;
 import static org.folio.support.TestConstants.USER_ID;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
@@ -14,6 +16,7 @@ import org.folio.marc.migrations.domain.dto.MigrationOperation;
 import org.folio.marc.migrations.domain.dto.MigrationOperationStatus;
 import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
 import org.folio.marc.migrations.domain.dto.OperationType;
+import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.exceptions.ApiValidationException;
 import org.folio.spring.testing.type.IntegrationTest;
 import org.folio.support.IntegrationTestBase;
@@ -37,7 +40,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
       .entityType(EntityType.AUTHORITY);
 
     // Act & Assert
-    tryPost("/marc-migrations", migrationOperation)
+    var result = tryPost("/marc-migrations", migrationOperation)
       .andExpect(status().isCreated())
       .andExpect(jsonPath("id", notNullValue(UUID.class)))
       .andExpect(jsonPath("userId", is(USER_ID)))
@@ -45,7 +48,19 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
       .andExpect(jsonPath("entityType", is(EntityType.AUTHORITY.getValue())))
       .andExpect(jsonPath("status", is(MigrationOperationStatus.NEW.getValue())))
       .andExpect(jsonPath("totalNumOfRecords", is(87)))
-      .andExpect(jsonPath("processedNumOfRecords", is(0)));
+      .andExpect(jsonPath("processedNumOfRecords", is(0)))
+      .andReturn();
+    var operation = contentAsObj(result, MigrationOperation.class);
+
+    doGetUntilMatches("/marc-migrations/{operationId}",
+        jsonPath("status", is(MigrationOperationStatus.DATA_MAPPING.getValue())),
+        operation.getId());
+
+    var chunks = databaseHelper.getOperationChunks(TENANT_ID, operation.getId());
+    assertThat(chunks).hasSize(10)
+        .allMatch(chunk -> chunk.getStartRecordId() != null
+            && chunk.getEndRecordId() != null
+            && chunk.getStatus().equals(OperationStatusType.NEW));
   }
 
   @Test
