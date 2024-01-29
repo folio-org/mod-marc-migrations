@@ -1,5 +1,6 @@
 package org.folio.marc.migrations.services;
 
+import java.util.List;
 import java.util.UUID;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
@@ -45,8 +46,15 @@ public class JdbcService {
     FROM %s.marc_authority_view;
     """;
 
+  private static final String GET_AUTHORITY_IDS_CHUNK = """
+    SELECT marc_id
+    FROM %s.marc_authority_view
+    %s
+    LIMIT %s;
+    """;
+
   private static final String UPDATE_OPERATION_STATUS = """
-    UPDATE %s_mod_marc_migrations.operation
+    UPDATE %s.operation
     SET status = '%s'
     WHERE id = '%s';
     """;
@@ -73,10 +81,19 @@ public class JdbcService {
     return jdbcTemplate.queryForObject(COUNT_AUTHORITY_RECORDS.formatted(getSchemaName()), Integer.class);
   }
 
+  public List<UUID> getAuthorityIdsChunk(UUID idFrom, Integer limit) {
+    var whereClause = idFrom == null ? "" : "WHERE marc_id > '%s'".formatted(idFrom);
+    var sql = GET_AUTHORITY_IDS_CHUNK.formatted(getSchemaName(), whereClause, limit);
+    return jdbcTemplate.queryForList(sql, UUID.class);
+  }
+
+  public List<UUID> getAuthorityIdsChunk(Integer limit) {
+    return getAuthorityIdsChunk(null, limit);
+  }
+
   public void updateOperationStatus(UUID id, OperationStatusType status) {
-    var tenantId = context.getTenantId();
-    log.info("updateOperationStatus::For tenant {}. Operation {} status {}", tenantId, id, status);
-    var sql = UPDATE_OPERATION_STATUS.formatted(tenantId, status, id);
+    log.info("updateOperationStatus::For operation {}: {}", id, status);
+    var sql = UPDATE_OPERATION_STATUS.formatted(getSchemaName(), status, id);
     jdbcTemplate.execute(sql);
   }
 

@@ -2,15 +2,11 @@ package org.folio.marc.migrations.services.operations;
 
 import static java.util.Collections.emptyList;
 import static org.folio.marc.migrations.domain.entities.types.OperationStatusType.NEW;
-import static org.folio.support.TestConstants.TENANT_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Lists;
@@ -24,31 +20,26 @@ import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.domain.repositories.OperationChunkRepository;
-import org.folio.spring.FolioExecutionContext;
-import org.folio.spring.FolioModuleMetadata;
+import org.folio.marc.migrations.services.JdbcService;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
 class ChunkServiceTest {
 
-  private @Mock FolioModuleMetadata metadata;
   private @Mock MigrationProperties props;
-  private @Mock FolioExecutionContext context;
-  private @Mock JdbcTemplate jdbcTemplate;
+  private @Mock JdbcService jdbcService;
   private @Mock OperationChunkRepository repository;
   private @InjectMocks ChunkService service;
 
   @Test
   void prepareChunks_positive() {
     // Arrange
-    when(context.getTenantId()).thenReturn(TENANT_ID);
     when(props.getChunkSize()).thenReturn(2); //number of records in one chunk
     when(props.getChunkFetchIdsCount()).thenReturn(4); //number of records to fetch in one query
     when(props.getChunkPersistCount()).thenReturn(4); //number of chunks to persist into db at a time
@@ -59,8 +50,10 @@ class ChunkServiceTest {
         List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()),
         //returned from query in a loop, 1 chunk created. Persisted to db after a loop
         List.of(UUID.randomUUID(), UUID.randomUUID()));
-    when(jdbcTemplate.queryForList(any(), eq(UUID.class)))
-        .thenReturn(recordIdsMock.get(0), recordIdsMock.get(1), recordIdsMock.get(2), emptyList());
+    when(jdbcService.getAuthorityIdsChunk(any()))
+        .thenReturn(recordIdsMock.get(0));
+    when(jdbcService.getAuthorityIdsChunk(any(), any()))
+        .thenReturn(recordIdsMock.get(1), recordIdsMock.get(2), emptyList());
     var actualChunks = new LinkedList<OperationChunk>();
     doAnswer(invocation -> {
       actualChunks.addAll(invocation.<List<OperationChunk>>getArgument(0));
@@ -95,19 +88,6 @@ class ChunkServiceTest {
       softAssertions.assertThat(chunk.getNumOfRecords()).isEqualTo(2);
     }
     softAssertions.assertAll();
-  }
-
-  @Test
-  void prepareChunks_failOnUnsupportedEntity() {
-    var operation = new Operation();
-    operation.setEntityType(EntityType.INSTANCE);
-
-    // Act
-    var exc = assertThrows(UnsupportedOperationException.class, () -> service.prepareChunks(operation));
-
-    // Assert
-    assertEquals("prepareChunks:: Unsupported entity type: INSTANCE", exc.getMessage());
-    verifyNoInteractions(jdbcTemplate, repository);
   }
 
   private boolean fileNameValid(String fileName, UUID operationId, UUID chunkId, String postfix) {

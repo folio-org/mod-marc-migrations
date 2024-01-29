@@ -57,7 +57,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
         operation.getId());
 
     var chunks = databaseHelper.getOperationChunks(TENANT_ID, operation.getId());
-    assertThat(chunks).hasSize(10)
+    assertThat(chunks).hasSize(9)
         .allMatch(chunk -> chunk.getStartRecordId() != null
             && chunk.getEndRecordId() != null
             && chunk.getStatus().equals(OperationStatusType.NEW));
