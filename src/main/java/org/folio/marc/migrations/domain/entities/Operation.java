@@ -15,6 +15,8 @@ import lombok.Setter;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.entities.types.OperationType;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Getter
 @Setter
@@ -39,7 +41,8 @@ public class Operation {
   private OperationType operationType;
 
   @Enumerated(EnumType.STRING)
-  @Column(name = "status", nullable = false, length = 50)
+  @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+  @Column(name = "status", nullable = false)
   private OperationStatusType status;
 
   @Column(name = "total_num_of_records", nullable = false)

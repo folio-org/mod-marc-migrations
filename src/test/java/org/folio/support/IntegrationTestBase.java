@@ -1,5 +1,7 @@
 package org.folio.support;
 
+import static org.awaitility.Awaitility.await;
+import static org.awaitility.Durations.ONE_SECOND;
 import static org.folio.spring.integration.XOkapiHeaders.TENANT;
 import static org.folio.spring.integration.XOkapiHeaders.URL;
 import static org.folio.support.TestConstants.TENANT_ID;
@@ -17,7 +19,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
 import lombok.SneakyThrows;
+import org.awaitility.core.ThrowingRunnable;
+import org.folio.spring.FolioModuleMetadata;
 import org.folio.spring.integration.XOkapiHeaders;
 import org.folio.spring.testing.extension.EnableOkapi;
 import org.folio.spring.testing.extension.EnablePostgres;
@@ -30,7 +35,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlConfig;
@@ -45,12 +54,14 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 @SpringBootTest
 @ActiveProfiles("test")
 @AutoConfigureMockMvc
+@Import(IntegrationTestBase.TestConfig.class)
 @Sql(scripts = {"classpath:sql/mod-source-record-storage-init.sql", "classpath:sql/mod-entities-links-init.sql"},
      config = @SqlConfig(separator = EOF_STATEMENT_SEPARATOR), executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS)
 @Sql(scripts = "classpath:sql/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_CLASS)
 public class IntegrationTestBase {
 
   protected static @Autowired MockMvc mockMvc;
+  protected static DatabaseHelper databaseHelper;
   protected static OkapiConfiguration okapi;
   protected static ObjectMapper objectMapper = new ObjectMapper();
 
@@ -75,8 +86,9 @@ public class IntegrationTestBase {
   }
 
   @BeforeAll
-  static void setUpClass(@Autowired MockMvc mockMvc) {
+  static void setUpClass(@Autowired MockMvc mockMvc, @Autowired DatabaseHelper databaseHelper) {
     IntegrationTestBase.mockMvc = mockMvc;
+    IntegrationTestBase.databaseHelper = databaseHelper;
   }
 
   @SneakyThrows
@@ -153,6 +165,10 @@ public class IntegrationTestBase {
     return tryGet(uri, headers, args).andExpect(status().isOk());
   }
 
+  protected static void doGetUntilMatches(String uri, ResultMatcher matcher, Object... args) {
+    awaitUntilAsserted(() -> doGet(uri, args).andExpect(matcher));
+  }
+
   @SneakyThrows
   protected static ResultActions tryPut(String uri, Object body, HttpHeaders headers, Object... args) {
     return tryDoHttpMethod(put(uri, args), body, headers);
@@ -226,6 +242,18 @@ public class IntegrationTestBase {
   protected static <T> T contentAsObj(MvcResult result, Class<T> objectClass) {
     var contentAsBytes = result.getResponse().getContentAsByteArray();
     return objectMapper.readValue(contentAsBytes, objectClass);
+  }
+
+  protected static void awaitUntilAsserted(ThrowingRunnable throwingRunnable) {
+    await().pollInterval(Duration.ofMillis(200)).atMost(ONE_SECOND).untilAsserted(throwingRunnable);
+  }
+
+  @TestConfiguration
+  public static class TestConfig {
+    @Bean
+    public DatabaseHelper databaseHelper(JdbcTemplate jdbcTemplate, FolioModuleMetadata metadata) {
+      return new DatabaseHelper(metadata, jdbcTemplate);
+    }
   }
 
 }

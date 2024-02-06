@@ -2,6 +2,7 @@ package org.folio.marc.migrations.services.operations;
 
 import java.util.Optional;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
@@ -12,19 +13,12 @@ import org.springframework.stereotype.Service;
 
 @Log4j2
 @Service
+@RequiredArgsConstructor
 public class OperationsService {
 
   private final FolioExecutionContext context;
-  private final OperationRepository operationRepository;
+  private final OperationRepository repository;
   private final JdbcService jdbcService;
-
-  public OperationsService(FolioExecutionContext context,
-                           OperationRepository operationRepository,
-                           JdbcService jdbcService) {
-    this.context = context;
-    this.operationRepository = operationRepository;
-    this.jdbcService = jdbcService;
-  }
 
   public Operation createOperation(Operation operation) {
     log.info("createOperation::Preparing new operation: {}", operation);
@@ -34,11 +28,11 @@ public class OperationsService {
     operation.setTotalNumOfRecords(numOfRecords);
     operation.setProcessedNumOfRecords(0);
     log.info("createOperation::Saving new operation: {}", operation);
-    return operationRepository.save(operation);
+    return repository.save(operation);
   }
 
   public Optional<Operation> getOperation(UUID operationId) {
     log.info("getOperation::Get operation by ID: {}", operationId);
-    return operationRepository.findById(operationId);
+    return repository.findById(operationId);
   }
 }

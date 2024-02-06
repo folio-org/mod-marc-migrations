@@ -1,0 +1,40 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+  <changeSet id="MODMARCMIG-6@@create-operation-chunk-table" author="Viacheslav_Kolesnyk">
+    <preConditions>
+      <not>
+        <tableExists tableName="operation_chunk"/>
+      </not>
+    </preConditions>
+
+    <comment>Create operation chunk table</comment>
+
+    <createTable tableName="operation_chunk">
+      <column name="id" type="UUID">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_operation_chunk"/>
+      </column>
+      <column name="operation_id" type="UUID">
+        <constraints nullable="false" foreignKeyName="fk_chunk_operation" referencedTableName="operation" referencedColumnNames="id"/>
+      </column>
+      <column name="start_record_id" type="UUID">
+        <constraints nullable="false"/>
+      </column>
+      <column name="end_record_id" type="UUID">
+        <constraints nullable="false"/>
+      </column>
+      <column name="source_chunk_file_name" type="TEXT"/>
+      <column name="marc_chunk_file_name" type="TEXT"/>
+      <column name="entity_chunk_file_name" type="TEXT"/>
+      <column name="status" type="OperationStatus">
+        <constraints nullable="false"/>
+      </column>
+      <column name="num_of_records" type="INT">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+  </changeSet>
+</databaseChangeLog>

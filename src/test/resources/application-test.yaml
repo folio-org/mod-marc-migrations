@@ -8,6 +8,11 @@ folio:
       level: full
   environment: folio
   okapi-url: http://localhost:9130
+  migration:
+    chunk-size: ${RECORDS_CHUNK_SIZE:10}
+    chunk-fetch-ids-count: ${CHUNK_FETCH_IDS_COUNT:30}
+    chunk-persist-count: ${CHUNK_PERSIST_COUNT:50}
+    chunk-processing-max-parallelism: ${CHUNK_PROCESSING_MAX_PARALLELISM:4}
 spring:
   application:
     name: mod-marc-migrations

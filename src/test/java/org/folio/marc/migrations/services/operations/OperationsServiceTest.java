@@ -26,9 +26,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class OperationsServiceTest {
 
   private @Mock FolioExecutionContext context;
-  private @Mock OperationRepository operationRepository;
+  private @Mock OperationRepository repository;
   private @Mock JdbcService jdbcService;
-  private @InjectMocks OperationsService operationsService;
+  private @InjectMocks OperationsService service;
 
   @Test
   void createOperation_SetsFieldsAndSavesOperation() {
@@ -36,16 +36,16 @@ class OperationsServiceTest {
     Operation operation = new Operation();
     UUID userId = UUID.randomUUID();
     when(context.getUserId()).thenReturn(userId);
-    when(operationRepository.save(operation)).thenReturn(operation);
+    when(repository.save(operation)).thenReturn(operation);
     when(jdbcService.countNumOfRecords()).thenReturn(10);
 
     // Act
-    Operation result = operationsService.createOperation(operation);
+    Operation result = service.createOperation(operation);
 
     ArgumentCaptor<Operation> captor = captor();
 
     // Assert
-    verify(operationRepository).save(captor.capture());
+    verify(repository).save(captor.capture());
     assertNotNull(result);
     assertEquals(userId, captor.getValue().getUserId());
     assertEquals(OperationStatusType.NEW, captor.getValue().getStatus());
@@ -58,10 +58,10 @@ class OperationsServiceTest {
     // Arrange
     var operationId = UUID.randomUUID();
     var fetchedOperation = Optional.of(new Operation());
-    when(operationRepository.findById(operationId)).thenReturn(fetchedOperation);
+    when(repository.findById(operationId)).thenReturn(fetchedOperation);
 
     // Act
-    var result = operationsService.getOperation(operationId);
+    var result = service.getOperation(operationId);
 
     // Assert
     assertEquals(fetchedOperation, result);

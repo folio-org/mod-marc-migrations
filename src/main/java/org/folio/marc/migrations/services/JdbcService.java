@@ -1,6 +1,9 @@
 package org.folio.marc.migrations.services;
 
+import java.util.List;
+import java.util.UUID;
 import lombok.extern.log4j.Log4j2;
+import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.spring.FolioExecutionContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -43,6 +46,19 @@ public class JdbcService {
     FROM %s.marc_authority_view;
     """;
 
+  private static final String GET_AUTHORITY_IDS_CHUNK = """
+    SELECT marc_id
+    FROM %s.marc_authority_view
+    %s
+    LIMIT %s;
+    """;
+
+  private static final String UPDATE_OPERATION_STATUS = """
+    UPDATE %s.operation
+    SET status = '%s'
+    WHERE id = '%s';
+    """;
+
   private final JdbcTemplate jdbcTemplate;
   private final FolioExecutionContext context;
 
@@ -63,6 +79,22 @@ public class JdbcService {
   public Integer countNumOfRecords() {
     log.info("countNumOfRecords::Counting number of records in 'marc_authority_view'");
     return jdbcTemplate.queryForObject(COUNT_AUTHORITY_RECORDS.formatted(getSchemaName()), Integer.class);
+  }
+
+  public List<UUID> getAuthorityIdsChunk(UUID idFrom, Integer limit) {
+    var whereClause = idFrom == null ? "" : "WHERE marc_id > '%s'".formatted(idFrom);
+    var sql = GET_AUTHORITY_IDS_CHUNK.formatted(getSchemaName(), whereClause, limit);
+    return jdbcTemplate.queryForList(sql, UUID.class);
+  }
+
+  public List<UUID> getAuthorityIdsChunk(Integer limit) {
+    return getAuthorityIdsChunk(null, limit);
+  }
+
+  public void updateOperationStatus(UUID id, OperationStatusType status) {
+    log.info("updateOperationStatus::For operation {}: {}", id, status);
+    var sql = UPDATE_OPERATION_STATUS.formatted(getSchemaName(), status, id);
+    jdbcTemplate.execute(sql);
   }
 
   private void createView(String tenantId, String query) {

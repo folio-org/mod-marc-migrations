@@ -4,6 +4,20 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
                    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
+    <changeSet id="MODMARCMIG-6@@create-operation-status-enum" author="Viacheslav_Kolesnyk">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*)
+                FROM pg_type t
+                JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'operationstatus' AND n.nspname = '${database.defaultSchemaName}';
+            </sqlCheck>
+        </preConditions>
+
+        <comment>Create OperationStatus enum</comment>
+
+        <sql>CREATE TYPE OperationStatus AS ENUM ('NEW', 'DATA_MAPPING', 'DATA_MAPPING_COMPLETED', 'DATA_MAPPING_FAILED', 'DATA_SAVING', 'DATA_SAVING_COMPLETED', 'DATA_SAVING_FAILED')</sql>
+    </changeSet>
 
   <changeSet id="MODMARCMIG-5@@create-operation-table" author="pavlo_smahin">
     <preConditions>
@@ -27,7 +41,7 @@
         <column name="operation_type" type="VARCHAR(20)">
             <constraints nullable="false"/>
         </column>
-        <column name="status" type="VARCHAR(50)">
+        <column name="status" type="OperationStatus">
             <constraints nullable="false"/>
         </column>
         <column name="total_num_of_records" type="INT">
