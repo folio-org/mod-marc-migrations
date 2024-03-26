@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.2.2</version>
+    <version>3.2.3</version>
     <relativePath /> <!-- lookup parent from repository -->
   </parent>
 
@@ -26,7 +26,10 @@
       src/main/java/org/folio/marc/migrations/MarcMigrationsApplication.java
     </sonar.exclusions>
 
-    <folio-spring-support.version>8.0.0</folio-spring-support.version>
+    <folio-spring-support.version>8.2.0-SNAPSHOT</folio-spring-support.version>
+    <folio-s3-client.version>2.1.0-SNAPSHOT</folio-s3-client.version>
+    <aws-sdk-java.version>2.25.1</aws-sdk-java.version>
+    <di-core.version>4.2.0-SNAPSHOT</di-core.version>
     <mapstruct.version>1.5.5.Final</mapstruct.version>
     <lombok.mapstruct-binding.version>0.2.0</lombok.mapstruct-binding.version>
 
@@ -68,6 +71,24 @@
     </dependency>
 
     <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>data-import-processing-core</artifactId>
+      <version>${di-core.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.folio</groupId>
+      <artifactId>folio-s3-client</artifactId>
+      <version>${folio-s3-client.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>s3</artifactId>
+      <version>${aws-sdk-java.version}</version>
+    </dependency>
+
+    <dependency>
       <groupId>org.hibernate.validator</groupId>
       <artifactId>hibernate-validator</artifactId>
     </dependency>
@@ -89,6 +110,37 @@
       <artifactId>mapstruct-processor</artifactId>
       <version>${mapstruct.version}</version>
       <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.batch</groupId>
+      <artifactId>spring-batch-core</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-cache</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-to-slf4j</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>ch.qos.logback</groupId>
+          <artifactId>logback-classic</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <!-- Hibernate 6.4.1.Final has issue with saving or persisting JsonType fields and this was observed for authorities
+    when they are persisted hibernate increased version property twice (one for insert and one for update).
+    There is similar to this one issue in their issue tracker: https://hibernate.atlassian.net/browse/HHH-17660, we can
+    track its status and once it fixed we can try to upgrade version of hibernate which is enough to remove this dependency
+    and use the one from parent spring-boot -->
+    <dependency>
+      <groupId>org.hibernate.orm</groupId>
+      <artifactId>hibernate-core</artifactId>
+      <version>6.3.1.Final</version>
     </dependency>
 
     <!-- Test dependencies -->

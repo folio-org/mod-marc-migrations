@@ -19,8 +19,8 @@ import org.folio.marc.migrations.config.MigrationProperties;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
-import org.folio.marc.migrations.domain.repositories.OperationChunkRepository;
-import org.folio.marc.migrations.services.JdbcService;
+import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
+import org.folio.marc.migrations.services.jdbc.ChunkJdbcService;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,8 +33,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class ChunkServiceTest {
 
   private @Mock MigrationProperties props;
-  private @Mock JdbcService jdbcService;
-  private @Mock OperationChunkRepository repository;
+  private @Mock AuthorityJdbcService authorityJdbcService;
+  private @Mock ChunkJdbcService chunkJdbcService;
   private @InjectMocks ChunkService service;
 
   @Test
@@ -50,15 +50,15 @@ class ChunkServiceTest {
         List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()),
         //returned from query in a loop, 1 chunk created. Persisted to db after a loop
         List.of(UUID.randomUUID(), UUID.randomUUID()));
-    when(jdbcService.getAuthorityIdsChunk(any()))
+    when(authorityJdbcService.getAuthorityIdsChunk(any()))
         .thenReturn(recordIdsMock.get(0));
-    when(jdbcService.getAuthorityIdsChunk(any(), any()))
+    when(authorityJdbcService.getAuthorityIdsChunk(any(), any()))
         .thenReturn(recordIdsMock.get(1), recordIdsMock.get(2), emptyList());
     var actualChunks = new LinkedList<OperationChunk>();
     doAnswer(invocation -> {
       actualChunks.addAll(invocation.<List<OperationChunk>>getArgument(0));
       return null;
-    }).when(repository).saveAll(any());
+    }).when(chunkJdbcService).createChunks(any());
     var operation = new Operation();
     operation.setId(UUID.randomUUID());
     operation.setEntityType(EntityType.AUTHORITY);
@@ -67,7 +67,7 @@ class ChunkServiceTest {
     service.prepareChunks(operation);
 
     // Assert
-    verify(repository, times(2)).saveAll(any());
+    verify(chunkJdbcService, times(2)).createChunks(any());
     assertEquals(5, actualChunks.size());
 
     var recordIdsPartitioned = Lists.partition(recordIdsMock.stream().flatMap(Collection::stream).toList(), 2);
@@ -75,7 +75,7 @@ class ChunkServiceTest {
     for (int i = 0; i < actualChunks.size(); i++) {
       var chunk = actualChunks.get(i);
       softAssertions.assertThat(chunk.getId()).isNotNull();
-      softAssertions.assertThat(chunk.getOperation()).isEqualTo(operation);
+      softAssertions.assertThat(chunk.getOperationId()).isEqualTo(operation.getId());
       softAssertions.assertThat(chunk.getStartRecordId()).isEqualTo(recordIdsPartitioned.get(i).get(0));
       softAssertions.assertThat(chunk.getEndRecordId()).isEqualTo(recordIdsPartitioned.get(i).get(1));
       softAssertions.assertThat(

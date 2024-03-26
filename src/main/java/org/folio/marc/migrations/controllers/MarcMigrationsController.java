@@ -23,7 +23,7 @@ public class MarcMigrationsController implements MarcMigrationsApi {
   @Override
   public ResponseEntity<MigrationOperation> createMarcMigrations(String tenantId,
                                                                  NewMigrationOperation newMigrationOperation) {
-    MigrationOperation operation = migrationsService.createNewMigration(newMigrationOperation);
+    var operation = migrationsService.createNewMigration(newMigrationOperation);
     return ResponseEntity.status(HttpStatus.CREATED).body(operation);
   }
 

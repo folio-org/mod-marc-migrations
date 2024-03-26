@@ -82,11 +82,12 @@ class DateUtilsTest {
 
     // Act
     Timestamp result = DateUtils.currentTs();
+    Thread.sleep(1L);
 
     // Assert
-    assertNotNull(result);
     assertThat(result)
-        .isAfter(before)
-        .isBefore(Instant.now());
+      .isNotNull()
+      .isAfter(before)
+      .isBefore(Instant.now());
   }
 }

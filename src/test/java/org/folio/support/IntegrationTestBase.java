@@ -1,9 +1,10 @@
 package org.folio.support;
 
 import static org.awaitility.Awaitility.await;
-import static org.awaitility.Durations.ONE_SECOND;
+import static org.awaitility.Durations.TWO_SECONDS;
 import static org.folio.spring.integration.XOkapiHeaders.TENANT;
 import static org.folio.spring.integration.XOkapiHeaders.URL;
+import static org.folio.support.TestConstants.MAPPER;
 import static org.folio.support.TestConstants.TENANT_ID;
 import static org.folio.support.TestConstants.USER_ID;
 import static org.hamcrest.Matchers.is;
@@ -18,12 +19,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import lombok.SneakyThrows;
 import org.awaitility.core.ThrowingRunnable;
 import org.folio.spring.FolioModuleMetadata;
 import org.folio.spring.integration.XOkapiHeaders;
+import org.folio.spring.testing.extension.EnableMinio;
 import org.folio.spring.testing.extension.EnableOkapi;
 import org.folio.spring.testing.extension.EnablePostgres;
 import org.folio.spring.testing.extension.impl.OkapiConfiguration;
@@ -50,6 +51,7 @@ import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @EnableOkapi
+@EnableMinio
 @EnablePostgres
 @SpringBootTest
 @ActiveProfiles("test")
@@ -63,7 +65,6 @@ public class IntegrationTestBase {
   protected static @Autowired MockMvc mockMvc;
   protected static DatabaseHelper databaseHelper;
   protected static OkapiConfiguration okapi;
-  protected static ObjectMapper objectMapper = new ObjectMapper();
 
   @NotNull
   protected static ResultMatcher errorParameterValueMatches(Matcher<String> matcher) {
@@ -109,7 +110,7 @@ public class IntegrationTestBase {
     httpHeaders.add(XOkapiHeaders.USER_ID, USER_ID);
     httpHeaders.add(XOkapiHeaders.URL, okapi.getOkapiUrl());
 
-    var tenantAttributes = new TenantAttributes().moduleTo("mod-entities-links")
+    var tenantAttributes = new TenantAttributes().moduleTo("mod-marc-migrations")
         .addParametersItem(new Parameter("loadReference").value(String.valueOf(loadReference)));
     doPost("/_/tenant", tenantAttributes, httpHeaders);
   }
@@ -235,17 +236,17 @@ public class IntegrationTestBase {
 
   @SneakyThrows
   protected static String asJson(Object value) {
-    return objectMapper.writeValueAsString(value);
+    return MAPPER.writeValueAsString(value);
   }
 
   @SneakyThrows
   protected static <T> T contentAsObj(MvcResult result, Class<T> objectClass) {
     var contentAsBytes = result.getResponse().getContentAsByteArray();
-    return objectMapper.readValue(contentAsBytes, objectClass);
+    return MAPPER.readValue(contentAsBytes, objectClass);
   }
 
   protected static void awaitUntilAsserted(ThrowingRunnable throwingRunnable) {
-    await().pollInterval(Duration.ofMillis(200)).atMost(ONE_SECOND).untilAsserted(throwingRunnable);
+    await().pollInterval(Duration.ofMillis(100)).atMost(TWO_SECONDS).untilAsserted(throwingRunnable);
   }
 
   @TestConfiguration

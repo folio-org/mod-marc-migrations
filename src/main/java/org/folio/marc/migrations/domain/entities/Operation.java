@@ -12,6 +12,7 @@ import java.sql.Timestamp;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.entities.types.OperationType;
@@ -21,6 +22,7 @@ import org.hibernate.type.SqlTypes;
 @Getter
 @Setter
 @Entity
+@ToString
 @Table(name = "operation")
 public class Operation {
 
@@ -48,8 +50,11 @@ public class Operation {
   @Column(name = "total_num_of_records", nullable = false)
   private Integer totalNumOfRecords;
 
-  @Column(name = "processed_num_of_records", nullable = false)
-  private Integer processedNumOfRecords;
+  @Column(name = "mapped_num_of_records", nullable = false)
+  private Integer mappedNumOfRecords;
+
+  @Column(name = "saved_num_of_records", nullable = false)
+  private Integer savedNumOfRecords;
 
   @Column(name = "start_time_mapping")
   private Timestamp startTimeMapping;

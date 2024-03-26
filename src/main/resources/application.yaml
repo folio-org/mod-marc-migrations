@@ -23,7 +23,7 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-    show-sql: false
+    show-sql: true
   liquibase:
     change-log: classpath:db/changelog/changelog-master.xml
   cloud:
@@ -32,6 +32,16 @@ spring:
         enabled: true
   jackson:
     default-property-inclusion: non_empty
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: never
+  cache:
+    cache-names:
+      - mapping-metadata-cache
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=600s
 
 folio:
   environment: ${ENV:folio}
@@ -54,6 +64,13 @@ folio:
     chunk-fetch-ids-count: ${CHUNK_FETCH_IDS_COUNT:500}
     chunk-persist-count: ${CHUNK_PERSIST_COUNT:1000}
     chunk-processing-max-parallelism: ${CHUNK_PROCESSING_MAX_PARALLELISM:4}
+  remote-storage:
+    endpoint: ${S3_URL:http://localhost:9000/}
+    region: ${S3_REGION:}
+    bucket: ${S3_BUCKET:marc-migrations}
+    accessKey: ${S3_ACCESS_KEY_ID:}
+    secretKey: ${S3_SECRET_ACCESS_KEY:}
+    awsSdk: ${S3_IS_AWS:false}
 
 management:
   endpoints:

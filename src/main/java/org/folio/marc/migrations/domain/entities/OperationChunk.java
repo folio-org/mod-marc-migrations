@@ -5,8 +5,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
@@ -22,6 +20,7 @@ import org.hibernate.type.SqlTypes;
 @Getter
 @Setter
 @Entity
+@ToString
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
@@ -32,10 +31,8 @@ public class OperationChunk {
   @Column(nullable = false)
   private UUID id;
 
-  @ToString.Exclude
-  @ManyToOne
-  @JoinColumn(name = "operation_id", nullable = false)
-  private Operation operation;
+  @Column(nullable = false)
+  private UUID operationId;
 
   /**
    * Interval start record id, inclusive.
