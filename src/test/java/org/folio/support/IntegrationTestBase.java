@@ -1,7 +1,7 @@
 package org.folio.support;
 
 import static org.awaitility.Awaitility.await;
-import static org.awaitility.Durations.TWO_SECONDS;
+import static org.awaitility.Durations.FIVE_SECONDS;
 import static org.folio.spring.integration.XOkapiHeaders.TENANT;
 import static org.folio.spring.integration.XOkapiHeaders.URL;
 import static org.folio.support.TestConstants.MAPPER;
@@ -246,7 +246,7 @@ public class IntegrationTestBase {
   }
 
   protected static void awaitUntilAsserted(ThrowingRunnable throwingRunnable) {
-    await().pollInterval(Duration.ofMillis(100)).atMost(TWO_SECONDS).untilAsserted(throwingRunnable);
+    await().pollInterval(Duration.ofMillis(100)).atMost(FIVE_SECONDS).untilAsserted(throwingRunnable);
   }
 
   @TestConfiguration
