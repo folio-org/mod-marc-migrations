@@ -10,6 +10,6 @@ public class ApplicationConfig {
 
   @Bean
   public BeanPropertyRowMapper<OperationChunk> operationChunkMapper() {
-    return new BeanPropertyRowMapper<>();
+    return new BeanPropertyRowMapper<>(OperationChunk.class);
   }
 }
