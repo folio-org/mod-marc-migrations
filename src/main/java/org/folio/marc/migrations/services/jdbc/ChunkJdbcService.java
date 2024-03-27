@@ -36,12 +36,13 @@ public class ChunkJdbcService extends JdbcService {
     VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
     """;
 
-  private final BeanPropertyRowMapper<OperationChunk> mapper = new BeanPropertyRowMapper<>(OperationChunk.class);
-
+  private final BeanPropertyRowMapper<OperationChunk> mapper;
   private final JdbcTemplate jdbcTemplate;
 
-  public ChunkJdbcService(FolioExecutionContext context, JdbcTemplate jdbcTemplate) {
+  public ChunkJdbcService(FolioExecutionContext context, BeanPropertyRowMapper<OperationChunk> mapper,
+                          JdbcTemplate jdbcTemplate) {
     super(context);
+    this.mapper = mapper;
     this.jdbcTemplate = jdbcTemplate;
   }
 

@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component;
 public class RecordsChunkMapper
   implements ItemProcessor<MappingComposite<MarcRecord>, MappingComposite<MappingResult>> {
 
-  private final String noMarcRecordJson =
+  private static final String NO_MARC_RECORD_JSON =
     "{\"marcId\": \"%s\", \"authorityId\": \"%s\", \"state\": \"%s\", \"version\": %s}";
 
   private final ObjectMapper objectMapper;
@@ -79,7 +79,7 @@ public class RecordsChunkMapper
       log.warn(
         "Unable to convert invalid marc record to string. marcId {}, authorityId {}, state {}, version {}",
         marc.marcId(), marc.authorityId(), marc.state(), marc.version());
-      return noMarcRecordJson.formatted(marc.marcId(), marc.authorityId(), marc.state(), marc.version());
+      return NO_MARC_RECORD_JSON.formatted(marc.marcId(), marc.authorityId(), marc.state(), marc.version());
     }
   }
 }

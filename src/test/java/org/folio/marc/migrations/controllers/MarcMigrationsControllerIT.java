@@ -195,7 +195,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
         && step.getNumOfErrors() == 0);
 
     var fileNames = s3Client.list("operation/" + operation.getId() + "/");
-    assertThat(fileNames).hasSize(0);
+    assertThat(fileNames).isEmpty();
   }
 
   @Test

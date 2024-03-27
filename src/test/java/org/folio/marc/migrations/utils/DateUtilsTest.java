@@ -6,10 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.Month;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import org.apache.commons.lang3.ThreadUtils;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
 
@@ -78,11 +80,11 @@ class DateUtilsTest {
   void currentTs_NotNull() throws InterruptedException {
     // Arrange
     Instant before = Instant.now();
-    Thread.sleep(1L);
+    ThreadUtils.sleep(Duration.ofMillis(1L));
 
     // Act
     Timestamp result = DateUtils.currentTs();
-    Thread.sleep(1L);
+    ThreadUtils.sleep(Duration.ofMillis(1L));
 
     // Assert
     assertThat(result)
