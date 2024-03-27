@@ -1,7 +1,7 @@
 package org.folio.marc.migrations.services.tenant;
 
 import lombok.extern.log4j.Log4j2;
-import org.folio.marc.migrations.services.JdbcService;
+import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.spring.FolioExecutionContext;
 import org.folio.spring.liquibase.FolioSpringLiquibase;
 import org.folio.spring.service.PrepareSystemUserService;
@@ -17,15 +17,15 @@ import org.springframework.stereotype.Service;
 public class ModuleTenantService extends TenantService {
 
   private final PrepareSystemUserService systemUserService;
-  private final JdbcService jdbcService;
+  private final AuthorityJdbcService authorityJdbcService;
 
   public ModuleTenantService(JdbcTemplate jdbcTemplate,
                              FolioExecutionContext context,
                              FolioSpringLiquibase folioSpringLiquibase,
-                             PrepareSystemUserService systemUserService, JdbcService jdbcService) {
+                             PrepareSystemUserService systemUserService, AuthorityJdbcService authorityJdbcService) {
     super(jdbcTemplate, context, folioSpringLiquibase);
     this.systemUserService = systemUserService;
-    this.jdbcService = jdbcService;
+    this.authorityJdbcService = authorityJdbcService;
   }
 
   @Override
@@ -33,7 +33,7 @@ public class ModuleTenantService extends TenantService {
     log.info("afterTenantUpdate::Initiating additional setup [tenant: {}]", context.getTenantId());
     super.afterTenantUpdate(tenantAttributes);
     systemUserService.setupSystemUser();
-    jdbcService.initViews();
+    authorityJdbcService.initViews(context.getTenantId());
     log.info("afterTenantUpdate::Completed additional setup [tenant: {}]", context.getTenantId());
   }
 }

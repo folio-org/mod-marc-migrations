@@ -2,7 +2,6 @@ package org.folio.marc.migrations.services.operations;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentCaptor.captor;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -11,7 +10,7 @@ import java.util.UUID;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.repositories.OperationRepository;
-import org.folio.marc.migrations.services.JdbcService;
+import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.spring.FolioExecutionContext;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
@@ -27,22 +26,22 @@ class OperationsServiceTest {
 
   private @Mock FolioExecutionContext context;
   private @Mock OperationRepository repository;
-  private @Mock JdbcService jdbcService;
+  private @Mock AuthorityJdbcService authorityJdbcService;
   private @InjectMocks OperationsService service;
 
   @Test
   void createOperation_SetsFieldsAndSavesOperation() {
     // Arrange
-    Operation operation = new Operation();
-    UUID userId = UUID.randomUUID();
+    var operation = new Operation();
+    var userId = UUID.randomUUID();
     when(context.getUserId()).thenReturn(userId);
     when(repository.save(operation)).thenReturn(operation);
-    when(jdbcService.countNumOfRecords()).thenReturn(10);
+    when(authorityJdbcService.countNumOfRecords()).thenReturn(10);
 
     // Act
-    Operation result = service.createOperation(operation);
+    var result = service.createOperation(operation);
 
-    ArgumentCaptor<Operation> captor = captor();
+    var captor = ArgumentCaptor.<Operation>captor();
 
     // Assert
     verify(repository).save(captor.capture());
@@ -50,7 +49,8 @@ class OperationsServiceTest {
     assertEquals(userId, captor.getValue().getUserId());
     assertEquals(OperationStatusType.NEW, captor.getValue().getStatus());
     assertEquals(10, captor.getValue().getTotalNumOfRecords());
-    assertEquals(0, captor.getValue().getProcessedNumOfRecords());
+    assertEquals(0, captor.getValue().getMappedNumOfRecords());
+    assertEquals(0, captor.getValue().getSavedNumOfRecords());
   }
 
   @Test

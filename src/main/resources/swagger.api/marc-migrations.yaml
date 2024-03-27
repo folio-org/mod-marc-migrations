@@ -157,8 +157,11 @@ components:
         totalNumOfRecords:
           description: Total number of records that will be migrated
           type: integer
-        processedNumOfRecords:
-          description: Total number of migrated records
+        mappedNumOfRecords:
+          description: Total number of mapped records
+          type: integer
+        savedNumOfRecords:
+          description: Total number of saved records
           type: integer
         startTimeMapping:
           description: Start time of mapping step of migration

@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import org.folio.marc.migrations.services.JdbcService;
+import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.spring.FolioExecutionContext;
 import org.folio.spring.service.PrepareSystemUserService;
 import org.folio.spring.testing.type.UnitTest;
@@ -22,7 +22,7 @@ class ModuleTenantServiceTest {
 
   private @Mock PrepareSystemUserService systemUserService;
   private @Mock FolioExecutionContext context;
-  private @Mock JdbcService jdbcService;
+  private @Mock AuthorityJdbcService authorityJdbcService;
 
   private @InjectMocks ModuleTenantService moduleTenantService;
 
@@ -32,7 +32,7 @@ class ModuleTenantServiceTest {
     assertDoesNotThrow(() -> moduleTenantService.createOrUpdateTenant(new TenantAttributes().moduleTo("mod-1.0.0")));
 
     verify(systemUserService).setupSystemUser();
-    verify(jdbcService).initViews();
+    verify(authorityJdbcService).initViews(TENANT_ID);
   }
 
 }

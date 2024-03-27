@@ -1,16 +1,17 @@
-package org.folio.marc.migrations.services;
+package org.folio.marc.migrations.services.jdbc;
 
 import java.util.List;
 import java.util.UUID;
 import lombok.extern.log4j.Log4j2;
-import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
+import org.folio.marc.migrations.domain.entities.MarcRecord;
 import org.folio.spring.FolioExecutionContext;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 @Log4j2
 @Service
-public class JdbcService {
+public class AuthorityJdbcService extends JdbcService {
 
   private static final String CREATE_RECORDS_LB_VIEW_SQL = """
     CREATE OR REPLACE VIEW %s.records_lb_view
@@ -53,22 +54,23 @@ public class JdbcService {
     LIMIT %s;
     """;
 
-  private static final String UPDATE_OPERATION_STATUS = """
-    UPDATE %s.operation
-    SET status = '%s'
-    WHERE id = '%s';
+  private static final String GET_AUTHORITIES_CHUNK = """
+    SELECT *
+    FROM %s.marc_authority_view
+    WHERE marc_id >= '%s' and marc_id <= '%s';
     """;
 
   private final JdbcTemplate jdbcTemplate;
-  private final FolioExecutionContext context;
+  private final BeanPropertyRowMapper<MarcRecord> recordsMapper;
 
-  public JdbcService(JdbcTemplate jdbcTemplate, FolioExecutionContext context) {
+  public AuthorityJdbcService(JdbcTemplate jdbcTemplate, FolioExecutionContext context,
+                              BeanPropertyRowMapper<MarcRecord> recordsMapper) {
+    super(context);
     this.jdbcTemplate = jdbcTemplate;
-    this.context = context;
+    this.recordsMapper = recordsMapper;
   }
 
-  public void initViews() {
-    var tenantId = context.getTenantId();
+  public void initViews(String tenantId) {
     var schemaName = getSchemaName();
     createView(tenantId, CREATE_RECORDS_LB_VIEW_SQL.formatted(schemaName, tenantId));
     createView(tenantId, CREATE_MARC_RECORDS_LB_VIEW_SQL.formatted(schemaName, tenantId));
@@ -91,10 +93,10 @@ public class JdbcService {
     return getAuthorityIdsChunk(null, limit);
   }
 
-  public void updateOperationStatus(UUID id, OperationStatusType status) {
-    log.info("updateOperationStatus::For operation {}: {}", id, status);
-    var sql = UPDATE_OPERATION_STATUS.formatted(getSchemaName(), status, id);
-    jdbcTemplate.execute(sql);
+  public List<MarcRecord> getAuthoritiesChunk(UUID from, UUID to) {
+    log.debug("getAuthoritiesChunk:: from id {}, to id {}", from, to);
+    var sql = GET_AUTHORITIES_CHUNK.formatted(getSchemaName(), from, to);
+    return jdbcTemplate.query(sql, recordsMapper);
   }
 
   private void createView(String tenantId, String query) {
@@ -102,9 +104,4 @@ public class JdbcService {
     jdbcTemplate.execute(query);
     log.info("createView:: Successfully created view [tenant: {}, query: {}]", tenantId, query);
   }
-
-  private String getSchemaName() {
-    return context.getFolioModuleMetadata().getDBSchemaName(context.getTenantId());
-  }
-
 }

@@ -47,7 +47,10 @@
         <column name="total_num_of_records" type="INT">
             <constraints nullable="false"/>
         </column>
-        <column name="processed_num_of_records" type="INT">
+        <column name="mapped_num_of_records" type="INT">
+            <constraints nullable="false"/>
+        </column>
+        <column name="saved_num_of_records" type="INT">
             <constraints nullable="false"/>
         </column>
         <column name="start_time_mapping" type="DATETIME"/>

@@ -5,6 +5,7 @@ services:
   mod-marc-migrations:
     container_name: mod-marc-migrations
     image: dev.folio/mod-marc-migrations
+    user: root
     build:
       context: ../
       dockerfile: Dockerfile
@@ -13,11 +14,13 @@ services:
     ports:
       - "${APP_PORT}:8081"
       - "${DEBUG_PORT}:${DEBUG_PORT}"
+    volumes:
+      - ./generated:/usr/verticles/job
     depends_on:
       - api-mock
       - postgres
-      - mod-source-record-storage
       - mod-entities-links
+      - minio
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
@@ -29,27 +32,13 @@ services:
       JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${DEBUG_PORT}
       OKAPI_URL: ${OKAPI_URL}
       SYSTEM_USER_PASSWORD: mod-marc-migrations
-
-  mod-source-record-storage:
-    container_name: mod-source-record-storage-marc-migrations
-    image: folioci/mod-source-record-storage:latest
-    networks:
-      - mod-marc-migrations-local
-    ports:
-      - "8082:8081"
-    depends_on:
-      - postgres
-      - kafka
-    environment:
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      DB_DATABASE: ${DB_DATABASE}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      KAFKA_HOST: ${KAFKA_HOST}
-      KAFKA_PORT: ${KAFKA_PORT}
-      ENV: ${ENV}
-      JAVA_OPTIONS: -Xmx120m -Xms120m
+      S3_REGION: ${S3_REGION}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_URL: ${S3_URL}
+      RECORDS_CHUNK_SIZE: ${RECORDS_CHUNK_SIZE}
+      CHUNK_FETCH_IDS_COUNT: ${CHUNK_FETCH_IDS_COUNT}
+      CHUNK_PERSIST_COUNT: ${CHUNK_PERSIST_COUNT}
 
   mod-entities-links:
     container_name: mod-entities-links-marc-migrations
@@ -90,6 +79,9 @@ services:
     container_name: postgres-marc-migrations
     networks:
       - mod-marc-migrations-local
+    volumes:
+      - ../src/test/resources/sql/mod-entities-links-init.sql:/docker-entrypoint-initdb.d/links-init.sql
+      - ../src/test/resources/sql/mod-source-record-storage-init.sql:/docker-entrypoint-initdb.d/srs-init.sql
     ports:
       - "${DB_PORT}:5432"
     environment:
@@ -153,6 +145,22 @@ services:
     networks:
       - mod-marc-migrations-local
 
+  minio:
+    image: minio/minio
+    container_name: minio-marc-migrations
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+      - "33995:33995"
+    volumes:
+      - minio-data:/data
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY}
+    command: server start
+    networks:
+      - mod-marc-migrations-local
+
 networks:
   mod-marc-migrations-local:
     driver: bridge
@@ -161,4 +169,6 @@ volumes:
   pgadmin-data:
     driver: "local"
   postgres-data:
+    driver: "local"
+  minio-data:
     driver: "local"

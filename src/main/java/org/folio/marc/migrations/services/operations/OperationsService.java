@@ -7,7 +7,7 @@ import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.repositories.OperationRepository;
-import org.folio.marc.migrations.services.JdbcService;
+import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.spring.FolioExecutionContext;
 import org.springframework.stereotype.Service;
 
@@ -18,15 +18,16 @@ public class OperationsService {
 
   private final FolioExecutionContext context;
   private final OperationRepository repository;
-  private final JdbcService jdbcService;
+  private final AuthorityJdbcService authorityJdbcService;
 
   public Operation createOperation(Operation operation) {
     log.info("createOperation::Preparing new operation: {}", operation);
-    var numOfRecords = jdbcService.countNumOfRecords();
+    var numOfRecords = authorityJdbcService.countNumOfRecords();
     operation.setUserId(context.getUserId());
     operation.setStatus(OperationStatusType.NEW);
     operation.setTotalNumOfRecords(numOfRecords);
-    operation.setProcessedNumOfRecords(0);
+    operation.setMappedNumOfRecords(0);
+    operation.setSavedNumOfRecords(0);
     log.info("createOperation::Saving new operation: {}", operation);
     return repository.save(operation);
   }

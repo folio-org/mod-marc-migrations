@@ -1,0 +1,71 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+  <changeSet id="MODMARCMIG-7@@create-operation-step-enum" author="Viacheslav_Kolesnyk">
+    <preConditions onFail="MARK_RAN">
+      <sqlCheck expectedResult="0">
+        SELECT COUNT(*)
+        FROM pg_type t
+        JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+        WHERE t.typname = 'operationstep' AND n.nspname = '${database.defaultSchemaName}';
+      </sqlCheck>
+    </preConditions>
+
+    <comment>Create OperationStep enum</comment>
+
+    <sql>CREATE TYPE OperationStep AS ENUM ('DATA_MAPPING', 'DATA_SAVING')</sql>
+  </changeSet>
+
+  <changeSet id="MODMARCMIG-7@@create-step-status-enum" author="Viacheslav_Kolesnyk">
+    <preConditions onFail="MARK_RAN">
+      <sqlCheck expectedResult="0">
+        SELECT COUNT(*)
+        FROM pg_type t
+        JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+        WHERE t.typname = 'stepstatus' AND n.nspname = '${database.defaultSchemaName}';
+      </sqlCheck>
+    </preConditions>
+
+    <comment>Create StepStatus enum</comment>
+
+    <sql>CREATE TYPE StepStatus AS ENUM ('IN_PROGRESS', 'COMPLETED', 'FAILED')</sql>
+  </changeSet>
+
+  <changeSet id="MODMARCMIG-7@@create-operation-chunk-step-table" author="Viacheslav_Kolesnyk">
+    <preConditions>
+      <not>
+        <tableExists tableName="operation_chunk_step"/>
+      </not>
+    </preConditions>
+
+    <comment>Create operation chunk step table</comment>
+
+    <createTable tableName="operation_chunk_step">
+      <column name="id" type="UUID">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_operation_chunk_step"/>
+      </column>
+      <column name="operation_id" type="UUID">
+        <constraints nullable="false" foreignKeyName="fk_step_operation" referencedTableName="operation" referencedColumnNames="id"/>
+      </column>
+      <column name="operation_chunk_id" type="UUID">
+        <constraints nullable="false" foreignKeyName="fk_step_chunk" referencedTableName="operation_chunk" referencedColumnNames="id"/>
+      </column>
+      <column name="operation_step" type="OperationStep">
+        <constraints nullable="false"/>
+      </column>
+      <column name="entity_error_chunk_file_name" type="TEXT"/>
+      <column name="error_chunk_file_name" type="TEXT"/>
+      <column name="status" type="StepStatus">
+        <constraints nullable="false"/>
+      </column>
+      <column name="step_start_time" type="DATETIME"/>
+      <column name="step_end_time" type="DATETIME"/>
+      <column name="num_of_errors" type="INT" defaultValue="0">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+  </changeSet>
+</databaseChangeLog>
