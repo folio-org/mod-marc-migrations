@@ -64,7 +64,7 @@ class RecordsChunkMapperTest {
         && result.mappedRecord() != null
         && result.mappedRecord().contains("\"_version\":1,\"source\":\"MARC\""));
 
-    records.stream().map(mr -> mr.authorityId().toString()).forEach(authorityId ->
+    records.stream().map(mr -> mr.recordId().toString()).forEach(authorityId ->
       assertThat(actual.records().stream()
         .anyMatch(mappingResult -> mappingResult.mappedRecord().contains(authorityId)))
         .isTrue());
@@ -100,7 +100,7 @@ class RecordsChunkMapperTest {
         && result.mappedRecord().contains("\"_version\":1,\"source\":\"MARC\"")
     );
 
-    records.stream().map(mr -> mr.authorityId().toString()).forEach(authorityId ->
+    records.stream().map(mr -> mr.recordId().toString()).forEach(authorityId ->
       assertThat(actual.records().stream()
         .anyMatch(mappingResult -> Optional.ofNullable(mappingResult.mappedRecord())
           .orElse(mappingResult.invalidMarcRecord())
@@ -170,7 +170,7 @@ class RecordsChunkMapperTest {
         && result.invalidMarcRecord() != null
         && result.invalidMarcRecord().contains(marcRecordContains));
 
-    records.stream().map(mr -> mr.authorityId().toString()).forEach(authorityId ->
+    records.stream().map(mr -> mr.recordId().toString()).forEach(authorityId ->
       assertThat(actual.records().stream()
         .anyMatch(mappingResult -> mappingResult.invalidMarcRecord().contains(authorityId)))
         .isTrue());

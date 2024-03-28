@@ -55,10 +55,8 @@ public class ChunkStep {
   @Column(nullable = false)
   private StepStatus status;
 
-  @Column(name = "start_time_mapping")
   private Timestamp stepStartTime;
 
-  @Column(name = "end_time_mapping")
   private Timestamp stepEndTime;
 
   @Column(nullable = false)

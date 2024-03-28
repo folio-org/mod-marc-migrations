@@ -132,17 +132,6 @@
       </exclusions>
     </dependency>
 
-    <!-- Hibernate 6.4.1.Final has issue with saving or persisting JsonType fields and this was observed for authorities
-    when they are persisted hibernate increased version property twice (one for insert and one for update).
-    There is similar to this one issue in their issue tracker: https://hibernate.atlassian.net/browse/HHH-17660, we can
-    track its status and once it fixed we can try to upgrade version of hibernate which is enough to remove this dependency
-    and use the one from parent spring-boot -->
-    <dependency>
-      <groupId>org.hibernate.orm</groupId>
-      <artifactId>hibernate-core</artifactId>
-      <version>6.3.1.Final</version>
-    </dependency>
-
     <!-- Test dependencies -->
     <dependency>
       <groupId>org.springframework.boot</groupId>

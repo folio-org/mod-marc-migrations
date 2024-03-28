@@ -8,6 +8,9 @@ import org.springframework.jdbc.core.BeanPropertyRowMapper;
 @Configuration
 public class ApplicationConfig {
 
+  /**
+   * Provides bean to map database records to OperationChunk entities using JdbcTemplate
+   * */
   @Bean
   public BeanPropertyRowMapper<OperationChunk> operationChunkMapper() {
     return new BeanPropertyRowMapper<>(OperationChunk.class);

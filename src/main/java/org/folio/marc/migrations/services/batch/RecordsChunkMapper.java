@@ -25,7 +25,7 @@ public class RecordsChunkMapper
   implements ItemProcessor<MappingComposite<MarcRecord>, MappingComposite<MappingResult>> {
 
   private static final String NO_MARC_RECORD_JSON =
-    "{\"marcId\": \"%s\", \"authorityId\": \"%s\", \"state\": \"%s\", \"version\": %s}";
+    "{\"marcId\": \"%s\", \"recordId\": \"%s\", \"state\": \"%s\", \"version\": %s}";
 
   private final ObjectMapper objectMapper;
   private final MappingMetadataProvider mappingMetadataProvider;
@@ -47,15 +47,15 @@ public class RecordsChunkMapper
           var marcSource = new JsonObject(sourceData.marc().toString());
           var authority = new MarcToAuthorityMapper().mapRecord(
             marcSource, mappingData.mappingParameters(), mappingData.mappingRules());
-          authority.setId(sourceData.authorityId().toString());
+          authority.setId(sourceData.recordId().toString());
           authority.setVersion(sourceData.version());
           authority.setSource(Authority.Source.MARC);
 
           var authorityString = objectMapper.writeValueAsString(authority);
           return new MappingResult(authorityString, null, null);
         } catch (Exception ex) {
-          log.warn("Error while processing data for marcId {}, authorityId {}: {}",
-            sourceData.marcId(), sourceData.authorityId(), ex.getMessage());
+          log.warn("Error while processing data for marcId {}, recordId {}: {}",
+            sourceData.marcId(), sourceData.recordId(), ex.getMessage());
           return new MappingResult(null, marcToString(sourceData), ex.getMessage());
         }
       })
@@ -77,9 +77,9 @@ public class RecordsChunkMapper
       return objectMapper.writeValueAsString(marc);
     } catch (JsonProcessingException e) {
       log.warn(
-        "Unable to convert invalid marc record to string. marcId {}, authorityId {}, state {}, version {}",
-        marc.marcId(), marc.authorityId(), marc.state(), marc.version());
-      return NO_MARC_RECORD_JSON.formatted(marc.marcId(), marc.authorityId(), marc.state(), marc.version());
+        "Unable to convert invalid marc record to string. marcId {}, recordId {}, state {}, version {}",
+        marc.marcId(), marc.recordId(), marc.state(), marc.version());
+      return NO_MARC_RECORD_JSON.formatted(marc.marcId(), marc.recordId(), marc.state(), marc.version());
     }
   }
 }
