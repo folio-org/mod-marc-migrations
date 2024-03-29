@@ -6,4 +6,6 @@
 
   <include file="/changes/v1.0/initial_schema.xml" relativeToChangelogFile="true"/>
   <include file="/changes/v1.0/create_operation_chunk.xml" relativeToChangelogFile="true"/>
+  <include file="/changes/v1.0/create_chunk_step.xml" relativeToChangelogFile="true"/>
+  <include file="/changes/v1.0/create_spring_batch_structure.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

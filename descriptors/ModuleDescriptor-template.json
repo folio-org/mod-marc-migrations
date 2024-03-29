@@ -39,6 +39,9 @@
           "pathPattern": "/marc-migrations",
           "permissionsRequired": [
             "marc-migrations.operations.item.post"
+          ],
+          "modulePermissions": [
+            "mapping-metadata.get"
           ]
         },
         {
