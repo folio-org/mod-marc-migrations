@@ -15,6 +15,7 @@ import org.folio.marc.migrations.domain.entities.OperationChunk;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.entities.types.OperationStep;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
+import org.folio.marc.migrations.services.batch.mapping.MappingRecordsChunkPreProcessor;
 import org.folio.marc.migrations.services.domain.RecordsMappingData;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
@@ -28,11 +29,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
-class ChunkStepPreparationProcessorTest {
+class MappingRecordsChunkPreProcessorTest {
 
   private @Mock AuthorityJdbcService authorityJdbcService;
   private @Mock ChunkStepJdbcService chunkStepJdbcService;
-  private @InjectMocks ChunkStepPreparationProcessor processor;
+  private @InjectMocks MappingRecordsChunkPreProcessor processor;
 
   @Test
   void process_positive() {

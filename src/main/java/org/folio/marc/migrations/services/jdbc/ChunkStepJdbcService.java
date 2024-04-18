@@ -21,9 +21,7 @@ public class ChunkStepJdbcService extends JdbcService {
 
   private static final String UPDATE_CHUNK_STEP = """
     UPDATE %s.operation_chunk_step
-    SET status = '%s',
-        step_end_time = '%s',
-        num_of_errors = %s
+    SET %s
     WHERE id = '%s';
     """;
 
@@ -52,7 +50,28 @@ public class ChunkStepJdbcService extends JdbcService {
     log.debug("updateChunkStep::For step {}: status {}, stepEndTime {}, numOfErrors {}",
       id, status, stepEndTime, numOfErrors);
 
-    var sql = UPDATE_CHUNK_STEP.formatted(getSchemaName(), status, stepEndTime, numOfErrors, id);
+    var setFields = """
+        status = '%s',
+        step_end_time = '%s',
+        num_of_errors = %s
+        """.formatted(status, stepEndTime, numOfErrors);
+    var sql = UPDATE_CHUNK_STEP.formatted(getSchemaName(), setFields, id);
+    jdbcTemplate.update(sql);
+  }
+
+  public void updateChunkStep(UUID id, StepStatus status, Timestamp stepEndTime, int numOfErrors,
+                              String entityErrorChunkFileName, String errorChunkFileName) {
+    log.debug("updateChunkStep::For step {}: status {}, stepEndTime {}, numOfErrors {}",
+        id, status, stepEndTime, numOfErrors);
+
+    var setFields = """
+        status = '%s',
+        entity_error_chunk_file_name = '%s',
+        error_chunk_file_name = '%s',
+        step_end_time = '%s',
+        num_of_errors = %s
+        """.formatted(status, entityErrorChunkFileName, errorChunkFileName, stepEndTime, numOfErrors);
+    var sql = UPDATE_CHUNK_STEP.formatted(getSchemaName(), setFields, id);
     jdbcTemplate.update(sql);
   }
 }

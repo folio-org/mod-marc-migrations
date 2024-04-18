@@ -9,24 +9,22 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.SneakyThrows;
-import org.folio.marc.migrations.config.MigrationProperties;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.services.domain.OperationTimeType;
 import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
 import org.folio.marc.migrations.services.operations.ChunkService;
-import org.folio.spring.FolioExecutionContext;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParameter;
@@ -36,13 +34,12 @@ import org.springframework.batch.core.launch.JobLauncher;
 @UnitTest
 @ExtendWith(MockitoExtension.class)
 class MigrationOrchestratorTest {
-  private @Spy MigrationProperties migrationProperties;
+
   private @Mock ChunkService chunkService;
   private @Mock OperationJdbcService jdbcService;
-  private @Mock FolioExecutionContext context;
-  private @Mock FolioExecutor remappingExecutor;
   private @Mock JobLauncher jobLauncher;
   private @Mock Job job;
+  private @Mock FolioExecutor remappingExecutor;
   private @InjectMocks MigrationOrchestrator service;
 
   @Test
@@ -51,6 +48,9 @@ class MigrationOrchestratorTest {
     // Arrange
     var operation = new Operation();
     operation.setId(UUID.randomUUID());
+    operation.setStatus(OperationStatusType.DATA_MAPPING);
+    var operationId = operation.getId().toString();
+    when(jdbcService.getOperation(operationId)).thenReturn(operation);
     doAnswer(invocation -> {
       ((Runnable) invocation.getArgument(0)).run();
       return null;
@@ -60,11 +60,12 @@ class MigrationOrchestratorTest {
     service.submitMappingTask(operation).get(200, TimeUnit.MILLISECONDS);
 
     // Assert
-    verify(jdbcService).updateOperationStatus(eq(operation.getId().toString()), eq(OperationStatusType.DATA_MAPPING),
+    verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING),
       eq(OperationTimeType.MAPPING_START), notNull());
     verify(chunkService).prepareChunks(operation);
     verify(jobLauncher).run(job, new JobParameters(
-      Map.of(OPERATION_ID, new JobParameter<>(operation.getId().toString(), String.class))));
+      Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class))));
+    verify(jdbcService).getOperation(operationId);
     verifyNoMoreInteractions(jdbcService);
   }
 
@@ -74,6 +75,7 @@ class MigrationOrchestratorTest {
     // Arrange
     var operation = new Operation();
     operation.setId(UUID.randomUUID());
+    var operationId = operation.getId().toString();
     doAnswer(invocation -> {
       ((Runnable) invocation.getArgument(0)).run();
       return null;
@@ -84,10 +86,10 @@ class MigrationOrchestratorTest {
     service.submitMappingTask(operation).get(200, TimeUnit.MILLISECONDS);
 
     // Assert
-    verify(jdbcService).updateOperationStatus(eq(operation.getId().toString()), eq(OperationStatusType.DATA_MAPPING),
+    verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING),
       eq(OperationTimeType.MAPPING_START), notNull());
     verify(chunkService).prepareChunks(operation);
-    verify(jdbcService).updateOperationStatus(eq(operation.getId().toString()),
+    verify(jdbcService).updateOperationStatus(eq(operationId),
       eq(OperationStatusType.DATA_MAPPING_FAILED), eq(OperationTimeType.MAPPING_END), notNull());
     verifyNoInteractions(jobLauncher);
   }
@@ -98,6 +100,64 @@ class MigrationOrchestratorTest {
     // Arrange
     var operation = new Operation();
     operation.setId(UUID.randomUUID());
+    operation.setStatus(OperationStatusType.DATA_MAPPING);
+    var operationId = operation.getId().toString();
+    doAnswer(invocation -> {
+      ((Runnable) invocation.getArgument(0)).run();
+      return null;
+    }).when(remappingExecutor).execute(any());
+    when(jdbcService.getOperation(operationId)).thenReturn(operation);
+    doThrow(new IllegalStateException()).when(jobLauncher).run(any(), any());
+
+    // Act
+    service.submitMappingTask(operation).get(200, TimeUnit.MILLISECONDS);
+
+    // Assert
+    verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING),
+      eq(OperationTimeType.MAPPING_START), notNull());
+    verify(chunkService).prepareChunks(operation);
+    verify(jobLauncher).run(job, new JobParameters(
+      Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class))));
+    verify(jdbcService).updateOperationStatus(eq(operationId),
+      eq(OperationStatusType.DATA_MAPPING_FAILED), eq(OperationTimeType.MAPPING_END), notNull());
+    verifyNoMoreInteractions(jdbcService);
+  }
+
+  @Test
+  @SneakyThrows
+  void submitMappingSaveTask_positive() {
+    // Arrange
+    var operation = new Operation();
+    operation.setId(UUID.randomUUID());
+    operation.setStatus(OperationStatusType.DATA_SAVING);
+    var operationId = operation.getId().toString();
+    when(jdbcService.getOperation(operationId)).thenReturn(operation);
+    doAnswer(invocation -> {
+      ((Runnable) invocation.getArgument(0)).run();
+      return null;
+    }).when(remappingExecutor).execute(any());
+
+    // Act
+    service.submitMappingSaveTask(operation).get(200, TimeUnit.MILLISECONDS);
+
+    // Assert
+    verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_SAVING),
+        eq(OperationTimeType.SAVING_START), notNull());
+    verify(jobLauncher).run(job, new JobParameters(
+        Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class))));
+    verify(jdbcService).getOperation(operationId);
+    verifyNoMoreInteractions(jdbcService);
+  }
+
+  @Test
+  @SneakyThrows
+  void submitMappingSaveTask_negative_shouldFailAndUpdateOperationStatus_whenBatchJobFails() {
+    // Arrange
+    var operation = new Operation();
+    operation.setId(UUID.randomUUID());
+    operation.setStatus(OperationStatusType.DATA_SAVING);
+    var operationId = operation.getId().toString();
+    when(jdbcService.getOperation(operationId)).thenReturn(operation);
     doAnswer(invocation -> {
       ((Runnable) invocation.getArgument(0)).run();
       return null;
@@ -105,15 +165,16 @@ class MigrationOrchestratorTest {
     doThrow(new IllegalStateException()).when(jobLauncher).run(any(), any());
 
     // Act
-    service.submitMappingTask(operation).get(200, TimeUnit.MILLISECONDS);
+    service.submitMappingSaveTask(operation).get(200, TimeUnit.MILLISECONDS);
 
     // Assert
-    verify(jdbcService).updateOperationStatus(eq(operation.getId().toString()), eq(OperationStatusType.DATA_MAPPING),
-      eq(OperationTimeType.MAPPING_START), notNull());
-    verify(chunkService).prepareChunks(operation);
+    verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_SAVING),
+        eq(OperationTimeType.SAVING_START), notNull());
     verify(jobLauncher).run(job, new JobParameters(
-      Map.of(OPERATION_ID, new JobParameter<>(operation.getId().toString(), String.class))));
-    verify(jdbcService).updateOperationStatus(eq(operation.getId().toString()),
-      eq(OperationStatusType.DATA_MAPPING_FAILED), eq(OperationTimeType.MAPPING_END), notNull());
+        Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class))));
+    verify(jdbcService).getOperation(operationId);
+    verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_SAVING_FAILED),
+        eq(OperationTimeType.SAVING_END), notNull());
+    verifyNoMoreInteractions(jdbcService);
   }
 }

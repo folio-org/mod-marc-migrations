@@ -52,6 +52,18 @@
           "permissionsRequired": [
             "marc-migrations.operations.item.get"
           ]
+        },
+        {
+          "methods": [
+            "PUT"
+          ],
+          "pathPattern": "/marc-migrations/{id}",
+          "permissionsRequired": [
+            "marc-migrations.operations.item.put"
+          ],
+          "modulePermissions": [
+            "inventory-storage.authorities.bulk.post"
+          ]
         }
       ]
     },
@@ -100,12 +112,18 @@
       "description": "Get MARC Migrations Operation by ID"
     },
     {
+      "permissionName": "marc-migrations.operations.item.put",
+      "displayName": "MARC Migrations - Put operation",
+      "description": "Save MARC Migrations Operation by ID"
+    },
+    {
       "permissionName": "marc-migrations.all",
       "displayName": "MARC Migrations - all permissions",
       "description": "Entire set of permissions needed to use MARC migrations",
       "subPermissions": [
         "marc-migrations.operations.item.post",
-        "marc-migrations.operations.item.get"
+        "marc-migrations.operations.item.get",
+        "marc-migrations.operations.item.put"
       ]
     }
   ],

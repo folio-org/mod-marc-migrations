@@ -1,4 +1,4 @@
-package org.folio.marc.migrations.services.batch;
+package org.folio.marc.migrations.services.batch.mapping;
 
 import static org.folio.marc.migrations.services.batch.support.JobConstants.JOB_FILES_PATH;
 import static org.folio.marc.migrations.services.batch.support.JobConstants.JobParameterNames.OPERATION_ID;
@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
@@ -26,7 +27,7 @@ import org.springframework.stereotype.Component;
 @Component
 @StepScope
 @RequiredArgsConstructor
-public class FileUploadStepListener implements StepExecutionListener {
+public class MappingRecordsFileUploadStepListener implements StepExecutionListener {
 
   private final FolioS3Client s3Client;
   private final OperationJdbcService jdbcService;
@@ -54,7 +55,15 @@ public class FileUploadStepListener implements StepExecutionListener {
     try {
       log.info("afterStep:: trying to upload and delete local files for operation {}", operationId);
       uploadLocalFiles(filesPath, operationId);
-      finishOperation(operationId, OperationStatusType.DATA_MAPPING_COMPLETED);
+
+      var operation = jdbcService.getOperation(operationId);
+      if (!Objects.equals(operation.getTotalNumOfRecords(), operation.getMappedNumOfRecords())) {
+        log.warn("afterStep:: operation.totalNumOfRecords: {}, operation.mappedNumOfRecords: {}",
+            operation.getTotalNumOfRecords(), operation.getMappedNumOfRecords());
+        finishOperation(operationId, OperationStatusType.DATA_MAPPING_FAILED);
+      } else {
+        finishOperation(operationId, OperationStatusType.DATA_MAPPING_COMPLETED);
+      }
     } catch (Exception ex) {
       log.warn("afterStep:: file upload/delete failed for operation {}, reason {}",
         operationId, ex.getMessage());

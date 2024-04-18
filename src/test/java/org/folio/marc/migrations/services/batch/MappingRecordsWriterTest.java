@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
+import org.folio.marc.migrations.services.batch.mapping.MappingRecordsWriter;
 import org.folio.marc.migrations.services.domain.MappingComposite;
 import org.folio.marc.migrations.services.domain.MappingResult;
 import org.folio.marc.migrations.services.domain.RecordsMappingData;
@@ -28,14 +29,14 @@ import org.springframework.batch.item.Chunk;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
-class RecordsWriterTest {
+class MappingRecordsWriterTest {
 
   private final Long jobId = 5L;
   private final String jobFilesDirectory = "job/" + jobId;
   private final JobExecution jobExecution = new JobExecution(new JobInstance(jobId, "testJob"), null);
   private final StepExecution stepExecution = new StepExecution("testStep", jobExecution);
 
-  private RecordsWriter writer = new RecordsWriter();
+  private final MappingRecordsWriter writer = new MappingRecordsWriter();
 
   @AfterEach
   @SneakyThrows
