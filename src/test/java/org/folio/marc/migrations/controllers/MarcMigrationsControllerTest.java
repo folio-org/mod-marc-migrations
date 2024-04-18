@@ -1,12 +1,14 @@
 package org.folio.marc.migrations.controllers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.UUID;
 import org.folio.marc.migrations.controllers.delegates.MarcMigrationsService;
 import org.folio.marc.migrations.domain.dto.MigrationOperation;
 import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
+import org.folio.marc.migrations.domain.dto.SaveMigrationOperation;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -51,5 +53,20 @@ class MarcMigrationsControllerTest {
     // Assert
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals(result, response.getBody());
+  }
+
+  @Test
+  void saveMarcMigrations_ReturnsNoContentResponse() {
+    // Arrange
+    var operationId = UUID.randomUUID();
+    var saveMigrationOperation = new SaveMigrationOperation();
+
+    // Act
+    var response = migrationsController.saveMarcMigration(operationId, saveMigrationOperation);
+
+    // Assert
+    assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+    verify(migrationsService).saveMigrationOperation(operationId, saveMigrationOperation);
+
   }
 }

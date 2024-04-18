@@ -1,4 +1,4 @@
-package org.folio.marc.migrations.services.batch;
+package org.folio.marc.migrations.services.batch.mapping;
 
 import static org.folio.marc.migrations.services.batch.support.JobConstants.JOB_FILES_PATH;
 
@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component;
 @Component
 @StepScope
 @RequiredArgsConstructor
-public class RecordsWriter implements ItemWriter<MappingComposite<MappingResult>> {
+public class MappingRecordsWriter implements ItemWriter<MappingComposite<MappingResult>> {
 
   private String filePath;
 

@@ -1,0 +1,17 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "POST",
+        "urlPath": "/authority-storage/authorities/bulk"
+      },
+      "response": {
+        "status": 201,
+        "body": "{\"errorsNumber\":\"0\"}",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    }
+  ]
+}
