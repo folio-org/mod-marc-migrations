@@ -36,7 +36,7 @@
     <testcontainers.version>1.19.7</testcontainers.version>
 
     <checkstyle.version>10.15.0</checkstyle.version>
-    <maven-openapi-generator-plugin.version>7.4.0</maven-openapi-generator-plugin.version>
+    <maven-openapi-generator-plugin.version>7.5.0</maven-openapi-generator-plugin.version>
     <maven-copy-rename-plugin.version>1.0.1</maven-copy-rename-plugin.version>
     <maven-checkstyle-plugin.version>3.3.1</maven-checkstyle-plugin.version>
     <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
