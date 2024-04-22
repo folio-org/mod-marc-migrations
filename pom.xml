@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.2.4</version>
+    <version>3.2.5</version>
     <relativePath /> <!-- lookup parent from repository -->
   </parent>
 
@@ -28,7 +28,7 @@
 
     <folio-spring-support.version>8.2.0-SNAPSHOT</folio-spring-support.version>
     <folio-s3-client.version>2.2.0-SNAPSHOT</folio-s3-client.version>
-    <aws-sdk-java.version>2.25.31</aws-sdk-java.version>
+    <aws-sdk-java.version>2.25.35</aws-sdk-java.version>
     <di-core.version>4.3.0-SNAPSHOT</di-core.version>
     <mapstruct.version>1.5.5.Final</mapstruct.version>
     <lombok.mapstruct-binding.version>0.2.0</lombok.mapstruct-binding.version>
@@ -36,7 +36,7 @@
     <testcontainers.version>1.19.7</testcontainers.version>
 
     <checkstyle.version>10.15.0</checkstyle.version>
-    <maven-openapi-generator-plugin.version>7.4.0</maven-openapi-generator-plugin.version>
+    <maven-openapi-generator-plugin.version>7.5.0</maven-openapi-generator-plugin.version>
     <maven-copy-rename-plugin.version>1.0.1</maven-copy-rename-plugin.version>
     <maven-checkstyle-plugin.version>3.3.1</maven-checkstyle-plugin.version>
     <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
