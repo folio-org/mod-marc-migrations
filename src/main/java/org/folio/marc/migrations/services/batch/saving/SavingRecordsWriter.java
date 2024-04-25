@@ -37,7 +37,6 @@ public class SavingRecordsWriter implements ItemWriter<DataSavingResult> {
     log.debug("write:: for operationId {}, chunkId {}", operationId, chunkId);
 
     if (saveResult.saveResponse() == null) {
-      jdbcService.addProcessedOperationRecords(operationId, 0, 0);
       updateChunkAndChunkStep(chunkId, stepId, false, numberOfRecords, null, null);
       return;
     }
