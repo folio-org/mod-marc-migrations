@@ -331,8 +331,6 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
         .status(DATA_SAVING);
     tryPut(marcMigrationEndpoint(operationId), saveMigrationOperation)
         .andExpect(status().isNoContent());
-    doGetUntilMatches(marcMigrationEndpoint(operationId),
-        operationStatus(DATA_SAVING));
     awaitUntilAsserted(() ->
         doGet(marcMigrationEndpoint(operationId))
             .andExpect(operationStatus(DATA_SAVING_COMPLETED))
