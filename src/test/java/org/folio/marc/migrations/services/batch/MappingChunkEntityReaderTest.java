@@ -15,6 +15,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import org.folio.marc.migrations.config.MigrationProperties;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
+import org.folio.marc.migrations.services.batch.mapping.MappingChunkEntityReader;
 import org.folio.marc.migrations.services.jdbc.ChunkJdbcService;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,19 +25,19 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
-class ChunkEntityReaderTest {
+class MappingChunkEntityReaderTest {
 
   private String operationId;
   private MigrationProperties props;
   private ChunkJdbcService jdbcService;
-  private ChunkEntityReader reader;
+  private MappingChunkEntityReader reader;
 
   @BeforeEach
   void setUp() {
     operationId = UUID.randomUUID().toString();
     props = mock(MigrationProperties.class);
     jdbcService = mock(ChunkJdbcService.class);
-    reader = new ChunkEntityReader(operationId, props, jdbcService);
+    reader = new MappingChunkEntityReader(operationId, props, jdbcService);
   }
 
   @Test

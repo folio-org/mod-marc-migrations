@@ -3,9 +3,11 @@ package org.folio.marc.migrations.services.jdbc;
 import java.sql.Timestamp;
 import java.util.UUID;
 import lombok.extern.log4j.Log4j2;
+import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.services.domain.OperationTimeType;
 import org.folio.spring.FolioExecutionContext;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -27,11 +29,30 @@ public class OperationJdbcService extends JdbcService {
     WHERE id = '%s';
     """;
 
-  private final JdbcTemplate jdbcTemplate;
+  private static final String GET_OPERATION = """
+    SELECT *
+    FROM %s.operation
+    WHERE id = '%s'
+    """;
 
-  public OperationJdbcService(FolioExecutionContext context, JdbcTemplate jdbcTemplate) {
+  private final JdbcTemplate jdbcTemplate;
+  private final BeanPropertyRowMapper<Operation> mapper;
+
+  public OperationJdbcService(FolioExecutionContext context,
+                              JdbcTemplate jdbcTemplate,
+                              BeanPropertyRowMapper<Operation> mapper) {
     super(context);
     this.jdbcTemplate = jdbcTemplate;
+    this.mapper = mapper;
+  }
+
+  public Operation getOperation(String id) {
+    if (id == null) {
+      return null;
+    }
+
+    var sql = GET_OPERATION.formatted(getSchemaName(), id);
+    return this.jdbcTemplate.queryForObject(sql, mapper);
   }
 
   public void updateOperationStatus(String id, OperationStatusType status, OperationTimeType operationTimeType,

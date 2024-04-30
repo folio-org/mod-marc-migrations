@@ -2,6 +2,7 @@ package org.folio.marc.migrations.services.batch;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -10,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.json.JsonObject;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -17,9 +19,14 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
+import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
+import org.folio.marc.migrations.domain.entities.types.StepStatus;
+import org.folio.marc.migrations.services.batch.mapping.MappingRecordsChunkProcessor;
 import org.folio.marc.migrations.services.batch.support.MappingMetadataProvider;
 import org.folio.marc.migrations.services.domain.MappingComposite;
 import org.folio.marc.migrations.services.domain.RecordsMappingData;
+import org.folio.marc.migrations.services.jdbc.ChunkJdbcService;
+import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
 import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.spring.testing.type.UnitTest;
@@ -33,23 +40,30 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
-class RecordsChunkMapperTest {
+class MappingRecordsChunkProcessorTest {
 
   private @Spy ObjectMapper objectMapper;
   private @Mock MappingMetadataProvider mappingMetadataProvider;
   private @Mock OperationJdbcService jdbcService;
-  private @InjectMocks RecordsChunkMapper mapper;
+  private @Mock ChunkJdbcService chunkJdbcService;
+  private @Mock ChunkStepJdbcService chunkStepJdbcService;
+  private @InjectMocks MappingRecordsChunkProcessor mapper;
+
+  private RecordsMappingData mappingData;
 
   @BeforeEach
   @SneakyThrows
   void setup() {
     lenient().when(mappingMetadataProvider.getMappingData())
       .thenReturn(new MappingMetadataProvider.MappingData(new JsonObject(), new MappingParameters()));
+
+    var chunkId = UUID.randomUUID();
+    var chunkStepId = UUID.randomUUID();
+    mappingData = new RecordsMappingData(UUID.randomUUID(), chunkId, chunkStepId, null, 2, null, null);
   }
 
   @Test
   void process_positive() {
-    var mappingData = new RecordsMappingData(UUID.randomUUID(), null, null, null, 2, null, null);
     var records = records();
     var composite = new MappingComposite<>(mappingData, records);
 
@@ -69,12 +83,14 @@ class RecordsChunkMapperTest {
         .anyMatch(mappingResult -> mappingResult.mappedRecord().contains(authorityId)))
         .isTrue());
     verify(jdbcService).addProcessedOperationRecords(mappingData.operationId(), records.size(), 0);
+    verify(chunkStepJdbcService)
+        .updateChunkStep(eq(mappingData.stepId()), eq(StepStatus.COMPLETED), any(Timestamp.class), eq(0));
+    verify(chunkJdbcService).updateChunk(mappingData.chunkId(), OperationStatusType.DATA_MAPPING_COMPLETED);
   }
 
   @Test
   @SneakyThrows
   void process_positive_partial() {
-    var mappingData = new RecordsMappingData(UUID.randomUUID(), null, null, null, 2, null, null);
     var records = records();
     var composite = new MappingComposite<>(mappingData, records);
     when(objectMapper.writeValueAsString(any()))
@@ -107,6 +123,9 @@ class RecordsChunkMapperTest {
           .contains(authorityId)))
         .isTrue());
     verify(jdbcService).addProcessedOperationRecords(mappingData.operationId(), records.size() - 1, 0);
+    verify(chunkStepJdbcService)
+        .updateChunkStep(eq(mappingData.stepId()), eq(StepStatus.FAILED), any(Timestamp.class), eq(1));
+    verify(chunkJdbcService).updateChunk(mappingData.chunkId(), OperationStatusType.DATA_MAPPING_FAILED);
   }
 
   @Test
@@ -154,7 +173,6 @@ class RecordsChunkMapperTest {
   }
 
   private void process_negative(String errorCause, String marcRecordContains) {
-    var mappingData = new RecordsMappingData(UUID.randomUUID(), null, null, null, 2, null, null);
     var records = records();
     var composite = new MappingComposite<>(mappingData, records);
 
@@ -175,6 +193,9 @@ class RecordsChunkMapperTest {
         .anyMatch(mappingResult -> mappingResult.invalidMarcRecord().contains(authorityId)))
         .isTrue());
     verifyNoInteractions(jdbcService);
+    verify(chunkStepJdbcService)
+        .updateChunkStep(eq(mappingData.stepId()), eq(StepStatus.FAILED), any(Timestamp.class), eq(records.size()));
+    verify(chunkJdbcService).updateChunk(mappingData.chunkId(), OperationStatusType.DATA_MAPPING_FAILED);
   }
 
   private List<MarcRecord> records() {

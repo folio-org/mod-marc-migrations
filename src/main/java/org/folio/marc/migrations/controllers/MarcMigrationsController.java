@@ -4,6 +4,7 @@ import java.util.UUID;
 import org.folio.marc.migrations.controllers.delegates.MarcMigrationsService;
 import org.folio.marc.migrations.domain.dto.MigrationOperation;
 import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
+import org.folio.marc.migrations.domain.dto.SaveMigrationOperation;
 import org.folio.marc.migrations.rest.resource.MarcMigrationsApi;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,5 +31,11 @@ public class MarcMigrationsController implements MarcMigrationsApi {
   @Override
   public ResponseEntity<MigrationOperation> getMarcMigrationById(UUID operationId, String tenantId) {
     return ResponseEntity.ok(migrationsService.getMarcMigrationById(operationId));
+  }
+
+  @Override
+  public ResponseEntity<Void> saveMarcMigration(UUID operationId, SaveMigrationOperation saveMigrationOperation) {
+    migrationsService.saveMigrationOperation(operationId, saveMigrationOperation);
+    return ResponseEntity.noContent().build();
   }
 }
