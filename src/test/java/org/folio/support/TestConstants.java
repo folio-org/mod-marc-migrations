@@ -1,6 +1,7 @@
 package org.folio.support;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.UUID;
 import lombok.experimental.UtilityClass;
 import org.folio.spring.FolioModuleMetadata;
 
@@ -22,4 +23,14 @@ public class TestConstants {
       return tenantId;
     }
   };
+
+  private static final String MARC_MIGRATION_ENDPOINT_PATH = "/marc-migrations";
+
+  public static String marcMigrationEndpoint() {
+    return MARC_MIGRATION_ENDPOINT_PATH;
+  }
+
+  public static String marcMigrationEndpoint(UUID id) {
+    return MARC_MIGRATION_ENDPOINT_PATH + "/" + id;
+  }
 }

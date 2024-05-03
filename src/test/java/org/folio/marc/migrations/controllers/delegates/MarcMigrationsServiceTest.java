@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
@@ -13,9 +14,12 @@ import java.util.UUID;
 import org.folio.marc.migrations.controllers.mappers.MarcMigrationMapper;
 import org.folio.marc.migrations.domain.dto.EntityType;
 import org.folio.marc.migrations.domain.dto.MigrationOperation;
+import org.folio.marc.migrations.domain.dto.MigrationOperationStatus;
 import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
 import org.folio.marc.migrations.domain.dto.OperationType;
+import org.folio.marc.migrations.domain.dto.SaveMigrationOperation;
 import org.folio.marc.migrations.domain.entities.Operation;
+import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.exceptions.ApiValidationException;
 import org.folio.marc.migrations.services.MigrationOrchestrator;
 import org.folio.marc.migrations.services.operations.OperationsService;
@@ -104,5 +108,60 @@ class MarcMigrationsServiceTest {
     // Act & Assert
     var exception = assertThrows(NotFoundException.class, () -> migrationsService.getMarcMigrationById(randomId));
     assertThat(exception).hasMessage(NOT_FOUND_MSG, randomId);
+  }
+
+  @Test
+  void saveMigration_ValidInput_submitsSaveMigrationOperation() {
+    // Arrange
+    var operationId = UUID.randomUUID();
+    var operation = new Operation();
+    operation.setId(operationId);
+    operation.setStatus(OperationStatusType.DATA_MAPPING_COMPLETED);
+    when(operationsService.getOperation(operationId)).thenReturn(Optional.of(operation));
+    var validSaveOperation = new SaveMigrationOperation()
+        .status(MigrationOperationStatus.DATA_SAVING);
+
+    // Act
+    migrationsService.saveMigrationOperation(operationId, validSaveOperation);
+
+    // Assert
+    verify(operationsService).getOperation(operationId);
+    verify(migrationOrchestrator).submitMappingSaveTask(operation);
+  }
+
+  @Test
+  void saveMigration_NotExists_ThrowsNotFoundException() {
+    // Arrange
+    var validSaveOperation = new SaveMigrationOperation()
+        .status(MigrationOperationStatus.DATA_SAVING);
+    var operationId = UUID.randomUUID();
+    when(operationsService.getOperation(operationId)).thenReturn(Optional.empty());
+
+    // Act
+    var exception = assertThrows(NotFoundException.class,
+        () -> migrationsService.saveMigrationOperation(operationId, validSaveOperation));
+
+    // Assert
+    assertThat(exception).hasMessage(NOT_FOUND_MSG, operationId);
+    verify(operationsService).getOperation(operationId);
+    verifyNoInteractions(migrationOrchestrator);
+  }
+
+  @Test
+  void saveMigration_InvalidStatus_ThrowsApiValidationException() {
+    // Arrange
+    var operationId = UUID.randomUUID();
+    var operation = new Operation();
+    operation.setId(operationId);
+    operation.setStatus(OperationStatusType.DATA_MAPPING_FAILED);
+    when(operationsService.getOperation(operationId)).thenReturn(Optional.of(operation));
+    var validSaveOperation = new SaveMigrationOperation()
+        .status(MigrationOperationStatus.DATA_SAVING);
+
+    // Act & Assert
+    assertThrows(ApiValidationException.class,
+        () -> migrationsService.saveMigrationOperation(operationId, validSaveOperation));
+    verify(operationsService).getOperation(operationId);
+    verifyNoInteractions(migrationOrchestrator);
   }
 }

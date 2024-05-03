@@ -100,7 +100,8 @@ docker compose up --build --force-recreate --no-deps
 ### API marc-migrations
 The API provides management endpoint for MARC Migrations
 
-| METHOD | URL                              | Required permissions                   | DESCRIPTION                         |
-|:-------|:---------------------------------|:---------------------------------------|:------------------------------------|
-| POST   | `/marc-migrations`               | `marc-migrations.operations.item.post` | Create new MARC Migration operation |
-| GET    | `/marc-migrations/{operationId}` | `marc-migrations.operations.item.get`  | Get MARC Migration operation by ID  |
+| METHOD  | URL                              | Required permissions                   | DESCRIPTION                                                           |
+|:--------|:---------------------------------|:---------------------------------------|:----------------------------------------------------------------------|
+| POST    | `/marc-migrations`               | `marc-migrations.operations.item.post` | Create new MARC Migration operation                                   |
+| GET     | `/marc-migrations/{operationId}` | `marc-migrations.operations.item.get`  | Get MARC Migration operation by ID                                    |
+| PUT     | `/marc-migrations/{operationId}` | `marc-migrations.operations.item.put`  | Save Mapped Data for the newly created MARC Migration (with POST API) |

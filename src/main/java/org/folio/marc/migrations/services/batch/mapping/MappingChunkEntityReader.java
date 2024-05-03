@@ -1,4 +1,4 @@
-package org.folio.marc.migrations.services.batch;
+package org.folio.marc.migrations.services.batch.mapping;
 
 import java.util.List;
 import java.util.UUID;
@@ -12,7 +12,7 @@ import org.springframework.batch.item.ItemReader;
 
 @Log4j2
 @RequiredArgsConstructor
-public class ChunkEntityReader implements ItemReader<OperationChunk> {
+public class MappingChunkEntityReader implements ItemReader<OperationChunk> {
 
   private final String operationId;
   private final MigrationProperties props;

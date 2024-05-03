@@ -15,7 +15,9 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
+import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
+import org.folio.marc.migrations.services.batch.mapping.MappingRecordsFileUploadStepListener;
 import org.folio.marc.migrations.services.domain.OperationTimeType;
 import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
 import org.folio.s3.client.FolioS3Client;
@@ -36,14 +38,14 @@ import org.springframework.batch.core.StepExecution;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
-class FileUploadStepListenerTest {
+class MappingRecordsFileUploadStepListenerTest {
 
   private final Long jobId = 5L;
   private final String jobFilesDirectory = "job/" + jobId;
 
   private @Mock FolioS3Client s3Client;
   private @Mock OperationJdbcService jdbcService;
-  private @InjectMocks FileUploadStepListener listener;
+  private @InjectMocks MappingRecordsFileUploadStepListener listener;
 
   @BeforeEach
   @SneakyThrows
@@ -62,6 +64,10 @@ class FileUploadStepListenerTest {
   @SneakyThrows
   void afterStep_positive() {
     var operationId = UUID.randomUUID().toString();
+    var operation = new Operation();
+    operation.setTotalNumOfRecords(10);
+    operation.setMappedNumOfRecords(10);
+    when(jdbcService.getOperation(operationId)).thenReturn(operation);
     var jobExecution = new JobExecution(new JobInstance(jobId, "testJob"), 1L,
       new JobParameters(Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class))));
     var stepExecution = new StepExecution("testStep", jobExecution);
@@ -78,6 +84,7 @@ class FileUploadStepListenerTest {
     verify(s3Client).upload(path2.toFile().getAbsolutePath(), "operation/" + operationId + "/test2");
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING_COMPLETED),
       eq(OperationTimeType.MAPPING_END), notNull());
+    verify(jdbcService).getOperation(operationId);
     assertThat(Files.exists(Path.of(jobFilesDirectory))).isFalse();
   }
 

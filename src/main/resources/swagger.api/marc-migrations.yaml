@@ -123,6 +123,55 @@ paths:
                   value:
                     message: 'Unexpected error'
                     type: 'NullPointerException'
+    put:
+      summary: Save MARC migration operation
+      operationId: saveMarcMigration
+      tags:
+        - marc-migrations
+      parameters:
+        - in: path
+          name: operationId
+          description: The UUID of a MARC migration operation
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 474d0af6-028f-4d15-8354-d2fc10c71a68
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveMigrationOperation'
+            examples:
+              ValidBody:
+                value:
+                  status: data_mapping, data_saving
+        required: true
+      responses:
+        '204':
+          description: Saved MARC migration operation
+        '404':
+          description: MARC migration operation was not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                InvalidUUIDFormat:
+                  value:
+                    message: 'MARC migration operation was not found [id: 474d0af6-028f-4d15-8354-d2fc10c71a68]'
+                    type: 'NotFoundException'
+        '500':
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                UnexpectedError:
+                  value:
+                    message: 'Unexpected error'
+                    type: 'NullPointerException'
 
 components:
   schemas:
@@ -180,6 +229,14 @@ components:
           type: string
           format: date-time
 
+    SaveMigrationOperation:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/MigrationOperationStatus'
+
     EntityType:
       description: Type of entity for migration
       type: string
@@ -235,6 +292,12 @@ components:
         value:
           description: Parameter value
           type: string
+
+    authorityBulkResponse:
+      $ref: schemas/authority/authorityBulkResponse.yaml
+    authorityBulkRequest:
+      $ref: schemas/authority/authorityBulkRequest.yaml
+
   parameters:
     TenantId:
       name: X-Okapi-Tenant

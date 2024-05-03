@@ -4,9 +4,13 @@ import java.util.Arrays;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
-import org.folio.marc.migrations.services.batch.ChunkEntityReader;
-import org.folio.marc.migrations.services.batch.FileUploadStepListener;
-import org.folio.marc.migrations.services.batch.RecordsWriter;
+import org.folio.marc.migrations.services.batch.mapping.MappingChunkEntityReader;
+import org.folio.marc.migrations.services.batch.mapping.MappingRecordsFileUploadStepListener;
+import org.folio.marc.migrations.services.batch.mapping.MappingRecordsWriter;
+import org.folio.marc.migrations.services.batch.saving.SavingRecordsChunkProcessor;
+import org.folio.marc.migrations.services.batch.saving.SavingRecordsStepListener;
+import org.folio.marc.migrations.services.batch.saving.SavingRecordsWriter;
+import org.folio.marc.migrations.services.domain.DataSavingResult;
 import org.folio.marc.migrations.services.domain.MappingComposite;
 import org.folio.marc.migrations.services.domain.MappingResult;
 import org.folio.marc.migrations.services.jdbc.ChunkJdbcService;
@@ -63,11 +67,14 @@ public class SpringBatchConfig {
     return operations;
   }
 
-  @Bean
-  public Step remapAuthRecordsStep(JobRepository jobRepository, PlatformTransactionManager transactionManager,
+  @Bean("remapAuthRecordsStep")
+  public Step remapAuthRecordsStep(JobRepository jobRepository,
+                                   PlatformTransactionManager transactionManager,
                                    ItemReader<OperationChunk> reader,
-                                   ItemProcessor<OperationChunk, MappingComposite<MappingResult>> processor,
-                                   RecordsWriter writer, FileUploadStepListener listener,
+                                   @Qualifier("remappingStepProcessor")
+                                     ItemProcessor<OperationChunk, MappingComposite<MappingResult>> processor,
+                                   MappingRecordsWriter writer,
+                                   MappingRecordsFileUploadStepListener listener,
                                    @Qualifier("chunksProcessingExecutor") TaskExecutor executor,
                                    RepeatOperations customThrottler) {
     return new StepBuilder("remapAuthRecords", jobRepository)
@@ -82,22 +89,53 @@ public class SpringBatchConfig {
   }
 
   @Bean("remappingJob")
-  public Job remappingJob(JobRepository jobRepository, Step remapAuthRecordsStep) {
+  public Job remappingJob(JobRepository jobRepository,
+                          @Qualifier("remapAuthRecordsStep") Step remapAuthRecordsStep) {
     return new JobBuilder("remapping", jobRepository)
       .incrementer(new RunIdIncrementer())
       .start(remapAuthRecordsStep)
       .build();
   }
 
-  @Bean
+  @Bean(name = "remapSaveAuthRecordsStep")
+  public Step remapSaveAuthRecordsStep(JobRepository jobRepository,
+                                       PlatformTransactionManager transactionManager,
+                                       ItemReader<OperationChunk> reader,
+                                       SavingRecordsChunkProcessor processor,
+                                       SavingRecordsWriter writer,
+                                       SavingRecordsStepListener listener,
+                                       @Qualifier("chunksProcessingExecutor") TaskExecutor executor,
+                                       RepeatOperations customThrottler) {
+    return new StepBuilder("remapSaveAuthRecords", jobRepository)
+        .<OperationChunk, DataSavingResult>chunk(1, transactionManager)
+        .reader(reader)
+        .processor(processor)
+        .writer(writer)
+        .listener(listener)
+        .taskExecutor(executor)
+        .stepOperations(customThrottler)
+        .build();
+  }
+
+  @Bean("remappingSaveJob")
+  public Job remappingSaveJob(JobRepository jobRepository,
+                              @Qualifier("remapSaveAuthRecordsStep") Step remapAuthRecordsStep) {
+    return new JobBuilder("remappingSave", jobRepository)
+        .incrementer(new RunIdIncrementer())
+        .start(remapAuthRecordsStep)
+        .build();
+  }
+
+  @Bean("remappingStepProcessor")
   @StepScope
-  public ItemProcessor<OperationChunk, MappingComposite<MappingResult>> compositeItemProcessor(
+  public ItemProcessor<OperationChunk, MappingComposite<MappingResult>> remappingCompositeItemProcessor(
+    @Qualifier("mappingRecordsStepPreProcessor")
     ItemProcessor<OperationChunk, MappingComposite<MarcRecord>> preparationProcessor,
-    ItemProcessor<MappingComposite<MarcRecord>, MappingComposite<MappingResult>> chunkMapper,
-    ItemProcessor<MappingComposite<MappingResult>, MappingComposite<MappingResult>> chunkDbUpdater) {
+    @Qualifier("mappingRecordsStepProcessor")
+    ItemProcessor<MappingComposite<MarcRecord>, MappingComposite<MappingResult>> chunkMapper) {
 
     var compositeItemProcessor = new CompositeItemProcessor<OperationChunk, MappingComposite<MappingResult>>();
-    compositeItemProcessor.setDelegates(Arrays.asList(preparationProcessor, chunkMapper, chunkDbUpdater));
+    compositeItemProcessor.setDelegates(Arrays.asList(preparationProcessor, chunkMapper));
     return compositeItemProcessor;
   }
 
@@ -108,6 +146,6 @@ public class SpringBatchConfig {
   @StepScope
   public ItemReader<OperationChunk> syncReader(@Value("#{jobParameters['operationId']}") String operationId,
                                                MigrationProperties properties, ChunkJdbcService jdbcService) {
-    return new SynchronizedItemReader<>(new ChunkEntityReader(operationId, properties, jdbcService));
+    return new SynchronizedItemReader<>(new MappingChunkEntityReader(operationId, properties, jdbcService));
   }
 }

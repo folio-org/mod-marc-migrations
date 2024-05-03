@@ -1,0 +1,8 @@
+description: Bulk authorities create request
+type: object
+properties:
+  recordsFileName:
+    description: File name of authority records
+    type: string
+required:
+  - recordsFileName

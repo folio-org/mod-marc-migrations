@@ -1,4 +1,4 @@
-package org.folio.marc.migrations.services.batch;
+package org.folio.marc.migrations.services.batch.mapping;
 
 import static org.folio.marc.migrations.services.batch.support.JobConstants.OPERATION_FILES_PATH;
 
@@ -21,10 +21,10 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.stereotype.Component;
 
 @Log4j2
-@Component
+@Component("mappingRecordsStepPreProcessor")
 @StepScope
 @RequiredArgsConstructor
-public class ChunkStepPreparationProcessor implements ItemProcessor<OperationChunk, MappingComposite<MarcRecord>> {
+public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationChunk, MappingComposite<MarcRecord>> {
 
   private static final String STEP_FILE_NAME = OPERATION_FILES_PATH + "%s_%s_%s";
 
