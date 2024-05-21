@@ -50,14 +50,13 @@ public class AuthorityJdbcService extends JdbcService {
   private static final String GET_AUTHORITY_IDS_CHUNK = """
     SELECT marc_id
     FROM %s.marc_authority_view
-    %s
-    LIMIT %s;
+    %s;
     """;
 
   private static final String GET_AUTHORITIES_CHUNK = """
     SELECT *
     FROM %s.marc_authority_view
-    WHERE marc_id >= '%s' and marc_id <= '%s';
+    %s;
     """;
 
   private final JdbcTemplate jdbcTemplate;
@@ -83,19 +82,22 @@ public class AuthorityJdbcService extends JdbcService {
     return jdbcTemplate.queryForObject(COUNT_AUTHORITY_RECORDS.formatted(getSchemaName()), Integer.class);
   }
 
-  public List<UUID> getAuthorityIdsChunk(UUID idFrom, Integer limit) {
-    var whereClause = idFrom == null ? "" : "WHERE marc_id > '%s'".formatted(idFrom);
-    var sql = GET_AUTHORITY_IDS_CHUNK.formatted(getSchemaName(), whereClause, limit);
+  public List<UUID> getAuthorityIdsChunk(UUID idFrom, Integer offset, Integer limit) {
+    var whereClause = idFrom == null ? "LIMIT %s".formatted(limit)
+        : "WHERE marc_id >= '%s' OFFSET %s LIMIT %s".formatted(idFrom, offset, limit);
+    var sql = GET_AUTHORITY_IDS_CHUNK.formatted(getSchemaName(), whereClause);
     return jdbcTemplate.queryForList(sql, UUID.class);
   }
 
   public List<UUID> getAuthorityIdsChunk(Integer limit) {
-    return getAuthorityIdsChunk(null, limit);
+    return getAuthorityIdsChunk(null, null, limit);
   }
 
   public List<MarcRecord> getAuthoritiesChunk(UUID from, UUID to) {
     log.debug("getAuthoritiesChunk:: from id {}, to id {}", from, to);
-    var sql = GET_AUTHORITIES_CHUNK.formatted(getSchemaName(), from, to);
+    var whereClause = to != null
+        ? "WHERE marc_id >= '%s' and marc_id < '%s'".formatted(from, to) : "WHERE marc_id >= '%s'".formatted(from);
+    var sql = GET_AUTHORITIES_CHUNK.formatted(getSchemaName(), whereClause);
     return jdbcTemplate.query(sql, recordsMapper);
   }
 

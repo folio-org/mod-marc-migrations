@@ -68,4 +68,10 @@
       </column>
     </createTable>
   </changeSet>
+
+  <changeSet  author="Mukhiddin_Yusupov" id="MODMARCMIG-11-drop-not-null-constraint-for-operation_chunk-end-record-id">
+    <dropNotNullConstraint  columnDataType="UUID"
+                            columnName="end_record_id"
+                            tableName="operation_chunk"/>
+  </changeSet>
 </databaseChangeLog>

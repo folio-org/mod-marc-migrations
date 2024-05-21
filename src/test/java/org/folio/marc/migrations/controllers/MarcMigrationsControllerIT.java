@@ -49,6 +49,7 @@ import org.folio.spring.testing.type.IntegrationTest;
 import org.folio.support.IntegrationTestBase;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -57,6 +58,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 @DatabaseCleanup(tables = {CHUNK_STEPS_TABLE, CHUNKS_TABLE, OPERATION_TABLE})
 class MarcMigrationsControllerIT extends IntegrationTestBase {
   private @SpyBean FolioS3Client s3Client;
+
+  @Value(value = "${folio.migration.chunk-fetch-ids-count}")
+  private Integer chunkFetchIdsCount;
 
   @BeforeAll
   static void beforeAll() {
@@ -93,9 +97,12 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
 
     var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
     assertThat(chunks).hasSize(9)
-      .allMatch(chunk -> chunk.getStartRecordId() != null
-        && chunk.getEndRecordId() != null
-        && chunk.getStatus().equals(OperationStatusType.DATA_MAPPING_COMPLETED));
+      .allMatch(chunk ->
+        chunk.getStartRecordId() != null && chunk.getEndRecordId() != null
+            && chunk.getNumOfRecords().equals(chunkFetchIdsCount)
+          || chunk.getStartRecordId() != null && chunk.getEndRecordId() == null
+            && chunk.getNumOfRecords().equals(87 % chunkFetchIdsCount)
+          && chunk.getStatus().equals(OperationStatusType.DATA_MAPPING_COMPLETED));
 
     var steps = databaseHelper.getChunksSteps(TENANT_ID, operationId);
     assertThat(steps).hasSize(9)
@@ -144,7 +151,6 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
     assertThat(chunks).hasSize(9)
       .allMatch(chunk -> chunk.getStartRecordId() != null
-        && chunk.getEndRecordId() != null
         && chunk.getStatus().equals(OperationStatusType.DATA_MAPPING_FAILED));
 
     var steps = databaseHelper.getChunksSteps(TENANT_ID, operationId);
@@ -193,7 +199,6 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
     assertThat(chunks).hasSize(9)
       .allMatch(chunk -> chunk.getStartRecordId() != null
-        && chunk.getEndRecordId() != null
         && chunk.getStatus().equals(OperationStatusType.DATA_MAPPING_COMPLETED));
 
     var steps = databaseHelper.getChunksSteps(TENANT_ID, operationId);
