@@ -22,6 +22,7 @@
     * [Tracking the state of MARC Migration operation](#tracking-the-state-of-marc-migration-operation)
         * [Response](#response-1)
     * [Initiating the Data Saving phase for the MARC Migration operation](#initiating-the-data-saving-phase-for-the-marc-migration-operation)
+        * [Request body](#request-body-1)
     * [Full scenario for Authority records migration](#full-scenario-for-authority-records-migration)
 <!-- TOC -->
 
@@ -177,6 +178,13 @@ Also, when the job is finished successfully fields ```"mappedNumOfRecords"``` an
 
 Send a PUT request to start the Data Saving phase of migration operation.
 ```PUT /marc-migrations/{operationId}```
+
+##### Request body
+```json
+{
+  "status": "data_saving"
+}
+```
 
 This runs async job for saving the records which were previously mapped when the migration was registered and async job for that mapping is completed with success. Initiating Data Saving for the operation with failed Data Mapping phase is not possible and respective error will be received if PUT endpoint is called in this case.
 
