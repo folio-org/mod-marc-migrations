@@ -5,6 +5,8 @@ import java.util.UUID;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
 import org.folio.spring.FolioExecutionContext;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -40,7 +42,7 @@ public class AuthorityJdbcService extends JdbcService {
          LEFT JOIN %1$s.authority_view a ON a.id = r.external_id
          WHERE r.state = 'ACTUAL' AND r.record_type = 'MARC_AUTHORITY'
          ORDER BY r.id;
-     """;
+    """;
 
   private static final String COUNT_AUTHORITY_RECORDS = """
     SELECT COUNT(*)
@@ -60,13 +62,12 @@ public class AuthorityJdbcService extends JdbcService {
     WHERE marc_id >= '%s' and marc_id <= '%s';
     """;
 
-  private final JdbcTemplate jdbcTemplate;
   private final BeanPropertyRowMapper<MarcRecord> recordsMapper;
 
+  @Autowired
   public AuthorityJdbcService(JdbcTemplate jdbcTemplate, FolioExecutionContext context,
-                              BeanPropertyRowMapper<MarcRecord> recordsMapper) {
-    super(context);
-    this.jdbcTemplate = jdbcTemplate;
+                              @Qualifier("marcAuthorityRawMapper") BeanPropertyRowMapper<MarcRecord> recordsMapper) {
+    super(jdbcTemplate, context);
     this.recordsMapper = recordsMapper;
   }
 
@@ -97,11 +98,5 @@ public class AuthorityJdbcService extends JdbcService {
     log.debug("getAuthoritiesChunk:: from id {}, to id {}", from, to);
     var sql = GET_AUTHORITIES_CHUNK.formatted(getSchemaName(), from, to);
     return jdbcTemplate.query(sql, recordsMapper);
-  }
-
-  private void createView(String tenantId, String query) {
-    log.info("createView:: Attempting to create view [tenant: {}, query: {}]", tenantId, query);
-    jdbcTemplate.execute(query);
-    log.info("createView:: Successfully created view [tenant: {}, query: {}]", tenantId, query);
   }
 }

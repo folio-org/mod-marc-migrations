@@ -10,12 +10,15 @@ import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.domain.entities.ChunkStep;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
+import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.domain.entities.types.OperationStep;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
 import org.folio.marc.migrations.services.domain.MappingComposite;
 import org.folio.marc.migrations.services.domain.RecordsMappingData;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
+import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
+import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.stereotype.Component;
@@ -30,13 +33,20 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
 
   private final AuthorityJdbcService authorityJdbcService;
   private final ChunkStepJdbcService chunkStepJdbcService;
+  private final InstanceJdbcService instanceJdbcService;
+  private final OperationJdbcService operationJdbcService;
 
   @Override
   public MappingComposite<MarcRecord> process(OperationChunk chunk) {
     log.trace("process:: for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
     var chunkStep = createChunkStep(chunk);
 
-    var records = authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId());
+    var operationType = operationJdbcService.getOperation(chunk.getOperationId().toString()).getEntityType();
+
+    var records = (operationType == EntityType.AUTHORITY) ?
+        authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()) :
+        instanceJdbcService.getInstancesChunk(chunk.getStartRecordId(), chunk.getEndRecordId());
+
     log.debug("process:: retrieved {} records for operation {} chunk {}, step {}",
       records.size(), chunk.getOperationId(), chunk.getId(), chunkStep.getId());
     if (records.size() != chunk.getNumOfRecords()) {

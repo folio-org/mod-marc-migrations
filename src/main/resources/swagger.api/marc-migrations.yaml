@@ -243,6 +243,7 @@ components:
       enum:
         - authority
         - instance
+        - holdings
 
     OperationType:
       description: Type of migration

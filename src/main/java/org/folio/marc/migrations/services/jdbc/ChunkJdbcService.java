@@ -37,13 +37,11 @@ public class ChunkJdbcService extends JdbcService {
     """;
 
   private final BeanPropertyRowMapper<OperationChunk> mapper;
-  private final JdbcTemplate jdbcTemplate;
 
   public ChunkJdbcService(FolioExecutionContext context, BeanPropertyRowMapper<OperationChunk> mapper,
                           JdbcTemplate jdbcTemplate) {
-    super(context);
+    super(jdbcTemplate, context);
     this.mapper = mapper;
-    this.jdbcTemplate = jdbcTemplate;
   }
 
   public List<OperationChunk> getChunks(String operationId, UUID idFrom, int count) {

@@ -5,9 +5,11 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.domain.entities.Operation;
+import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.repositories.OperationRepository;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
+import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
 import org.folio.spring.FolioExecutionContext;
 import org.springframework.stereotype.Service;
 
@@ -19,10 +21,15 @@ public class OperationsService {
   private final FolioExecutionContext context;
   private final OperationRepository repository;
   private final AuthorityJdbcService authorityJdbcService;
+  private final InstanceJdbcService instanceJdbcService;
 
   public Operation createOperation(Operation operation) {
     log.info("createOperation::Preparing new operation: {}", operation);
-    var numOfRecords = authorityJdbcService.countNumOfRecords();
+
+    var numOfRecords = (operation.getEntityType() == EntityType.AUTHORITY) ?
+        authorityJdbcService.countNumOfRecords():
+        instanceJdbcService.countNumOfRecords();
+
     operation.setUserId(context.getUserId());
     operation.setStatus(OperationStatusType.NEW);
     operation.setTotalNumOfRecords(numOfRecords);

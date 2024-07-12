@@ -1,5 +1,6 @@
 package org.folio.marc.migrations.controllers.delegates;
 
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -18,6 +19,9 @@ import org.folio.marc.migrations.services.operations.OperationsService;
 import org.folio.spring.exception.NotFoundException;
 import org.springframework.stereotype.Service;
 
+import static org.folio.marc.migrations.domain.dto.EntityType.AUTHORITY;
+import static org.folio.marc.migrations.domain.dto.EntityType.INSTANCE;
+
 @Log4j2
 @Service
 @RequiredArgsConstructor
@@ -28,6 +32,7 @@ public class MarcMigrationsService {
   private final MarcMigrationMapper mapper;
   private final OperationsService operationsService;
   private final MigrationOrchestrator migrationOrchestrator;
+  private final List<EntityType> entityTypes = List.of(AUTHORITY, INSTANCE);
 
   public MigrationOperation createNewMigration(NewMigrationOperation newMigrationOperation) {
     log.debug("createNewMigration::Trying to create new migration operation: {}", newMigrationOperation);
@@ -68,7 +73,7 @@ public class MarcMigrationsService {
 
   private void validateEntityType(NewMigrationOperation newMigrationOperation) {
     var entityType = newMigrationOperation.getEntityType();
-    if (!EntityType.AUTHORITY.equals(entityType)) {
+    if (!entityTypes.contains(entityType)) {
       throw ApiValidationException.forEntityType(entityType.getValue());
     }
   }

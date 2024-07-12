@@ -64,7 +64,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   }
 
   @Test
-  void createNewMigration_positive() throws Exception {
+  void createNewMigrationAuthority_positive() throws Exception {
     // Arrange
     var migrationOperation = new NewMigrationOperation()
       .operationType(OperationType.REMAPPING)
@@ -107,6 +107,52 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
 
     var fileNames = s3Client.list("operation/" + operationId + "/");
     assertThat(fileNames).hasSize(9);
+  }
+
+  @Test
+  void createNewMigrationInstance_positive() throws Exception {
+    // Arrange
+    var migrationOperation = new NewMigrationOperation()
+        .operationType(OperationType.REMAPPING)
+        .entityType(EntityType.INSTANCE);
+
+    // Act & Assert
+    var result = tryPost(marcMigrationEndpoint(), migrationOperation)
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("id", notNullValue(UUID.class)))
+        .andExpect(jsonPath("userId", is(USER_ID)))
+        .andExpect(jsonPath("operationType", is(OperationType.REMAPPING.getValue())))
+        .andExpect(jsonPath("entityType", is(EntityType.INSTANCE.getValue())))
+        .andExpect(operationStatus(NEW))
+        .andExpect(totalRecords(11))
+        .andExpect(mappedRecords(0))
+        .andExpect(savedRecords(0))
+        .andReturn();
+    var operation = contentAsObj(result, MigrationOperation.class);
+    var operationId = operation.getId();
+
+    doGetUntilMatches(marcMigrationEndpoint(operationId), operationStatus(DATA_MAPPING));
+    doGetUntilMatches(marcMigrationEndpoint(operationId), operationStatus(DATA_MAPPING_COMPLETED));
+    doGet(marcMigrationEndpoint(operationId))
+        .andExpect(status().isOk())
+        .andExpect(mappedRecords(11));
+
+    var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
+    assertThat(chunks).hasSize(2)
+        .allMatch(chunk -> chunk.getStartRecordId() != null
+            && chunk.getEndRecordId() != null
+            && chunk.getStatus().equals(OperationStatusType.DATA_MAPPING_COMPLETED));
+
+    var steps = databaseHelper.getChunksSteps(TENANT_ID, operationId);
+    assertThat(steps).hasSize(2)
+        .allMatch(step -> step.getStepStartTime() != null
+            && step.getStepEndTime() != null
+            && step.getStepEndTime().after(step.getStepStartTime())
+            && step.getStatus().equals(COMPLETED)
+            && step.getNumOfErrors().equals(0));
+
+    var fileNames = s3Client.list("operation/" + operationId + "/");
+    assertThat(fileNames).hasSize(2);
   }
 
   @Test
@@ -257,7 +303,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     // Arrange
     var migrationOperation = new NewMigrationOperation()
       .operationType(OperationType.REMAPPING)
-      .entityType(EntityType.INSTANCE);
+      .entityType(EntityType.HOLDINGS);
 
     // Act & Assert
     tryPost(marcMigrationEndpoint(), migrationOperation)

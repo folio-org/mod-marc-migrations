@@ -35,14 +35,12 @@ public class OperationJdbcService extends JdbcService {
     WHERE id = '%s'
     """;
 
-  private final JdbcTemplate jdbcTemplate;
   private final BeanPropertyRowMapper<Operation> mapper;
 
   public OperationJdbcService(FolioExecutionContext context,
                               JdbcTemplate jdbcTemplate,
                               BeanPropertyRowMapper<Operation> mapper) {
-    super(context);
-    this.jdbcTemplate = jdbcTemplate;
+    super(jdbcTemplate, context);
     this.mapper = mapper;
   }
 

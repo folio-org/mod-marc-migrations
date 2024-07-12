@@ -11,7 +11,9 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.Authority;
+import org.folio.Instance;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
+import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
 import org.folio.marc.migrations.services.batch.support.MappingMetadataProvider;
@@ -21,6 +23,7 @@ import org.folio.marc.migrations.services.jdbc.ChunkJdbcService;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
 import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
 import org.folio.processing.mapping.defaultmapper.MarcToAuthorityMapper;
+import org.folio.processing.mapping.defaultmapper.MarcToInstanceMapper;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.stereotype.Component;
@@ -47,7 +50,8 @@ public class MappingRecordsChunkProcessor
     log.debug("process:: for operation {}, chunk {}, step {}",
         mappingData.operationId(), mappingData.chunkId(), mappingData.stepId());
 
-    var mappingResults = getAuthorityMappingResults(composite.records());
+    var operationEntityType = jdbcService.getOperation(mappingData.operationId().toString()).getEntityType();
+    var mappingResults = getRecordMappingResults(composite.records(), operationEntityType);
     var mappedRecordsCount = (int) mappingResults.stream()
       .map(MappingResult::mappedRecord)
       .filter(Objects::nonNull)
@@ -62,7 +66,7 @@ public class MappingRecordsChunkProcessor
     return new MappingComposite<>(mappingData, mappingResults);
   }
 
-  private List<MappingResult> getAuthorityMappingResults(List<MarcRecord> records) {
+  private List<MappingResult> getRecordMappingResults(List<MarcRecord> records, EntityType type) {
     log.trace("process:: retrieving mapping metadata from cache");
     var mappingData = mappingMetadataProvider.getMappingData();
     if (mappingData == null) {
@@ -72,22 +76,34 @@ public class MappingRecordsChunkProcessor
     }
 
     return records.stream()
-        .map(sourceData -> asAuthorityMappingResult(sourceData, mappingData))
+        .map(sourceData -> asRecordMappingResult(sourceData, mappingData, type))
         .toList();
   }
 
-  private MappingResult asAuthorityMappingResult(MarcRecord sourceData,
-                                                 MappingMetadataProvider.MappingData mappingData) {
+  private MappingResult asRecordMappingResult(MarcRecord sourceData,
+                                              MappingMetadataProvider.MappingData mappingData,
+                                              EntityType entityType) {
     try {
       var marcSource = new JsonObject(sourceData.marc().toString());
-      var authority = new MarcToAuthorityMapper().mapRecord(
-          marcSource, mappingData.mappingParameters(), mappingData.mappingRules());
-      authority.setId(sourceData.recordId().toString());
-      authority.setVersion(sourceData.version());
-      authority.setSource(Authority.Source.MARC);
 
-      var authorityString = objectMapper.writeValueAsString(authority);
-      return new MappingResult(authorityString);
+      Object marcRecord;
+      String recordString;
+      if (entityType == EntityType.AUTHORITY) {
+        marcRecord = new MarcToAuthorityMapper().mapRecord(marcSource, mappingData.mappingParameters(), mappingData.mappingRules());
+        Authority authority = (Authority) marcRecord;
+        authority.setId(sourceData.recordId().toString());
+        authority.setVersion(sourceData.version());
+        authority.setSource(Authority.Source.MARC);
+        recordString = objectMapper.writeValueAsString(authority);
+      } else {
+        marcRecord = new MarcToInstanceMapper().mapRecord(marcSource, mappingData.mappingParameters(), mappingData.mappingRules());
+        Instance instance = (Instance) marcRecord;
+        instance.setId(sourceData.recordId().toString());
+        instance.setVersion(sourceData.version());
+        instance.setSource("MARC");
+        recordString = objectMapper.writeValueAsString(instance);
+      }
+      return new MappingResult(recordString);
     } catch (Exception ex) {
       log.warn("Error while processing data for marcId {}, recordId {}: {}",
           sourceData.marcId(), sourceData.recordId(), ex.getMessage());
