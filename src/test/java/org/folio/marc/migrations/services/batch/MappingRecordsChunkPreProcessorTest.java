@@ -35,22 +35,22 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class MappingRecordsChunkPreProcessorTest {
 
+  private final static UUID AUTHORITY_OPERATION_ID = UUID.randomUUID();
+  private final static UUID INSTANCE_OPERATION_ID = UUID.randomUUID();
+
   private @Mock AuthorityJdbcService authorityJdbcService;
   private @Mock ChunkStepJdbcService chunkStepJdbcService;
   private @Mock OperationJdbcService operationJdbcService;
   private @Mock InstanceJdbcService instanceJdbcService;
   private @InjectMocks MappingRecordsChunkPreProcessor processor;
 
-  private final static UUID authorityOperationId = UUID.randomUUID();
-  private final static UUID instanceOperationId = UUID.randomUUID();
-
   @Test
   void processAuthority_positive() {
     int numOfRecords = 5;
-    var chunk = chunk(numOfRecords, authorityOperationId);
+    var chunk = chunk(numOfRecords, AUTHORITY_OPERATION_ID);
     var marcRecords = marcRecords(numOfRecords);
 
-    when(operationJdbcService.getOperation(authorityOperationId.toString())).thenReturn(authorityOperation());
+    when(operationJdbcService.getOperation(AUTHORITY_OPERATION_ID.toString())).thenReturn(authorityOperation());
     when(authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
       .thenReturn(marcRecords);
 
@@ -60,10 +60,10 @@ class MappingRecordsChunkPreProcessorTest {
   @Test
   void processInstance_positive() {
     int numOfRecords = 5;
-    var chunk = chunk(numOfRecords, instanceOperationId);
+    var chunk = chunk(numOfRecords, INSTANCE_OPERATION_ID);
     var marcRecords = marcRecords(numOfRecords);
 
-    when(operationJdbcService.getOperation(instanceOperationId.toString())).thenReturn(instanceOperation());
+    when(operationJdbcService.getOperation(INSTANCE_OPERATION_ID.toString())).thenReturn(instanceOperation());
     when(instanceJdbcService.getInstancesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
         .thenReturn(marcRecords);
 
@@ -130,14 +130,14 @@ class MappingRecordsChunkPreProcessorTest {
 
   private Operation authorityOperation() {
     return Operation.builder()
-        .id(authorityOperationId)
+        .id(AUTHORITY_OPERATION_ID)
         .entityType(EntityType.AUTHORITY)
         .build();
   }
 
   private Operation instanceOperation() {
     return Operation.builder()
-        .id(instanceOperationId)
+        .id(INSTANCE_OPERATION_ID)
         .entityType(EntityType.INSTANCE)
         .build();
   }
