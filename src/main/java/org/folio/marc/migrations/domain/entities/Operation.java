@@ -10,7 +10,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.sql.Timestamp;
 import java.util.UUID;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
@@ -23,7 +26,10 @@ import org.hibernate.type.SqlTypes;
 @Setter
 @Entity
 @ToString
+@Builder(toBuilder = true)
+@NoArgsConstructor
 @Table(name = "operation")
+@AllArgsConstructor
 public class Operation {
 
   @Id

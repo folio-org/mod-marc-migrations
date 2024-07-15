@@ -11,7 +11,9 @@ import java.util.stream.Stream;
 import org.assertj.core.api.SoftAssertions;
 import org.folio.marc.migrations.domain.entities.ChunkStep;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
+import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
+import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.entities.types.OperationStep;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
@@ -19,6 +21,8 @@ import org.folio.marc.migrations.services.batch.mapping.MappingRecordsChunkPrePr
 import org.folio.marc.migrations.services.domain.RecordsMappingData;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
+import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
+import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,17 +37,42 @@ class MappingRecordsChunkPreProcessorTest {
 
   private @Mock AuthorityJdbcService authorityJdbcService;
   private @Mock ChunkStepJdbcService chunkStepJdbcService;
+  private @Mock OperationJdbcService operationJdbcService;
+  private @Mock InstanceJdbcService instanceJdbcService;
   private @InjectMocks MappingRecordsChunkPreProcessor processor;
 
-  @Test
-  void process_positive() {
-    int numOfRecords = 5;
-    var chunk = chunk(numOfRecords);
-    var marcRecords = marcRecords(numOfRecords);
-    var stepCaptor = ArgumentCaptor.forClass(ChunkStep.class);
+  private final static UUID authorityOperationId = UUID.randomUUID();
+  private final static UUID instanceOperationId = UUID.randomUUID();
 
+  @Test
+  void processAuthority_positive() {
+    int numOfRecords = 5;
+    var chunk = chunk(numOfRecords, authorityOperationId);
+    var marcRecords = marcRecords(numOfRecords);
+
+    when(operationJdbcService.getOperation(authorityOperationId.toString())).thenReturn(authorityOperation());
     when(authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
       .thenReturn(marcRecords);
+
+    process_positive(chunk, marcRecords);
+  }
+
+  @Test
+  void processInstance_positive() {
+    int numOfRecords = 5;
+    var chunk = chunk(numOfRecords, instanceOperationId);
+    var marcRecords = marcRecords(numOfRecords);
+
+    when(operationJdbcService.getOperation(instanceOperationId.toString())).thenReturn(instanceOperation());
+    when(instanceJdbcService.getInstancesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
+        .thenReturn(marcRecords);
+
+    process_positive(chunk, marcRecords);
+  }
+
+  @Test
+  void process_positive(OperationChunk chunk, List<MarcRecord> marcRecords) {
+    var stepCaptor = ArgumentCaptor.forClass(ChunkStep.class);
 
     var actual = processor.process(chunk);
 
@@ -85,10 +114,10 @@ class MappingRecordsChunkPreProcessorTest {
     softAssert.assertAll();
   }
 
-  private OperationChunk chunk(int numOfRecords) {
+  private OperationChunk chunk(int numOfRecords, UUID operationId) {
     return OperationChunk.builder()
       .id(UUID.randomUUID())
-      .operationId(UUID.randomUUID())
+      .operationId(operationId)
       .startRecordId(UUID.randomUUID())
       .endRecordId(UUID.randomUUID())
       .numOfRecords(numOfRecords)
@@ -97,6 +126,20 @@ class MappingRecordsChunkPreProcessorTest {
       .sourceChunkFileName("source" + numOfRecords)
       .status(OperationStatusType.DATA_MAPPING)
       .build();
+  }
+
+  private Operation authorityOperation() {
+    return Operation.builder()
+        .id(authorityOperationId)
+        .entityType(EntityType.AUTHORITY)
+        .build();
+  }
+
+  private Operation instanceOperation() {
+    return Operation.builder()
+        .id(instanceOperationId)
+        .entityType(EntityType.INSTANCE)
+        .build();
   }
 
   private List<MarcRecord> marcRecords(int count) {

@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
+import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
 import org.folio.spring.FolioExecutionContext;
 import org.folio.spring.service.PrepareSystemUserService;
 import org.folio.spring.testing.type.UnitTest;
@@ -23,6 +24,7 @@ class ModuleTenantServiceTest {
   private @Mock PrepareSystemUserService systemUserService;
   private @Mock FolioExecutionContext context;
   private @Mock AuthorityJdbcService authorityJdbcService;
+  private @Mock InstanceJdbcService instanceJdbcService;
 
   private @InjectMocks ModuleTenantService moduleTenantService;
 
@@ -33,6 +35,7 @@ class ModuleTenantServiceTest {
 
     verify(systemUserService).setupSystemUser();
     verify(authorityJdbcService).initViews(TENANT_ID);
+    verify(instanceJdbcService).initViews(TENANT_ID);
   }
 
 }

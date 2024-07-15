@@ -5,7 +5,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -19,6 +18,8 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
+import org.folio.marc.migrations.domain.entities.Operation;
+import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
 import org.folio.marc.migrations.services.batch.mapping.MappingRecordsChunkProcessor;
@@ -63,25 +64,36 @@ class MappingRecordsChunkProcessorTest {
   }
 
   @Test
-  void process_positive() {
+  void processAuthority_positive() {
+    process_positive(authorityOperation());
+  }
+
+  @Test
+  void processInstance_positive() {
+    process_positive(instanceOperation());
+  }
+
+  void process_positive(Operation operation) {
     var records = records();
     var composite = new MappingComposite<>(mappingData, records);
+
+    when(jdbcService.getOperation(any())).thenReturn(operation);
 
     var actual = mapper.process(composite);
 
     assertThat(actual).isNotNull();
     assertThat(actual.mappingData()).isEqualTo(mappingData);
     assertThat(actual.records())
-      .hasSize(records.size())
-      .allMatch(result -> result.invalidMarcRecord() == null
-        && result.errorCause() == null
-        && result.mappedRecord() != null
-        && result.mappedRecord().contains("\"_version\":1,\"source\":\"MARC\""));
+        .hasSize(records.size())
+        .allMatch(result -> result.invalidMarcRecord() == null
+            && result.errorCause() == null
+            && result.mappedRecord() != null
+            && result.mappedRecord().contains("\"_version\":1,\"source\":\"MARC\""));
 
     records.stream().map(mr -> mr.recordId().toString()).forEach(authorityId ->
-      assertThat(actual.records().stream()
-        .anyMatch(mappingResult -> mappingResult.mappedRecord().contains(authorityId)))
-        .isTrue());
+        assertThat(actual.records().stream()
+            .anyMatch(mappingResult -> mappingResult.mappedRecord().contains(authorityId)))
+            .isTrue());
     verify(jdbcService).addProcessedOperationRecords(mappingData.operationId(), records.size(), 0);
     verify(chunkStepJdbcService)
         .updateChunkStep(eq(mappingData.stepId()), eq(StepStatus.COMPLETED), any(Timestamp.class), eq(0));
@@ -96,6 +108,7 @@ class MappingRecordsChunkProcessorTest {
     when(objectMapper.writeValueAsString(any()))
       .thenThrow(new IllegalStateException("test exc"))
       .thenCallRealMethod();
+    when(jdbcService.getOperation(any())).thenReturn(authorityOperation());
 
     var actual = mapper.process(composite);
 
@@ -175,6 +188,7 @@ class MappingRecordsChunkProcessorTest {
   private void process_negative(String errorCause, String marcRecordContains) {
     var records = records();
     var composite = new MappingComposite<>(mappingData, records);
+    when(jdbcService.getOperation(any())).thenReturn(authorityOperation());
 
     var actual = mapper.process(composite);
 
@@ -192,10 +206,23 @@ class MappingRecordsChunkProcessorTest {
       assertThat(actual.records().stream()
         .anyMatch(mappingResult -> mappingResult.invalidMarcRecord().contains(authorityId)))
         .isTrue());
-    verifyNoInteractions(jdbcService);
     verify(chunkStepJdbcService)
         .updateChunkStep(eq(mappingData.stepId()), eq(StepStatus.FAILED), any(Timestamp.class), eq(records.size()));
     verify(chunkJdbcService).updateChunk(mappingData.chunkId(), OperationStatusType.DATA_MAPPING_FAILED);
+  }
+
+  private Operation authorityOperation() {
+    return Operation.builder()
+        .id(UUID.randomUUID())
+        .entityType(EntityType.AUTHORITY)
+        .build();
+  }
+
+  private Operation instanceOperation() {
+    return Operation.builder()
+        .id(UUID.randomUUID())
+        .entityType(EntityType.AUTHORITY)
+        .build();
   }
 
   private List<MarcRecord> records() {
