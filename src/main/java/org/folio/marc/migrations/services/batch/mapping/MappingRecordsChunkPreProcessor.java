@@ -1,5 +1,10 @@
 package org.folio.marc.migrations.services.batch.mapping;
 
+import static org.folio.marc.migrations.services.batch.support.JobConstants.OPERATION_FILES_PATH;
+
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.domain.entities.ChunkStep;
@@ -17,12 +22,6 @@ import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.stereotype.Component;
-
-import java.sql.Timestamp;
-import java.time.Instant;
-import java.util.UUID;
-
-import static org.folio.marc.migrations.services.batch.support.JobConstants.OPERATION_FILES_PATH;
 
 @Log4j2
 @Component("mappingRecordsStepPreProcessor")
