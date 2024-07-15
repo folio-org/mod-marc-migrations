@@ -76,7 +76,7 @@ class MarcMigrationsServiceTest {
     // Arrange
     var invalidOperation = new NewMigrationOperation()
       .operationType(OperationType.REMAPPING)
-      .entityType(EntityType.INSTANCE);
+      .entityType(EntityType.HOLDINGS);
 
     // Act & Assert
     assertThrows(ApiValidationException.class, () -> migrationsService.createNewMigration(invalidOperation));

@@ -70,7 +70,6 @@ class MappingRecordsChunkPreProcessorTest {
     process_positive(chunk, marcRecords);
   }
 
-  @Test
   void process_positive(OperationChunk chunk, List<MarcRecord> marcRecords) {
     var stepCaptor = ArgumentCaptor.forClass(ChunkStep.class);
 
