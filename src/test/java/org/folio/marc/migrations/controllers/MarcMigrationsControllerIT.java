@@ -311,7 +311,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
       .andExpect(errorMessageMatches(containsString("Unexpected value")))
       .andExpect(errorTypeMatches(ApiValidationException.class))
       .andExpect(errorParameterKeyMatches(is("entityType")))
-      .andExpect(errorParameterValueMatches(is("instance")));
+      .andExpect(errorParameterValueMatches(is("holdings")));
   }
 
   @Test
