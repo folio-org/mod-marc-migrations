@@ -89,14 +89,16 @@ public class MappingRecordsChunkProcessor
       Object marcRecord;
       String recordString;
       if (entityType == EntityType.AUTHORITY) {
-        marcRecord = new MarcToAuthorityMapper().mapRecord(marcSource, mappingData.mappingParameters(), mappingData.mappingRules());
+        marcRecord = new MarcToAuthorityMapper()
+            .mapRecord(marcSource, mappingData.mappingParameters(), mappingData.mappingRules());
         Authority authority = (Authority) marcRecord;
         authority.setId(sourceData.recordId().toString());
         authority.setVersion(sourceData.version());
         authority.setSource(Authority.Source.MARC);
         recordString = objectMapper.writeValueAsString(authority);
       } else {
-        marcRecord = new MarcToInstanceMapper().mapRecord(marcSource, mappingData.mappingParameters(), mappingData.mappingRules());
+        marcRecord = new MarcToInstanceMapper()
+            .mapRecord(marcSource, mappingData.mappingParameters(), mappingData.mappingRules());
         Instance instance = (Instance) marcRecord;
         instance.setId(sourceData.recordId().toString());
         instance.setVersion(sourceData.version());

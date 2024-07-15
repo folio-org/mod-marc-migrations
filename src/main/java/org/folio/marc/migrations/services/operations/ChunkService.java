@@ -35,16 +35,16 @@ public class ChunkService {
     log.info("prepareChunks:: starting for operation {}", operation.getId());
     var chunks = new LinkedList<OperationChunk>();
 
-    var recordIds = (operation.getEntityType() == EntityType.AUTHORITY) ?
-        authorityJdbcService.getAuthorityIdsChunk(props.getChunkFetchIdsCount()):
-        instanceJdbcService.getInstanceIdsChunk(props.getChunkFetchIdsCount());
+    var recordIds = (operation.getEntityType() == EntityType.AUTHORITY)
+        ? authorityJdbcService.getAuthorityIdsChunk(props.getChunkFetchIdsCount()) :
+          instanceJdbcService.getInstanceIdsChunk(props.getChunkFetchIdsCount());
     addChunksForRecordIds(operation, chunks, recordIds);
     var idFrom = Optional.ofNullable(chunks.peekLast()).map(OperationChunk::getEndRecordId).orElse(null);
 
     while (recordIds.size() == props.getChunkFetchIdsCount()) {
-      recordIds = (operation.getEntityType() == EntityType.AUTHORITY) ?
-          authorityJdbcService.getAuthorityIdsChunk(idFrom, props.getChunkFetchIdsCount()):
-          instanceJdbcService.getInstanceIdsChunk(idFrom, props.getChunkFetchIdsCount());
+      recordIds = (operation.getEntityType() == EntityType.AUTHORITY)
+          ? authorityJdbcService.getAuthorityIdsChunk(idFrom, props.getChunkFetchIdsCount()) :
+            instanceJdbcService.getInstanceIdsChunk(idFrom, props.getChunkFetchIdsCount());
       addChunksForRecordIds(operation, chunks, recordIds);
 
       idFrom = Optional.ofNullable(chunks.peekLast()).map(OperationChunk::getEndRecordId).orElse(null);

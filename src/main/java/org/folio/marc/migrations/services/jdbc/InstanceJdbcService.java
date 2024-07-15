@@ -1,5 +1,7 @@
 package org.folio.marc.migrations.services.jdbc;
 
+import java.util.List;
+import java.util.UUID;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
 import org.folio.spring.FolioExecutionContext;
@@ -7,9 +9,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.UUID;
 
 @Log4j2
 @Service

@@ -1,13 +1,12 @@
 package org.folio.marc.migrations.domain.mappers;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.UUID;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
 import org.folio.marc.migrations.domain.entities.types.RecordState;
 import org.springframework.jdbc.core.DataClassRowMapper;
 import org.springframework.stereotype.Component;
-
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.UUID;
 
 @Component("marcBibRawMapper")
 public class MarcBibRawMapper extends DataClassRowMapper<MarcRecord> {
