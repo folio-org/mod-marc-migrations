@@ -35,8 +35,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class MappingRecordsChunkPreProcessorTest {
 
-  private final static UUID AUTHORITY_OPERATION_ID = UUID.randomUUID();
-  private final static UUID INSTANCE_OPERATION_ID = UUID.randomUUID();
+  private static final UUID AUTHORITY_OPERATION_ID = UUID.randomUUID();
+  private static final UUID INSTANCE_OPERATION_ID = UUID.randomUUID();
 
   private @Mock AuthorityJdbcService authorityJdbcService;
   private @Mock ChunkStepJdbcService chunkStepJdbcService;
