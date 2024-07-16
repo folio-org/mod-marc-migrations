@@ -1,0 +1,8 @@
+description: Bulk create request
+type: object
+properties:
+  recordsFileName:
+    description: File name of entities
+    type: string
+required:
+  - recordsFileName

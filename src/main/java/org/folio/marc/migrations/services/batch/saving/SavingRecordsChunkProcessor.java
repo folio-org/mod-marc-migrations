@@ -9,10 +9,11 @@ import org.folio.marc.migrations.domain.entities.ChunkStep;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
 import org.folio.marc.migrations.domain.entities.types.OperationStep;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
-import org.folio.marc.migrations.services.AuthorityStorageService;
+import org.folio.marc.migrations.services.BulkStorageService;
 import org.folio.marc.migrations.services.domain.DataSavingResult;
 import org.folio.marc.migrations.services.domain.RecordsSavingData;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
+import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.stereotype.Component;
@@ -23,8 +24,9 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SavingRecordsChunkProcessor implements ItemProcessor<OperationChunk, DataSavingResult> {
 
-  private final AuthorityStorageService authorityStorageService;
+  private final BulkStorageService bulkStorageService;
   private final ChunkStepJdbcService chunkStepJdbcService;
+  private final OperationJdbcService operationJdbcService;
 
   @Override
   public DataSavingResult process(OperationChunk chunk) {
@@ -33,7 +35,10 @@ public class SavingRecordsChunkProcessor implements ItemProcessor<OperationChunk
     var chunkStep = createChunkStep(chunk);
     var recordsSavingData = new RecordsSavingData(chunk.getOperationId(), chunk.getId(), chunkStep.getId(),
         chunk.getNumOfRecords());
-    var saveResponse = authorityStorageService.saveAuthorities(chunk.getEntityChunkFileName());
+
+    var operationType = operationJdbcService.getOperation(chunk.getOperationId().toString()).getEntityType();
+
+    var saveResponse = bulkStorageService.saveEntities(chunk.getEntityChunkFileName(), operationType);
     return new DataSavingResult(recordsSavingData, saveResponse);
   }
 

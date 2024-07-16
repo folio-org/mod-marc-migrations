@@ -1,6 +1,6 @@
 package org.folio.marc.migrations.services.domain;
 
-import org.folio.marc.migrations.domain.dto.AuthorityBulkResponse;
+import org.folio.marc.migrations.domain.dto.BulkResponse;
 
-public record DataSavingResult(RecordsSavingData recordsSavingData, AuthorityBulkResponse saveResponse) {
+public record DataSavingResult(RecordsSavingData recordsSavingData, BulkResponse saveResponse) {
 }
