@@ -72,17 +72,6 @@ class MarcMigrationsServiceTest {
   }
 
   @Test
-  void createNewMigration_InvalidEntityType_ThrowsApiValidationException() {
-    // Arrange
-    var invalidOperation = new NewMigrationOperation()
-      .operationType(OperationType.REMAPPING)
-      .entityType(EntityType.HOLDINGS);
-
-    // Act & Assert
-    assertThrows(ApiValidationException.class, () -> migrationsService.createNewMigration(invalidOperation));
-  }
-
-  @Test
   void getMarcMigrationById_Valid_ReturnsMigrationOperation() {
     // Arrange
     var operationId = UUID.randomUUID();

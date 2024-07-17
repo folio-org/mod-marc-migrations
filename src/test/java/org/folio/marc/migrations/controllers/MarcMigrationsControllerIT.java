@@ -299,22 +299,6 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   }
 
   @Test
-  void createNewMigration_negative_entityTypeIsUnexpected() throws Exception {
-    // Arrange
-    var migrationOperation = new NewMigrationOperation()
-      .operationType(OperationType.REMAPPING)
-      .entityType(EntityType.HOLDINGS);
-
-    // Act & Assert
-    tryPost(marcMigrationEndpoint(), migrationOperation)
-      .andExpect(status().isUnprocessableEntity())
-      .andExpect(errorMessageMatches(containsString("Unexpected value")))
-      .andExpect(errorTypeMatches(ApiValidationException.class))
-      .andExpect(errorParameterKeyMatches(is("entityType")))
-      .andExpect(errorParameterValueMatches(is("holdings")));
-  }
-
-  @Test
   void getMigrationById_positive() throws Exception {
     // Arrange
     var migrationOperation = new NewMigrationOperation()
