@@ -18,7 +18,7 @@ public class InstanceJdbcService extends JdbcService {
     CREATE OR REPLACE VIEW %s.instance_view
           AS
         SELECT *
-          FROM %s_mod_inventory_storage.instance;
+          FROM %s_mod_inventory_storage.instance WHERE (jsonb ->> 'source') = 'MARC';
     """;
 
   private static final String CREATE_MARC_BIB_VIEW_SQL = """
