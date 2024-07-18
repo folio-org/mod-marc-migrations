@@ -1,4 +1,4 @@
-package org.folio.marc.migrations.services.batch;
+package org.folio.marc.migrations.services.batch.mapping;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -15,7 +15,6 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import org.folio.marc.migrations.config.MigrationProperties;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
-import org.folio.marc.migrations.services.batch.mapping.MappingChunkEntityReader;
 import org.folio.marc.migrations.services.jdbc.ChunkJdbcService;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.BeforeEach;
