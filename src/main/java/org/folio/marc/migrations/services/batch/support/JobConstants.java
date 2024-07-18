@@ -12,5 +12,6 @@ public class JobConstants {
   @NoArgsConstructor(access = AccessLevel.PRIVATE)
   public static class JobParameterNames {
     public static final String OPERATION_ID = "operationId";
+    public static final String ENTITY_TYPE = "entityType";
   }
 }

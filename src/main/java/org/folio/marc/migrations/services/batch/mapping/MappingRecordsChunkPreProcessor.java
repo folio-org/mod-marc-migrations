@@ -6,6 +6,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.domain.entities.ChunkStep;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
@@ -18,9 +19,9 @@ import org.folio.marc.migrations.services.domain.RecordsMappingData;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
 import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
-import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Log4j2
@@ -34,16 +35,17 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
   private final AuthorityJdbcService authorityJdbcService;
   private final ChunkStepJdbcService chunkStepJdbcService;
   private final InstanceJdbcService instanceJdbcService;
-  private final OperationJdbcService operationJdbcService;
+
+  @Setter
+  @Value("#{jobParameters['entityType']}")
+  private EntityType entityType;
 
   @Override
   public MappingComposite<MarcRecord> process(OperationChunk chunk) {
     log.trace("process:: for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
     var chunkStep = createChunkStep(chunk);
 
-    var operationType = operationJdbcService.getOperation(chunk.getOperationId().toString()).getEntityType();
-
-    var records = (operationType == EntityType.AUTHORITY)
+    var records = (entityType == EntityType.AUTHORITY)
         ? authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()) :
           instanceJdbcService.getInstancesChunk(chunk.getStartRecordId(), chunk.getEndRecordId());
 

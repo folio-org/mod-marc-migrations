@@ -1,6 +1,8 @@
 package org.folio.marc.migrations.services.batch;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.folio.marc.migrations.domain.entities.types.EntityType.AUTHORITY;
+import static org.folio.marc.migrations.domain.entities.types.EntityType.INSTANCE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
@@ -18,8 +20,6 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
-import org.folio.marc.migrations.domain.entities.Operation;
-import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
 import org.folio.marc.migrations.services.batch.mapping.MappingRecordsChunkProcessor;
@@ -65,19 +65,19 @@ class MappingRecordsChunkProcessorTest {
 
   @Test
   void processAuthority_positive() {
-    process_positive(authorityOperation());
+    mapper.setEntityType(AUTHORITY);
+    process_positive();
   }
 
   @Test
   void processInstance_positive() {
-    process_positive(instanceOperation());
+    mapper.setEntityType(INSTANCE);
+    process_positive();
   }
 
-  void process_positive(Operation operation) {
+  void process_positive() {
     var records = records();
     var composite = new MappingComposite<>(mappingData, records);
-
-    when(jdbcService.getOperation(any())).thenReturn(operation);
 
     var actual = mapper.process(composite);
 
@@ -108,8 +108,7 @@ class MappingRecordsChunkProcessorTest {
     when(objectMapper.writeValueAsString(any()))
       .thenThrow(new IllegalStateException("test exc"))
       .thenCallRealMethod();
-    when(jdbcService.getOperation(any())).thenReturn(authorityOperation());
-
+    mapper.setEntityType(AUTHORITY);
     var actual = mapper.process(composite);
 
     assertThat(actual).isNotNull();
@@ -188,8 +187,7 @@ class MappingRecordsChunkProcessorTest {
   private void process_negative(String errorCause, String marcRecordContains) {
     var records = records();
     var composite = new MappingComposite<>(mappingData, records);
-    when(jdbcService.getOperation(any())).thenReturn(authorityOperation());
-
+    mapper.setEntityType(AUTHORITY);
     var actual = mapper.process(composite);
 
     assertThat(actual).isNotNull();
@@ -209,20 +207,6 @@ class MappingRecordsChunkProcessorTest {
     verify(chunkStepJdbcService)
         .updateChunkStep(eq(mappingData.stepId()), eq(StepStatus.FAILED), any(Timestamp.class), eq(records.size()));
     verify(chunkJdbcService).updateChunk(mappingData.chunkId(), OperationStatusType.DATA_MAPPING_FAILED);
-  }
-
-  private Operation authorityOperation() {
-    return Operation.builder()
-        .id(UUID.randomUUID())
-        .entityType(EntityType.AUTHORITY)
-        .build();
-  }
-
-  private Operation instanceOperation() {
-    return Operation.builder()
-        .id(UUID.randomUUID())
-        .entityType(EntityType.AUTHORITY)
-        .build();
   }
 
   private List<MarcRecord> records() {

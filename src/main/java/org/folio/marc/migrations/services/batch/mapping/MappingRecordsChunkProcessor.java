@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.folio.Authority;
 import org.folio.Instance;
@@ -26,6 +27,7 @@ import org.folio.processing.mapping.defaultmapper.MarcToAuthorityMapper;
 import org.folio.processing.mapping.defaultmapper.MarcToInstanceMapper;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Log4j2
@@ -38,6 +40,10 @@ public class MappingRecordsChunkProcessor
   private static final String NO_MARC_RECORD_JSON =
     "{\"marcId\": \"%s\", \"recordId\": \"%s\", \"state\": \"%s\", \"version\": %s}";
 
+  @Setter
+  @Value("#{jobParameters['entityType']}")
+  private EntityType entityType;
+
   private final ObjectMapper objectMapper;
   private final MappingMetadataProvider mappingMetadataProvider;
   private final OperationJdbcService jdbcService;
@@ -49,9 +55,7 @@ public class MappingRecordsChunkProcessor
     var mappingData = composite.mappingData();
     log.debug("process:: for operation {}, chunk {}, step {}",
         mappingData.operationId(), mappingData.chunkId(), mappingData.stepId());
-
-    var operationEntityType = jdbcService.getOperation(mappingData.operationId().toString()).getEntityType();
-    var mappingResults = getRecordMappingResults(composite.records(), operationEntityType);
+    var mappingResults = getRecordMappingResults(composite.records());
     var mappedRecordsCount = (int) mappingResults.stream()
       .map(MappingResult::mappedRecord)
       .filter(Objects::nonNull)
@@ -66,7 +70,7 @@ public class MappingRecordsChunkProcessor
     return new MappingComposite<>(mappingData, mappingResults);
   }
 
-  private List<MappingResult> getRecordMappingResults(List<MarcRecord> records, EntityType type) {
+  private List<MappingResult> getRecordMappingResults(List<MarcRecord> records) {
     log.trace("process:: retrieving mapping metadata from cache");
     var mappingData = mappingMetadataProvider.getMappingData();
     if (mappingData == null) {
@@ -76,13 +80,12 @@ public class MappingRecordsChunkProcessor
     }
 
     return records.stream()
-        .map(sourceData -> asRecordMappingResult(sourceData, mappingData, type))
+        .map(sourceData -> asRecordMappingResult(sourceData, mappingData))
         .toList();
   }
 
   private MappingResult asRecordMappingResult(MarcRecord sourceData,
-                                              MappingMetadataProvider.MappingData mappingData,
-                                              EntityType entityType) {
+                                              MappingMetadataProvider.MappingData mappingData) {
     try {
       var marcSource = new JsonObject(sourceData.marc().toString());
 

@@ -48,7 +48,8 @@ class OperationsServiceTest {
 
   void createOperation_SetsFieldsAndSavesOperation(EntityType entityType) {
     // Arrange
-    var operation = Operation.builder().entityType(entityType).build();
+    var operation = new Operation();
+    operation.setEntityType(entityType);
     var userId = UUID.randomUUID();
     when(context.getUserId()).thenReturn(userId);
     when(repository.save(operation)).thenReturn(operation);

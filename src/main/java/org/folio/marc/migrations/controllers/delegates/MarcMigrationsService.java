@@ -60,21 +60,9 @@ public class MarcMigrationsService {
 
   private void validateMigrationCreate(NewMigrationOperation newMigrationOperation) {
     log.debug("validate::Validating new migration operation: {}", newMigrationOperation);
-    validateOperationType(newMigrationOperation);
-    validateEntityType(newMigrationOperation);
-  }
-
-  private void validateOperationType(NewMigrationOperation newMigrationOperation) {
     var operationType = newMigrationOperation.getOperationType();
     if (!OperationType.REMAPPING.equals(operationType)) {
       throw ApiValidationException.forOperationType(operationType.getValue());
-    }
-  }
-
-  private void validateEntityType(NewMigrationOperation newMigrationOperation) {
-    var entityType = newMigrationOperation.getEntityType();
-    if (!entityTypes.contains(entityType)) {
-      throw ApiValidationException.forEntityType(entityType.getValue());
     }
   }
 
