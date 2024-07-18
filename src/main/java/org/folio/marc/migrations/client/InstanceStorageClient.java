@@ -5,9 +5,9 @@ import org.folio.marc.migrations.domain.dto.BulkResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 
-@FeignClient("authority-storage")
-public interface AuthorityStorageClient {
+@FeignClient("instance-storage")
+public interface InstanceStorageClient {
 
-  @PostMapping("/authorities/bulk")
-  BulkResponse saveAuthorityBulk(BulkRequest saveRequest);
+  @PostMapping("/instances/bulk")
+  BulkResponse saveInstanceBulk(BulkRequest saveRequest);
 }

@@ -95,14 +95,15 @@ docker compose up --build --force-recreate --no-deps
 
 ## Integration
 ### Folio modules communication
-| Module name               | Interface                 | Notes                                                                      |
-|---------------------------|---------------------------|----------------------------------------------------------------------------|
-| mod-login                 | login                     | For system user creation and authentication                                |
-| mod-permissions           | permissions               | For system user creation                                                   |
-| mod-users                 | users                     | For system user creation                                                   |
-| mod-source-record-manager | mapping-metadata-provider | For fetching MARC mapping metadata                                         |
-| mod-source-record-storage | source-storage-records    | For having access to MARC records                                          |
-| mod-entities-links        | authority-storage         | For having access to Authority records                                     |
+| Module name               | Interface                 | Notes                                       |
+|---------------------------|---------------------------|---------------------------------------------|
+| mod-login                 | login                     | For system user creation and authentication |
+| mod-permissions           | permissions               | For system user creation                    |
+| mod-users                 | users                     | For system user creation                    |
+| mod-source-record-manager | mapping-metadata-provider | For fetching MARC mapping metadata          |
+| mod-source-record-storage | source-storage-records    | For having access to MARC records           |
+| mod-entities-links        | authority-storage         | For having access to Authority records      |
+| mod-inventory-storage     | instance-storage          | For having access to Instances              |
 
 ## APIs
 ### API marc-migrations
