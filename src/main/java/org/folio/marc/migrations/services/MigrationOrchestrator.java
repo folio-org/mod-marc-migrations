@@ -76,9 +76,10 @@ public class MigrationOrchestrator {
    * */
   public CompletableFuture<Void> submitMappingSaveTask(Operation operation) {
     var operationId = operation.getId().toString();
+    var entityType = operation.getEntityType();
     log.info("submitSavingTask:: starting for operation {}", operationId);
     updateOperationStatus(operationId, OperationStatusType.DATA_SAVING, OperationTimeType.SAVING_START);
-    var future = CompletableFuture.runAsync(submitProcessChunksTask(operationId, operation.getEntityType()), remappingExecutor)
+    var future = CompletableFuture.runAsync(submitProcessChunksTask(operationId, entityType), remappingExecutor)
         .handle((unused, throwable) -> {
           if (throwable != null) {
             updateOperationStatus(operationId, OperationStatusType.DATA_SAVING_FAILED, OperationTimeType.SAVING_END);

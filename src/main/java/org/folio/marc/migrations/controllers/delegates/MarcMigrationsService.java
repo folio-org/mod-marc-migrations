@@ -1,14 +1,9 @@
 package org.folio.marc.migrations.controllers.delegates;
 
-import static org.folio.marc.migrations.domain.dto.EntityType.AUTHORITY;
-import static org.folio.marc.migrations.domain.dto.EntityType.INSTANCE;
-
-import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.controllers.mappers.MarcMigrationMapper;
-import org.folio.marc.migrations.domain.dto.EntityType;
 import org.folio.marc.migrations.domain.dto.MigrationOperation;
 import org.folio.marc.migrations.domain.dto.MigrationOperationStatus;
 import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
@@ -32,7 +27,6 @@ public class MarcMigrationsService {
   private final MarcMigrationMapper mapper;
   private final OperationsService operationsService;
   private final MigrationOrchestrator migrationOrchestrator;
-  private final List<EntityType> entityTypes = List.of(AUTHORITY, INSTANCE);
 
   public MigrationOperation createNewMigration(NewMigrationOperation newMigrationOperation) {
     log.debug("createNewMigration::Trying to create new migration operation: {}", newMigrationOperation);
