@@ -80,20 +80,19 @@ class SavingRecordsChunkProcessorTest {
   }
 
   void save_positive(OperationChunk chunk, EntityType entityType) {
-    var stepCaptor = ArgumentCaptor.forClass(ChunkStep.class);
-
-    verify(chunkStepJdbcService).createChunkStep(stepCaptor.capture());
-    verify(bulkStorageService).saveEntities(chunk.getEntityChunkFileName(), entityType);
-    var step = stepCaptor.getValue();
-
     var actual = processor.process(chunk);
-    assertChunkStep(chunk, step);
     assertThat(actual).isNotNull();
     assertThat(actual.saveResponse()).isNotNull();
     assertThat(actual.saveResponse().getErrorsNumber()).isEqualTo(0);
 
+    var stepCaptor = ArgumentCaptor.forClass(ChunkStep.class);
+    verify(chunkStepJdbcService).createChunkStep(stepCaptor.capture());
+    verify(bulkStorageService).saveEntities(chunk.getEntityChunkFileName(), entityType);
+    var step = stepCaptor.getValue();
     var operationId = entityType == AUTHORITY ? AUTHORITY_OPERATION_ID : INSTANCE_OPERATION_ID;
+
     assertRecordSavingData(actual.recordsSavingData(), chunk, operationId, step);
+    assertChunkStep(chunk, step);
   }
 
   private void assertRecordSavingData(RecordsSavingData recordsSavingData, OperationChunk chunk,
