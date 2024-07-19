@@ -6,8 +6,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import org.folio.marc.migrations.client.AuthorityStorageClient;
-import org.folio.marc.migrations.client.InstanceStorageClient;
+import org.folio.marc.migrations.client.BulkClient;
 import org.folio.marc.migrations.domain.dto.BulkResponse;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.services.BulkStorageService;
@@ -23,36 +22,32 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class BulkStorageServiceTest {
   private static final String FILE_NAME = "test";
 
-  private @Mock AuthorityStorageClient authorityStorageClient;
-  private @Mock InstanceStorageClient instanceStorageClient;
+  private @Mock BulkClient bulkClient;
   private @InjectMocks BulkStorageService bulkStorageService;
+
+  private final BulkResponse bulkResponse = new BulkResponse().errorsNumber(0);
 
   @Test
   void shouldSaveAuthorityBulk() {
-    BulkResponse bulkResponse = new BulkResponse();
-    bulkResponse.errorsNumber(0);
-
-    when(authorityStorageClient.saveAuthorityBulk(any()))
-        .thenReturn(bulkResponse);
-
+    when(bulkClient.saveBulk(any(), any())).thenReturn(bulkResponse);
     var response = bulkStorageService.saveEntities(FILE_NAME, EntityType.AUTHORITY);
 
-    verify(authorityStorageClient)
-        .saveAuthorityBulk(argThat(request -> request.getRecordsFileName().equals(FILE_NAME)));
+    verify(bulkClient)
+        .saveBulk(argThat(uri -> uri.equals(BulkClient.EntityBulkType.AUTHORITY.getUri())),
+                  argThat(request -> request.getRecordsFileName().equals(FILE_NAME)));
+
     assertThat(response).isEqualTo(bulkResponse);
   }
 
   @Test
   void shouldSaveInstanceBulk() {
-    BulkResponse bulkResponse = new BulkResponse();
-    bulkResponse.errorsNumber(0);
-
-    when(instanceStorageClient.saveInstanceBulk(any()))
-        .thenReturn(bulkResponse);
-
+    when(bulkClient.saveBulk(any(), any())).thenReturn(bulkResponse);
     var response = bulkStorageService.saveEntities(FILE_NAME, EntityType.INSTANCE);
 
-    verify(instanceStorageClient).saveInstanceBulk(argThat(request -> request.getRecordsFileName().equals(FILE_NAME)));
+    verify(bulkClient)
+        .saveBulk(argThat(uri -> uri.equals(BulkClient.EntityBulkType.INSTANCE.getUri())),
+                  argThat(request -> request.getRecordsFileName().equals(FILE_NAME)));
+
     assertThat(response).isEqualTo(bulkResponse);
   }
 
@@ -64,7 +59,7 @@ class BulkStorageServiceTest {
 
   @Test
   void shouldReturnNullIfErrorDuringBulkSave() {
-    when(authorityStorageClient.saveAuthorityBulk(any()))
+    when(bulkClient.saveBulk(any(), any()))
         .thenThrow(new RuntimeException("Test"));
 
     var response = bulkStorageService.saveEntities(FILE_NAME, EntityType.AUTHORITY);
