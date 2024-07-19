@@ -1,6 +1,8 @@
 package org.folio.marc.migrations.services.batch;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.folio.marc.migrations.domain.entities.types.EntityType.AUTHORITY;
+import static org.folio.marc.migrations.domain.entities.types.EntityType.INSTANCE;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -19,6 +21,7 @@ import org.folio.marc.migrations.services.batch.mapping.MappingRecordsChunkPrePr
 import org.folio.marc.migrations.services.domain.RecordsMappingData;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
+import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,19 +34,41 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class MappingRecordsChunkPreProcessorTest {
 
+  private static final UUID AUTHORITY_OPERATION_ID = UUID.randomUUID();
+  private static final UUID INSTANCE_OPERATION_ID = UUID.randomUUID();
+
   private @Mock AuthorityJdbcService authorityJdbcService;
   private @Mock ChunkStepJdbcService chunkStepJdbcService;
+  private @Mock InstanceJdbcService instanceJdbcService;
   private @InjectMocks MappingRecordsChunkPreProcessor processor;
 
   @Test
-  void process_positive() {
+  void processAuthority_positive() {
     int numOfRecords = 5;
-    var chunk = chunk(numOfRecords);
+    var chunk = chunk(numOfRecords, AUTHORITY_OPERATION_ID);
     var marcRecords = marcRecords(numOfRecords);
-    var stepCaptor = ArgumentCaptor.forClass(ChunkStep.class);
 
     when(authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
       .thenReturn(marcRecords);
+    processor.setEntityType(AUTHORITY);
+    process_positive(chunk, marcRecords);
+  }
+
+  @Test
+  void processInstance_positive() {
+    int numOfRecords = 5;
+    var chunk = chunk(numOfRecords, INSTANCE_OPERATION_ID);
+    var marcRecords = marcRecords(numOfRecords);
+
+    when(instanceJdbcService.getInstancesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
+        .thenReturn(marcRecords);
+    processor.setEntityType(INSTANCE);
+
+    process_positive(chunk, marcRecords);
+  }
+
+  void process_positive(OperationChunk chunk, List<MarcRecord> marcRecords) {
+    var stepCaptor = ArgumentCaptor.forClass(ChunkStep.class);
 
     var actual = processor.process(chunk);
 
@@ -85,10 +110,10 @@ class MappingRecordsChunkPreProcessorTest {
     softAssert.assertAll();
   }
 
-  private OperationChunk chunk(int numOfRecords) {
+  private OperationChunk chunk(int numOfRecords, UUID operationId) {
     return OperationChunk.builder()
       .id(UUID.randomUUID())
-      .operationId(UUID.randomUUID())
+      .operationId(operationId)
       .startRecordId(UUID.randomUUID())
       .endRecordId(UUID.randomUUID())
       .numOfRecords(numOfRecords)

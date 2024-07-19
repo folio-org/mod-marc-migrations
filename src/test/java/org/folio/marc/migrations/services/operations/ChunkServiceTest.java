@@ -21,7 +21,9 @@ import org.folio.marc.migrations.domain.entities.OperationChunk;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.ChunkJdbcService;
+import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
 import org.folio.spring.testing.type.UnitTest;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -34,26 +36,18 @@ class ChunkServiceTest {
 
   private @Mock MigrationProperties props;
   private @Mock AuthorityJdbcService authorityJdbcService;
+  private @Mock InstanceJdbcService instanceJdbcService;
   private @Mock ChunkJdbcService chunkJdbcService;
   private @InjectMocks ChunkService service;
 
-  @Test
-  void prepareChunks_positive() {
-    // Arrange
+  @BeforeEach
+  void beforeEach() {
     when(props.getChunkSize()).thenReturn(2); //number of records in one chunk
     when(props.getChunkFetchIdsCount()).thenReturn(4); //number of records to fetch in one query
     when(props.getChunkPersistCount()).thenReturn(4); //number of chunks to persist into db at a time
-    var recordIdsMock = List.of(
-        //returned from first query and partitioned into 2 chunks
-        List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()),
-        //returned from query in a loop and partitioned into 2 chunks. Persisted to db in a loop
-        List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()),
-        //returned from query in a loop, 1 chunk created. Persisted to db after a loop
-        List.of(UUID.randomUUID(), UUID.randomUUID()));
-    when(authorityJdbcService.getAuthorityIdsChunk(any()))
-        .thenReturn(recordIdsMock.get(0));
-    when(authorityJdbcService.getAuthorityIdsChunk(any(), any()))
-        .thenReturn(recordIdsMock.get(1), recordIdsMock.get(2), emptyList());
+  }
+
+  void prepareChunks_positive(EntityType entityType, List<List<UUID>> recordIdsMock) {
     var actualChunks = new LinkedList<OperationChunk>();
     doAnswer(invocation -> {
       actualChunks.addAll(invocation.<List<OperationChunk>>getArgument(0));
@@ -61,7 +55,7 @@ class ChunkServiceTest {
     }).when(chunkJdbcService).createChunks(any());
     var operation = new Operation();
     operation.setId(UUID.randomUUID());
-    operation.setEntityType(EntityType.AUTHORITY);
+    operation.setEntityType(entityType);
 
     // Act
     service.prepareChunks(operation);
@@ -88,6 +82,36 @@ class ChunkServiceTest {
       softAssertions.assertThat(chunk.getNumOfRecords()).isEqualTo(2);
     }
     softAssertions.assertAll();
+  }
+
+  @Test
+  void prepareAuthorityChunks_positive() {
+    var recordIdsMock = getRecordIdsMocks();
+    when(authorityJdbcService.getAuthorityIdsChunk(any()))
+        .thenReturn(recordIdsMock.get(0));
+    when(authorityJdbcService.getAuthorityIdsChunk(any(), any()))
+        .thenReturn(recordIdsMock.get(1), recordIdsMock.get(2), emptyList());
+    prepareChunks_positive(EntityType.AUTHORITY, recordIdsMock);
+  }
+
+  @Test
+  void prepareInstanceChunks_positive() {
+    var recordIdsMock = getRecordIdsMocks();
+    when(instanceJdbcService.getInstanceIdsChunk(any()))
+        .thenReturn(recordIdsMock.get(0));
+    when(instanceJdbcService.getInstanceIdsChunk(any(), any()))
+        .thenReturn(recordIdsMock.get(1), recordIdsMock.get(2), emptyList());
+    prepareChunks_positive(EntityType.INSTANCE, recordIdsMock);
+  }
+
+  private List<List<UUID>> getRecordIdsMocks() {
+    return List.of(
+        //returned from first query and partitioned into 2 chunks
+        List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()),
+        //returned from query in a loop and partitioned into 2 chunks. Persisted to db in a loop
+        List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()),
+        //returned from query in a loop, 1 chunk created. Persisted to db after a loop
+        List.of(UUID.randomUUID(), UUID.randomUUID()));
   }
 
   private boolean fileNameValid(String fileName, UUID operationId, UUID chunkId, String postfix) {

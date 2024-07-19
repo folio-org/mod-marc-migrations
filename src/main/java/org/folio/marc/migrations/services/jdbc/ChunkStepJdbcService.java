@@ -25,11 +25,8 @@ public class ChunkStepJdbcService extends JdbcService {
     WHERE id = '%s';
     """;
 
-  private final JdbcTemplate jdbcTemplate;
-
   public ChunkStepJdbcService(FolioExecutionContext context, JdbcTemplate jdbcTemplate) {
-    super(context);
-    this.jdbcTemplate = jdbcTemplate;
+    super(jdbcTemplate, context);
   }
 
   public void createChunkStep(ChunkStep chunkStep) {

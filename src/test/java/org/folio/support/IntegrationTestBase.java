@@ -57,7 +57,11 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 @ActiveProfiles("test")
 @AutoConfigureMockMvc
 @Import(IntegrationTestBase.TestConfig.class)
-@Sql(scripts = {"classpath:sql/mod-source-record-storage-init.sql", "classpath:sql/mod-entities-links-init.sql"},
+@Sql(scripts = {
+  "classpath:sql/mod-source-record-storage-init.sql",
+  "classpath:sql/mod-entities-links-init.sql",
+  "classpath:sql/mod-inventory-storage-init.sql"
+  },
      config = @SqlConfig(separator = EOF_STATEMENT_SEPARATOR), executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS)
 @Sql(scripts = "classpath:sql/cleanup.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_CLASS)
 public class IntegrationTestBase {

@@ -1,5 +1,6 @@
 package org.folio.marc.migrations.services;
 
+import static org.folio.marc.migrations.services.batch.support.JobConstants.JobParameterNames.ENTITY_TYPE;
 import static org.folio.marc.migrations.services.batch.support.JobConstants.JobParameterNames.OPERATION_ID;
 
 import java.sql.Timestamp;
@@ -9,6 +10,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.domain.entities.Operation;
+import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.services.domain.OperationTimeType;
 import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
@@ -56,7 +58,7 @@ public class MigrationOrchestrator {
     var future = CompletableFuture.runAsync(() -> updateOperationStatus(operationId, OperationStatusType.DATA_MAPPING,
         OperationTimeType.MAPPING_START), remappingExecutor)
       .thenRun(() -> chunkService.prepareChunks(operation))
-      .thenRun(submitProcessChunksTask(operationId))
+      .thenRun(submitProcessChunksTask(operationId, operation.getEntityType()))
       .handle((unused, throwable) -> {
         if (throwable != null) {
           updateOperationStatus(operationId, OperationStatusType.DATA_MAPPING_FAILED, OperationTimeType.MAPPING_END);
@@ -74,9 +76,10 @@ public class MigrationOrchestrator {
    * */
   public CompletableFuture<Void> submitMappingSaveTask(Operation operation) {
     var operationId = operation.getId().toString();
+    var entityType = operation.getEntityType();
     log.info("submitSavingTask:: starting for operation {}", operationId);
     updateOperationStatus(operationId, OperationStatusType.DATA_SAVING, OperationTimeType.SAVING_START);
-    var future = CompletableFuture.runAsync(submitProcessChunksTask(operationId), remappingExecutor)
+    var future = CompletableFuture.runAsync(submitProcessChunksTask(operationId, entityType), remappingExecutor)
         .handle((unused, throwable) -> {
           if (throwable != null) {
             updateOperationStatus(operationId, OperationStatusType.DATA_SAVING_FAILED, OperationTimeType.SAVING_END);
@@ -92,11 +95,15 @@ public class MigrationOrchestrator {
     jdbcService.updateOperationStatus(operationId, status, timeType, Timestamp.from(Instant.now()));
   }
 
-  private Runnable submitProcessChunksTask(String operationId) {
+  private Runnable submitProcessChunksTask(String operationId, EntityType entityType) {
     return () -> {
       try {
         var jobParameters = new JobParameters(
-            Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class)));
+            Map.of(
+                OPERATION_ID, new JobParameter<>(operationId, String.class),
+                ENTITY_TYPE, new JobParameter<>(entityType, EntityType.class)
+            )
+        );
         var currentStatus = jdbcService.getOperation(operationId).getStatus();
         if (currentStatus == OperationStatusType.DATA_MAPPING) {
           jobLauncher.run(remappingJob, jobParameters);

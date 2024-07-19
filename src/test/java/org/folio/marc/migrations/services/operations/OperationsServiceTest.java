@@ -1,5 +1,7 @@
 package org.folio.marc.migrations.services.operations;
 
+import static org.folio.marc.migrations.domain.entities.types.EntityType.AUTHORITY;
+import static org.folio.marc.migrations.domain.entities.types.EntityType.INSTANCE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.verify;
@@ -8,9 +10,11 @@ import static org.mockito.Mockito.when;
 import java.util.Optional;
 import java.util.UUID;
 import org.folio.marc.migrations.domain.entities.Operation;
+import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.repositories.OperationRepository;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
+import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
 import org.folio.spring.FolioExecutionContext;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
@@ -27,16 +31,28 @@ class OperationsServiceTest {
   private @Mock FolioExecutionContext context;
   private @Mock OperationRepository repository;
   private @Mock AuthorityJdbcService authorityJdbcService;
+  private @Mock InstanceJdbcService instanceJdbcService;
   private @InjectMocks OperationsService service;
 
   @Test
-  void createOperation_SetsFieldsAndSavesOperation() {
+  void createAuthorityOperation_SetsFieldsAndSavesOperation() {
+    when(authorityJdbcService.countNumOfRecords()).thenReturn(10);
+    createOperation_SetsFieldsAndSavesOperation(AUTHORITY);
+  }
+
+  @Test
+  void createInstanceOperation_SetsFieldsAndSavesOperation() {
+    when(instanceJdbcService.countNumOfRecords()).thenReturn(10);
+    createOperation_SetsFieldsAndSavesOperation(INSTANCE);
+  }
+
+  void createOperation_SetsFieldsAndSavesOperation(EntityType entityType) {
     // Arrange
     var operation = new Operation();
+    operation.setEntityType(entityType);
     var userId = UUID.randomUUID();
     when(context.getUserId()).thenReturn(userId);
     when(repository.save(operation)).thenReturn(operation);
-    when(authorityJdbcService.countNumOfRecords()).thenReturn(10);
 
     // Act
     var result = service.createOperation(operation);

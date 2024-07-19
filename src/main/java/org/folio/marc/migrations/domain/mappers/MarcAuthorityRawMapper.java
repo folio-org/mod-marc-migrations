@@ -8,8 +8,8 @@ import org.folio.marc.migrations.domain.entities.types.RecordState;
 import org.springframework.jdbc.core.DataClassRowMapper;
 import org.springframework.stereotype.Component;
 
-@Component
-public class MarcRecordRawMapper extends DataClassRowMapper<MarcRecord> {
+@Component("marcAuthorityRawMapper")
+public class MarcAuthorityRawMapper extends DataClassRowMapper<MarcRecord> {
   @Override
   public MarcRecord mapRow(ResultSet rs, int rowNumber) throws SQLException {
     return new MarcRecord(rs.getObject("marc_id", UUID.class),

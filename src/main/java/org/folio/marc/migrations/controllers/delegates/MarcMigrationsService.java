@@ -4,7 +4,6 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.controllers.mappers.MarcMigrationMapper;
-import org.folio.marc.migrations.domain.dto.EntityType;
 import org.folio.marc.migrations.domain.dto.MigrationOperation;
 import org.folio.marc.migrations.domain.dto.MigrationOperationStatus;
 import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
@@ -55,21 +54,9 @@ public class MarcMigrationsService {
 
   private void validateMigrationCreate(NewMigrationOperation newMigrationOperation) {
     log.debug("validate::Validating new migration operation: {}", newMigrationOperation);
-    validateOperationType(newMigrationOperation);
-    validateEntityType(newMigrationOperation);
-  }
-
-  private void validateOperationType(NewMigrationOperation newMigrationOperation) {
     var operationType = newMigrationOperation.getOperationType();
     if (!OperationType.REMAPPING.equals(operationType)) {
       throw ApiValidationException.forOperationType(operationType.getValue());
-    }
-  }
-
-  private void validateEntityType(NewMigrationOperation newMigrationOperation) {
-    var entityType = newMigrationOperation.getEntityType();
-    if (!EntityType.AUTHORITY.equals(entityType)) {
-      throw ApiValidationException.forEntityType(entityType.getValue());
     }
   }
 
