@@ -66,8 +66,7 @@
             "marc-migrations.operations.item.put"
           ],
           "modulePermissions": [
-            "inventory-storage.authorities.bulk.post",
-            "inventory-storage.instances.bulk.post"
+            "inventory-storage.authorities.bulk.post"
           ]
         }
       ]

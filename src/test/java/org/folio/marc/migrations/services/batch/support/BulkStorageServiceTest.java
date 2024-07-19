@@ -20,7 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
-public class BulkStorageServiceTest {
+class BulkStorageServiceTest {
   private static final String FILE_NAME = "test";
 
   private @Mock AuthorityStorageClient authorityStorageClient;

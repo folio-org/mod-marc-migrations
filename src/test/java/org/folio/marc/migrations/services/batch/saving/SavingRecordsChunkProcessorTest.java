@@ -12,7 +12,6 @@ import java.util.UUID;
 import org.assertj.core.api.SoftAssertions;
 import org.folio.marc.migrations.domain.dto.BulkResponse;
 import org.folio.marc.migrations.domain.entities.ChunkStep;
-import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
@@ -21,7 +20,6 @@ import org.folio.marc.migrations.domain.entities.types.StepStatus;
 import org.folio.marc.migrations.services.BulkStorageService;
 import org.folio.marc.migrations.services.domain.RecordsSavingData;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
-import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,7 +37,6 @@ class SavingRecordsChunkProcessorTest {
 
   private @Mock BulkStorageService bulkStorageService;
   private @Mock ChunkStepJdbcService chunkStepJdbcService;
-  private @Mock OperationJdbcService operationJdbcService;
   private @InjectMocks SavingRecordsChunkProcessor processor;
 
   @BeforeEach
@@ -53,28 +50,18 @@ class SavingRecordsChunkProcessorTest {
 
   @Test
   void saveAuthority_positive() {
-    Operation authorityOperation = new Operation();
-    authorityOperation.setEntityType(AUTHORITY);
-
     int numOfRecords = 5;
     var chunk = chunk(numOfRecords, AUTHORITY_OPERATION_ID);
-
-    when(operationJdbcService.getOperation(chunk.getOperationId().toString()))
-        .thenReturn(authorityOperation);
+    processor.setEntityType(AUTHORITY);
 
     save_positive(chunk, AUTHORITY);
   }
 
   @Test
   void saveInstance_positive() {
-    Operation instanceOperation = new Operation();
-    instanceOperation.setEntityType(INSTANCE);
-
     int numOfRecords = 5;
     var chunk = chunk(numOfRecords, INSTANCE_OPERATION_ID);
-
-    when(operationJdbcService.getOperation(chunk.getOperationId().toString()))
-        .thenReturn(instanceOperation);
+    processor.setEntityType(INSTANCE);
 
     save_positive(chunk, INSTANCE);
   }
@@ -83,7 +70,7 @@ class SavingRecordsChunkProcessorTest {
     var actual = processor.process(chunk);
     assertThat(actual).isNotNull();
     assertThat(actual.saveResponse()).isNotNull();
-    assertThat(actual.saveResponse().getErrorsNumber()).isEqualTo(0);
+    assertThat(actual.saveResponse().getErrorsNumber()).isZero();
 
     var stepCaptor = ArgumentCaptor.forClass(ChunkStep.class);
     verify(chunkStepJdbcService).createChunkStep(stepCaptor.capture());

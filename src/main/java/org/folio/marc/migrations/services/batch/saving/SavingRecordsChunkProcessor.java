@@ -4,18 +4,20 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.domain.entities.ChunkStep;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
+import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.domain.entities.types.OperationStep;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
 import org.folio.marc.migrations.services.BulkStorageService;
 import org.folio.marc.migrations.services.domain.DataSavingResult;
 import org.folio.marc.migrations.services.domain.RecordsSavingData;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
-import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Log4j2
@@ -23,10 +25,12 @@ import org.springframework.stereotype.Component;
 @StepScope
 @RequiredArgsConstructor
 public class SavingRecordsChunkProcessor implements ItemProcessor<OperationChunk, DataSavingResult> {
+  @Setter
+  @Value("#{jobParameters['entityType']}")
+  private EntityType entityType;
 
   private final BulkStorageService bulkStorageService;
   private final ChunkStepJdbcService chunkStepJdbcService;
-  private final OperationJdbcService operationJdbcService;
 
   @Override
   public DataSavingResult process(OperationChunk chunk) {
@@ -36,9 +40,7 @@ public class SavingRecordsChunkProcessor implements ItemProcessor<OperationChunk
     var recordsSavingData = new RecordsSavingData(chunk.getOperationId(), chunk.getId(), chunkStep.getId(),
         chunk.getNumOfRecords());
 
-    var operationType = operationJdbcService.getOperation(chunk.getOperationId().toString()).getEntityType();
-
-    var saveResponse = bulkStorageService.saveEntities(chunk.getEntityChunkFileName(), operationType);
+    var saveResponse = bulkStorageService.saveEntities(chunk.getEntityChunkFileName(), entityType);
     return new DataSavingResult(recordsSavingData, saveResponse);
   }
 
