@@ -1,4 +1,4 @@
-package org.folio.marc.migrations.services.batch;
+package org.folio.marc.migrations.services.batch.mapping;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.marc.migrations.domain.entities.types.EntityType.AUTHORITY;
@@ -22,7 +22,6 @@ import lombok.SneakyThrows;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
-import org.folio.marc.migrations.services.batch.mapping.MappingRecordsChunkProcessor;
 import org.folio.marc.migrations.services.batch.support.MappingMetadataProvider;
 import org.folio.marc.migrations.services.domain.MappingComposite;
 import org.folio.marc.migrations.services.domain.RecordsMappingData;

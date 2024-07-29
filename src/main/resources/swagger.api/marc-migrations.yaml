@@ -293,10 +293,10 @@ components:
           description: Parameter value
           type: string
 
-    authorityBulkResponse:
-      $ref: schemas/authority/authorityBulkResponse.yaml
-    authorityBulkRequest:
-      $ref: schemas/authority/authorityBulkRequest.yaml
+    bulkResponse:
+      $ref: schemas/bulkResponse.yaml
+    bulkRequest:
+      $ref: schemas/bulkRequest.yaml
 
   parameters:
     TenantId:

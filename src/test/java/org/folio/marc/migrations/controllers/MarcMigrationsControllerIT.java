@@ -3,6 +3,8 @@ package org.folio.marc.migrations.controllers;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.notFound;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.marc.migrations.domain.dto.MigrationOperationStatus.DATA_MAPPING;
@@ -339,7 +341,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   }
 
   @Test
-  void saveMigration_positive() throws Exception {
+  void saveMigrationAuthority_positive() throws Exception {
     // Arrange
     var migrationOperation = new NewMigrationOperation()
         .operationType(OperationType.REMAPPING)
@@ -369,6 +371,8 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
             .andExpect(savedRecords(87))
     );
 
+    okapi.wireMockServer().verify(postRequestedFor(urlEqualTo("/authority-storage/authorities/bulk")));
+
     var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
     assertThat(chunks)
         .hasSize(9)
@@ -384,7 +388,54 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   }
 
   @Test
-  void saveMigration_recordsNotMapped() throws Exception {
+  void saveMigrationInstance_positive() throws Exception {
+    // Arrange
+    var migrationOperation = new NewMigrationOperation()
+        .operationType(OperationType.REMAPPING)
+        .entityType(EntityType.INSTANCE);
+
+    // Act & Assert
+    var result = doPost(marcMigrationEndpoint(), migrationOperation)
+        .andExpect(operationStatus(NEW))
+        .andExpect(totalRecords(11))
+        .andReturn();
+    var operation = contentAsObj(result, MigrationOperation.class);
+    var operationId = operation.getId();
+
+    doGetUntilMatches(marcMigrationEndpoint(operationId),
+        operationStatus(DATA_MAPPING_COMPLETED));
+    doGetUntilMatches(marcMigrationEndpoint(operationId), mappedRecords(11));
+
+    var saveMigrationOperation = new SaveMigrationOperation()
+        .status(DATA_SAVING);
+    tryPut(marcMigrationEndpoint(operationId), saveMigrationOperation)
+        .andExpect(status().isNoContent());
+    awaitUntilAsserted(() ->
+        doGet(marcMigrationEndpoint(operationId))
+            .andExpect(operationStatus(DATA_SAVING_COMPLETED))
+            .andExpect(totalRecords(11))
+            .andExpect(mappedRecords(11))
+            .andExpect(savedRecords(11))
+    );
+
+    okapi.wireMockServer().verify(postRequestedFor(urlEqualTo("/instance-storage/instances/bulk")));
+
+    var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
+    assertThat(chunks)
+        .hasSize(2)
+        .allMatch(chunk -> chunk.getStatus().equals(OperationStatusType.DATA_SAVING_COMPLETED));
+
+    var steps = databaseHelper.getChunksSteps(TENANT_ID, operationId);
+    assertThat(steps).hasSize(4)
+        .allMatch(step -> step.getStepStartTime() != null
+            && step.getStepEndTime() != null
+            && step.getStepEndTime().after(step.getStepStartTime())
+            && step.getStatus().equals(COMPLETED)
+            && step.getNumOfErrors().equals(0));
+  }
+
+  @Test
+  void saveMigrationAuthority_recordsNotMapped() throws Exception {
     // Arrange
     var wireMock = okapi.wireMockServer();
     final var stub = wireMock.stubFor(post(urlPathEqualTo("/authority-storage/authorities/bulk"))
@@ -427,6 +478,60 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
 
     var steps = databaseHelper.getChunksSteps(TENANT_ID, operationId);
     assertThat(steps).hasSize(18)
+        .filteredOn(step -> step.getOperationStep().equals(OperationStep.DATA_SAVING))
+        .allMatch(step -> step.getStepStartTime() != null
+            && step.getStepEndTime() != null
+            && step.getStepEndTime().after(step.getStepStartTime())
+            && step.getStatus().equals(StepStatus.FAILED)
+            && step.getNumOfErrors().equals(2));
+
+    wireMock.removeStubMapping(stub);
+  }
+
+  @Test
+  void saveMigrationInstance_recordsNotMapped() throws Exception {
+    // Arrange
+    var wireMock = okapi.wireMockServer();
+    final var stub = wireMock.stubFor(post(urlPathEqualTo("/instance-storage/instances/bulk"))
+        .willReturn(ResponseDefinitionBuilder.responseDefinition()
+            .withHeader("Content-Type", "application/json;charset=UTF-8")
+            .withBody("{ \"errorsNumber\": \"2\", \"errorRecordsFileName\": \"errorRecordsFileName\", "
+                + "\"errorsFileName\": \"errorsFileName\" }")));
+    var migrationOperation = new NewMigrationOperation()
+        .operationType(OperationType.REMAPPING)
+        .entityType(EntityType.INSTANCE);
+
+    // Act & Assert
+    var result = doPost(marcMigrationEndpoint(), migrationOperation)
+        .andExpect(operationStatus(NEW))
+        .andExpect(totalRecords(11))
+        .andReturn();
+    var operation = contentAsObj(result, MigrationOperation.class);
+    var operationId = operation.getId();
+
+    doGetUntilMatches(marcMigrationEndpoint(operationId),
+        operationStatus(DATA_MAPPING_COMPLETED));
+    doGetUntilMatches(marcMigrationEndpoint(operationId), mappedRecords(11));
+
+    var saveMigrationOperation = new SaveMigrationOperation()
+        .status(DATA_SAVING);
+    tryPut(marcMigrationEndpoint(operationId), saveMigrationOperation)
+        .andExpect(status().isNoContent());
+    awaitUntilAsserted(() ->
+        doGet(marcMigrationEndpoint(operationId))
+            .andExpect(operationStatus(DATA_SAVING_FAILED))
+            .andExpect(totalRecords(11))
+            .andExpect(mappedRecords(11))
+            .andExpect(savedRecords(7))
+    );
+
+    var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
+    assertThat(chunks)
+        .hasSize(2)
+        .allMatch(chunk -> chunk.getStatus().equals(OperationStatusType.DATA_SAVING_FAILED));
+
+    var steps = databaseHelper.getChunksSteps(TENANT_ID, operationId);
+    assertThat(steps).hasSize(4)
         .filteredOn(step -> step.getOperationStep().equals(OperationStep.DATA_SAVING))
         .allMatch(step -> step.getStepStartTime() != null
             && step.getStepEndTime() != null

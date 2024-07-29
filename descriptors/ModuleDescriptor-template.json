@@ -19,6 +19,10 @@
       "version": "2.0"
     },
     {
+      "id": "instance-storage",
+      "version": "10.1"
+    },
+    {
       "id": "source-storage-records",
       "version": "3.1"
     },
