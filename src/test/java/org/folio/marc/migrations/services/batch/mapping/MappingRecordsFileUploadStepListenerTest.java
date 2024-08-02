@@ -1,4 +1,4 @@
-package org.folio.marc.migrations.services.batch;
+package org.folio.marc.migrations.services.batch.mapping;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.marc.migrations.services.batch.support.JobConstants.JobParameterNames.OPERATION_ID;
@@ -17,7 +17,6 @@ import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
-import org.folio.marc.migrations.services.batch.mapping.MappingRecordsFileUploadStepListener;
 import org.folio.marc.migrations.services.domain.OperationTimeType;
 import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
 import org.folio.s3.client.FolioS3Client;

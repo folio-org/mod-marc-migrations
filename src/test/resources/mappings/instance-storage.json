@@ -1,0 +1,17 @@
+{
+  "mappings": [
+    {
+      "request": {
+        "method": "POST",
+        "urlPath": "/instance-storage/instances/bulk"
+      },
+      "response": {
+        "status": 201,
+        "body": "{\"errorsNumber\":\"0\"}",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    }
+  ]
+}

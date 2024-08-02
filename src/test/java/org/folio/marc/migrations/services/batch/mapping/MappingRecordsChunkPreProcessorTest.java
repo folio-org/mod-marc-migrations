@@ -1,4 +1,4 @@
-package org.folio.marc.migrations.services.batch;
+package org.folio.marc.migrations.services.batch.mapping;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.marc.migrations.domain.entities.types.EntityType.AUTHORITY;
@@ -17,7 +17,6 @@ import org.folio.marc.migrations.domain.entities.OperationChunk;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.entities.types.OperationStep;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
-import org.folio.marc.migrations.services.batch.mapping.MappingRecordsChunkPreProcessor;
 import org.folio.marc.migrations.services.domain.RecordsMappingData;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;

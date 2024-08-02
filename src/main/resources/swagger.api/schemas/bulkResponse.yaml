@@ -1,8 +1,8 @@
-description: Bulk authorities create response
+description: Bulk create response
 type: object
 properties:
   errorRecordsFileName:
-    description: File name of error authorities
+    description: File name of error entities
     type: string
   errorsFileName:
     description: File name of error details

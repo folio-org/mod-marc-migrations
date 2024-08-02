@@ -1,4 +1,4 @@
-package org.folio.marc.migrations.services.batch;
+package org.folio.marc.migrations.services.batch.mapping;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -13,7 +13,6 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
-import org.folio.marc.migrations.services.batch.mapping.MappingRecordsWriter;
 import org.folio.marc.migrations.services.domain.MappingComposite;
 import org.folio.marc.migrations.services.domain.MappingResult;
 import org.folio.marc.migrations.services.domain.RecordsMappingData;
