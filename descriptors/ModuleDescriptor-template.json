@@ -29,6 +29,10 @@
     {
       "id": "mapping-metadata-provider",
       "version": "1.0"
+    },
+    {
+      "id": "instance-storage-bulk",
+      "version": "1.0"
     }
   ],
   "provides": [
