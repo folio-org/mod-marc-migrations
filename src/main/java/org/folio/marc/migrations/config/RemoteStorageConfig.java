@@ -24,6 +24,8 @@ public class RemoteStorageConfig {
   private String accessKey;
   private String secretKey;
   private boolean awsSdk;
+  private Integer retryCount;
+  private Integer retryDelayMs;
 
   @Bean
   public FolioS3Client remoteFolioS3Client() {

@@ -290,6 +290,16 @@
         "name": "S3_IS_AWS",
         "value": "false",
         "description": "Specify if AWS S3 is used as files storage"
+      },
+      {
+        "name": "S3_RETRY_COUNT",
+        "value": "3",
+        "description": "Specify number of retries if S3 client return any kind of error"
+      },
+      {
+        "name": "S3_RETRY_DELAY_MS",
+        "value": "500",
+        "description": "Specify millisecond delay between retries if S3 client return any kind of error"
       }
     ]
   }
