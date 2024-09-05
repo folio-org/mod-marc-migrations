@@ -14,9 +14,9 @@ import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
+import org.folio.marc.migrations.services.batch.support.FolioS3Service;
 import org.folio.marc.migrations.services.domain.OperationTimeType;
 import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
-import org.folio.s3.client.FolioS3Client;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.StepExecutionListener;
@@ -29,7 +29,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class MappingRecordsFileUploadStepListener implements StepExecutionListener {
 
-  private final FolioS3Client s3Client;
+  private final FolioS3Service s3Service;
   private final OperationJdbcService jdbcService;
 
   @SneakyThrows
@@ -86,7 +86,7 @@ public class MappingRecordsFileUploadStepListener implements StepExecutionListen
 
       var localPath = file.getAbsolutePath();
       var remotePath = OPERATION_FILES_PATH.formatted(operationId) + file.getName();
-      s3Client.upload(localPath, remotePath);
+      s3Service.uploadFile(localPath, remotePath);
     }
   }
 

@@ -5,6 +5,7 @@ import static org.folio.marc.migrations.services.batch.support.JobConstants.JobP
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.notNull;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -17,9 +18,9 @@ import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
+import org.folio.marc.migrations.services.batch.support.FolioS3Service;
 import org.folio.marc.migrations.services.domain.OperationTimeType;
 import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
-import org.folio.s3.client.FolioS3Client;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,7 +43,7 @@ class MappingRecordsFileUploadStepListenerTest {
   private final Long jobId = 5L;
   private final String jobFilesDirectory = "job/" + jobId;
 
-  private @Mock FolioS3Client s3Client;
+  private @Mock FolioS3Service s3Service;
   private @Mock OperationJdbcService jdbcService;
   private @InjectMocks MappingRecordsFileUploadStepListener listener;
 
@@ -79,8 +80,8 @@ class MappingRecordsFileUploadStepListenerTest {
     var actual = listener.afterStep(stepExecution);
 
     assertThat(actual).isEqualTo(stepExecution.getExitStatus());
-    verify(s3Client).upload(path1.toFile().getAbsolutePath(), "operation/" + operationId + "/test1");
-    verify(s3Client).upload(path2.toFile().getAbsolutePath(), "operation/" + operationId + "/test2");
+    verify(s3Service).uploadFile(path1.toFile().getAbsolutePath(), "operation/" + operationId + "/test1");
+    verify(s3Service).uploadFile(path2.toFile().getAbsolutePath(), "operation/" + operationId + "/test2");
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING_COMPLETED),
       eq(OperationTimeType.MAPPING_END), notNull());
     verify(jdbcService).getOperation(operationId);
@@ -127,7 +128,7 @@ class MappingRecordsFileUploadStepListenerTest {
     var path1 = Path.of(jobFilesDirectory, "test1");
     Files.createFile(path1);
     var failMessage = "fail";
-    when(s3Client.upload(any(), any())).thenThrow(new IllegalStateException(failMessage));
+    doThrow(new IllegalStateException(failMessage)).when(s3Service).uploadFile(any(), any());
 
     var actual = listener.afterStep(stepExecution);
 
