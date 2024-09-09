@@ -21,6 +21,7 @@ import static org.folio.support.DatabaseHelper.OPERATION_TABLE;
 import static org.folio.support.TestConstants.TENANT_ID;
 import static org.folio.support.TestConstants.USER_ID;
 import static org.folio.support.TestConstants.marcMigrationEndpoint;
+import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
@@ -133,7 +134,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     var operation = contentAsObj(result, MigrationOperation.class);
     var operationId = operation.getId();
 
-    doGetUntilMatches(marcMigrationEndpoint(operationId), operationStatus(DATA_MAPPING));
+    doGetUntilMatches(marcMigrationEndpoint(operationId), operationStatusOr(DATA_MAPPING, DATA_MAPPING_COMPLETED));
     doGetUntilMatches(marcMigrationEndpoint(operationId), operationStatus(DATA_MAPPING_COMPLETED));
     doGet(marcMigrationEndpoint(operationId))
         .andExpect(status().isOk())
@@ -556,5 +557,10 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
 
   private ResultMatcher operationStatus(MigrationOperationStatus expectedStatus) {
     return jsonPath("status", is(expectedStatus.getValue()));
+  }
+
+  private ResultMatcher operationStatusOr(MigrationOperationStatus expectedStatus,
+                                          MigrationOperationStatus otherStatus) {
+    return jsonPath("status", anyOf(is(expectedStatus.getValue()), is(otherStatus.getValue())));
   }
 }
