@@ -12,3 +12,4 @@
 * prepare chunks of MARC Bibs for mapping ([MODMARCMIG-17](https://folio-org.atlassian.net/browse/MODMARCMIG-17))
 * extend the data saving service to save re-mapped Instances ([MODMARCMIG-19](https://folio-org.atlassian.net/browse/MODMARCMIG-19))
 * provide necessary module permission to call bulk instances upsert endpoint ([MODMARCMIG-23](https://folio-org.atlassian.net/browse/MODMARCMIG-23))
+* rename module permissions to call mapping-metadata endpoint ([MODMARCMIG-30](https://folio-org.atlassian.net/browse/MODMARCMIG-30))
