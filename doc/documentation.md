@@ -107,6 +107,7 @@ docker compose up --build --force-recreate --no-deps
 | mod-source-record-storage | source-storage-records    | For having access to MARC records           |
 | mod-entities-links        | authority-storage         | For having access to Authority records      |
 | mod-inventory-storage     | instance-storage          | For having access to Instances              |
+| mod-inventory-storage     | instance-storage-bulk     | For saving instances from provided files    |
 
 ## APIs
 ### API marc-migrations
