@@ -1,6 +1,12 @@
 ## v1.0.0 In progress
 ### New APIs versions
 * Provides `marc-migrations v1.0`
+* Requires `login v7.3`
+* Requires `permissions v5.6`
+* Requires `users v16.0`
+* Requires `authority-storage v2.0`
+* Requires `instance-storage v11.0`
+* Requires `instance-storage-bulk v1.0`
 * Requires `source-storage-records v3.3`
 * Requires `mapping-metadata-provider v1.1`
 
