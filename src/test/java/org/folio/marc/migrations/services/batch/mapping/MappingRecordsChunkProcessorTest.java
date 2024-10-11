@@ -5,6 +5,7 @@ import static org.folio.marc.migrations.domain.entities.types.EntityType.AUTHORI
 import static org.folio.marc.migrations.domain.entities.types.EntityType.INSTANCE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -20,6 +21,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
+import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
 import org.folio.marc.migrations.services.batch.support.MappingMetadataProvider;
@@ -54,7 +56,7 @@ class MappingRecordsChunkProcessorTest {
   @BeforeEach
   @SneakyThrows
   void setup() {
-    lenient().when(mappingMetadataProvider.getMappingData())
+    lenient().when(mappingMetadataProvider.getMappingData(isA(EntityType.class)))
       .thenReturn(new MappingMetadataProvider.MappingData(new JsonObject(), new MappingParameters()));
 
     var chunkId = UUID.randomUUID();
@@ -141,7 +143,7 @@ class MappingRecordsChunkProcessorTest {
 
   @Test
   void process_negative_noMappingMetadata() {
-    when(mappingMetadataProvider.getMappingData())
+    when(mappingMetadataProvider.getMappingData(AUTHORITY))
       .thenReturn(null);
 
     process_negative("Failed to fetch mapping metadata", "\"version\":1");
@@ -150,7 +152,7 @@ class MappingRecordsChunkProcessorTest {
   @Test
   @SneakyThrows
   void process_negative_noMappingMetadata_jsonException() {
-    when(mappingMetadataProvider.getMappingData())
+    when(mappingMetadataProvider.getMappingData(AUTHORITY))
       .thenReturn(null);
     when(objectMapper.writeValueAsString(any())).thenThrow(JsonProcessingException.class);
 
