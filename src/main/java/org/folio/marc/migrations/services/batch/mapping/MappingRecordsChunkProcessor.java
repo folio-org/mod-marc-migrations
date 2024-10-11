@@ -72,7 +72,7 @@ public class MappingRecordsChunkProcessor
 
   private List<MappingResult> getRecordMappingResults(List<MarcRecord> records) {
     log.trace("process:: retrieving mapping metadata from cache");
-    var mappingData = mappingMetadataProvider.getMappingData();
+    var mappingData = mappingMetadataProvider.getMappingData(entityType);
     if (mappingData == null) {
       return records.stream()
           .map(sourceRecord -> asFailedMappingResult(sourceRecord, "Failed to fetch mapping metadata"))
