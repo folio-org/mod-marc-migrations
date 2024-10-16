@@ -65,8 +65,8 @@ public class MappingRecordsFileUploadStepListener implements StepExecutionListen
         finishOperation(operationId, OperationStatusType.DATA_MAPPING_COMPLETED);
       }
     } catch (Exception ex) {
-      log.warn("afterStep:: file upload/delete failed for operation {}, reason {}",
-        operationId, ex.getMessage());
+      log.warn("afterStep:: file upload/delete failed for operation {}, reason: ",
+          operationId, ex);
 
       finishOperation(operationId, OperationStatusType.DATA_MAPPING_FAILED);
       return new ExitStatus(ExitStatus.FAILED.getExitCode(), ex.getMessage());
