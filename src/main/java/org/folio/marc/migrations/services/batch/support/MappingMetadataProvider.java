@@ -6,6 +6,7 @@ import io.vertx.core.json.JsonObject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.client.MappingMetadataClient;
+import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
@@ -18,12 +19,12 @@ public class MappingMetadataProvider {
   private final MappingMetadataClient client;
 
   @Cacheable(cacheNames = "mapping-metadata-cache",
-    key = "@folioExecutionContext.tenantId",
+    key = "@folioExecutionContext.tenantId + #entityType",
     unless = "#result == null")
-  public MappingData getMappingData() {
+  public MappingData getMappingData(EntityType entityType) {
     log.trace("getMappingData:: fetching mapping metadata");
     try {
-      var metadata = client.getMappingMetadata();
+      var metadata = client.getMappingMetadata(entityType.getMappingMetadataRecordType());
       if (metadata == null || isBlank(metadata.mappingParams()) || isBlank(metadata.mappingRules())) {
         log.warn("Failed to fetch mapping metadata");
         return null;
