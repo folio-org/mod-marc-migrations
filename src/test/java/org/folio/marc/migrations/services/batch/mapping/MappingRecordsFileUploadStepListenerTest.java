@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
+import org.folio.marc.migrations.config.MigrationProperties;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.services.batch.support.FolioS3Service;
@@ -42,14 +43,17 @@ class MappingRecordsFileUploadStepListenerTest {
 
   private final Long jobId = 5L;
   private final String jobFilesDirectory = "job/" + jobId;
+  private final String defaultFilePath = "job";
 
   private @Mock FolioS3Service s3Service;
   private @Mock OperationJdbcService jdbcService;
+  private @Mock MigrationProperties props;
   private @InjectMocks MappingRecordsFileUploadStepListener listener;
 
   @BeforeEach
   @SneakyThrows
-  void createDirectory() {
+  void setUpFilesStorage() {
+    when(props.getLocalFileStoragePath()).thenReturn(defaultFilePath);
     var directory = Path.of(jobFilesDirectory);
     Files.createDirectories(directory);
   }

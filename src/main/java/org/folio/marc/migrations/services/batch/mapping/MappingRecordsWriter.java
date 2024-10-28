@@ -26,7 +26,6 @@ import org.springframework.stereotype.Component;
 @StepScope
 @RequiredArgsConstructor
 public class MappingRecordsWriter implements ItemWriter<MappingComposite<MappingResult>> {
-
   private String filePath;
   private final MigrationProperties props;
 
