@@ -37,6 +37,7 @@ class MappingRecordsWriterTest {
   private final Long jobId = 5L;
   private final String jobFilesDirectory = "job/" + jobId;
   private final String defaultFilePath = "job";
+  private final String customFilePath = "custom";
   private final JobExecution jobExecution = new JobExecution(new JobInstance(jobId, "testJob"), null);
   private final StepExecution stepExecution = new StepExecution("testStep", jobExecution);
   private @Mock MigrationProperties props;
@@ -46,6 +47,7 @@ class MappingRecordsWriterTest {
   @SneakyThrows
   void deleteDirectory() {
     FileUtils.deleteDirectory(new File("job"));
+    FileUtils.deleteDirectory(new File(customFilePath));
   }
 
   @Test
@@ -70,6 +72,30 @@ class MappingRecordsWriterTest {
     writer.write(chunk);
 
     assertThat(new File(jobFilesDirectory).listFiles()).hasSize(3);
+    for (String filePath : expectedFiles) {
+      var file = new File(filePath);
+      assertThat(file).exists();
+      assertThat(FileUtils.readLines(file, StandardCharsets.UTF_8)).hasSize(2);
+    }
+  }
+
+  @Test
+  @SneakyThrows
+  void write_positiveConfigurableFilePath() {
+    String customDirectory = customFilePath + "/" + jobId;
+    when(props.getLocalFileStoragePath()).thenReturn(customFilePath);
+    writer.prepareFilesPath(stepExecution);
+    assertThat(Files.exists(Path.of(customDirectory))).isTrue();
+
+    var records = records(2, 2);
+    var composite = composite(records);
+    var chunk = new Chunk<>(composite);
+    var expectedFiles = List.of(customDirectory + "/entity", customDirectory + "/entityError",
+        customDirectory + "/error");
+
+    writer.write(chunk);
+
+    assertThat(new File(customDirectory).listFiles()).hasSize(3);
     for (String filePath : expectedFiles) {
       var file = new File(filePath);
       assertThat(file).exists();

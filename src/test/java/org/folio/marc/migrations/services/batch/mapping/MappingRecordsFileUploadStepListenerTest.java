@@ -93,6 +93,40 @@ class MappingRecordsFileUploadStepListenerTest {
   }
 
   @Test
+  @SneakyThrows
+  void afterStepWithConfigurableStoragePath_positive() {
+    String customFilePath = "custom";
+    String customDirectory = customFilePath + "/" + jobId;
+    when(props.getLocalFileStoragePath()).thenReturn(customFilePath);
+    var directory = Path.of(customDirectory);
+    Files.createDirectories(directory);
+
+    var operationId = UUID.randomUUID().toString();
+    var operation = new Operation();
+    operation.setTotalNumOfRecords(10);
+    operation.setMappedNumOfRecords(10);
+    when(jdbcService.getOperation(operationId)).thenReturn(operation);
+    var jobExecution = new JobExecution(new JobInstance(jobId, "testJob"), 1L,
+        new JobParameters(Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class))));
+    var stepExecution = new StepExecution("testStep", jobExecution);
+    stepExecution.setExitStatus(ExitStatus.COMPLETED);
+    var path1 = Path.of(customDirectory, "test1");
+    var path2 = Path.of(customDirectory, "test2");
+    Files.createFile(path1);
+    Files.createFile(path2);
+
+    var actual = listener.afterStep(stepExecution);
+
+    assertThat(actual).isEqualTo(stepExecution.getExitStatus());
+    verify(s3Service).uploadFile(path1.toFile().getAbsolutePath(), "operation/" + operationId + "/test1");
+    verify(s3Service).uploadFile(path2.toFile().getAbsolutePath(), "operation/" + operationId + "/test2");
+    verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING_COMPLETED),
+        eq(OperationTimeType.MAPPING_END), notNull());
+    verify(jdbcService).getOperation(operationId);
+    assertThat(Files.exists(directory)).isFalse();
+  }
+
+  @Test
   void afterStep_negative_noOperationId() {
     var jobExecution = new JobExecution(new JobInstance(jobId, "testJob"), 1L, new JobParameters());
     var stepExecution = new StepExecution("testStep", jobExecution);
