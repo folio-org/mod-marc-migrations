@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 public class JobConstants {
 
   public static final String OPERATION_FILES_PATH = "operation/%s/";
-  public static final String JOB_FILES_PATH = "job/%s";
+  public static final String JOB_FILES_PATH = "%s/%s";
 
   @NoArgsConstructor(access = AccessLevel.PRIVATE)
   public static class JobParameterNames {

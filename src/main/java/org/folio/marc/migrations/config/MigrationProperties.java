@@ -31,4 +31,8 @@ public class MigrationProperties {
    * */
   @Min(1)
   private int chunkProcessingMaxParallelism = 4;
+  /**
+   * Provides a local storage path for Authority and Marc bib files during migration.
+   * */
+  private String localFileStoragePath = "job";
 }

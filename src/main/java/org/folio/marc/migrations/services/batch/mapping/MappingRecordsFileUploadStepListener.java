@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.FileUtils;
+import org.folio.marc.migrations.config.MigrationProperties;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.services.batch.support.FolioS3Service;
 import org.folio.marc.migrations.services.domain.OperationTimeType;
@@ -31,6 +32,7 @@ public class MappingRecordsFileUploadStepListener implements StepExecutionListen
 
   private final FolioS3Service s3Service;
   private final OperationJdbcService jdbcService;
+  private final MigrationProperties props;
 
   @SneakyThrows
   @Override
@@ -38,7 +40,7 @@ public class MappingRecordsFileUploadStepListener implements StepExecutionListen
     var exitStatus = stepExecution.getExitStatus();
     var jobId = stepExecution.getJobExecution().getJobId();
     var operationId = stepExecution.getJobParameters().getString(OPERATION_ID);
-    var filesPath = JOB_FILES_PATH.formatted(jobId);
+    var filesPath = JOB_FILES_PATH.formatted(props.getLocalFileStoragePath(), jobId);
 
     if (operationId == null) {
       log.warn("No operationId found in job parameters for jobId " + jobId);
