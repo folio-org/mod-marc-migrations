@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.folio.marc.migrations.config.MigrationProperties;
 import org.folio.marc.migrations.services.domain.MappingComposite;
 import org.folio.marc.migrations.services.domain.MappingResult;
 import org.folio.marc.migrations.services.domain.RecordsMappingData;
@@ -25,13 +26,13 @@ import org.springframework.stereotype.Component;
 @StepScope
 @RequiredArgsConstructor
 public class MappingRecordsWriter implements ItemWriter<MappingComposite<MappingResult>> {
-
   private String filePath;
+  private final MigrationProperties props;
 
   @BeforeStep
   public void prepareFilesPath(StepExecution stepExecution) throws IOException {
     var jobExecution = stepExecution.getJobExecution();
-    this.filePath = JOB_FILES_PATH.formatted(jobExecution.getJobId());
+    this.filePath = JOB_FILES_PATH.formatted(props.getLocalFileStoragePath(), jobExecution.getJobId());
     Files.createDirectories(Paths.get(filePath));
   }
 

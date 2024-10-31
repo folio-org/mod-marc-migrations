@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
+import org.folio.marc.migrations.config.MigrationProperties;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.services.batch.support.FolioS3Service;
@@ -42,14 +43,17 @@ class MappingRecordsFileUploadStepListenerTest {
 
   private final Long jobId = 5L;
   private final String jobFilesDirectory = "job/" + jobId;
+  private final String defaultFilePath = "job";
 
   private @Mock FolioS3Service s3Service;
   private @Mock OperationJdbcService jdbcService;
+  private @Mock MigrationProperties props;
   private @InjectMocks MappingRecordsFileUploadStepListener listener;
 
   @BeforeEach
   @SneakyThrows
-  void createDirectory() {
+  void setUpFilesStorage() {
+    when(props.getLocalFileStoragePath()).thenReturn(defaultFilePath);
     var directory = Path.of(jobFilesDirectory);
     Files.createDirectories(directory);
   }
@@ -86,6 +90,40 @@ class MappingRecordsFileUploadStepListenerTest {
       eq(OperationTimeType.MAPPING_END), notNull());
     verify(jdbcService).getOperation(operationId);
     assertThat(Files.exists(Path.of(jobFilesDirectory))).isFalse();
+  }
+
+  @Test
+  @SneakyThrows
+  void afterStepWithConfigurableStoragePath_positive() {
+    String customFilePath = "custom";
+    String customDirectory = customFilePath + "/" + jobId;
+    when(props.getLocalFileStoragePath()).thenReturn(customFilePath);
+    var directory = Path.of(customDirectory);
+    Files.createDirectories(directory);
+
+    var operationId = UUID.randomUUID().toString();
+    var operation = new Operation();
+    operation.setTotalNumOfRecords(10);
+    operation.setMappedNumOfRecords(10);
+    when(jdbcService.getOperation(operationId)).thenReturn(operation);
+    var jobExecution = new JobExecution(new JobInstance(jobId, "testJob"), 1L,
+        new JobParameters(Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class))));
+    var stepExecution = new StepExecution("testStep", jobExecution);
+    stepExecution.setExitStatus(ExitStatus.COMPLETED);
+    var path1 = Path.of(customDirectory, "test1");
+    var path2 = Path.of(customDirectory, "test2");
+    Files.createFile(path1);
+    Files.createFile(path2);
+
+    var actual = listener.afterStep(stepExecution);
+
+    assertThat(actual).isEqualTo(stepExecution.getExitStatus());
+    verify(s3Service).uploadFile(path1.toFile().getAbsolutePath(), "operation/" + operationId + "/test1");
+    verify(s3Service).uploadFile(path2.toFile().getAbsolutePath(), "operation/" + operationId + "/test2");
+    verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING_COMPLETED),
+        eq(OperationTimeType.MAPPING_END), notNull());
+    verify(jdbcService).getOperation(operationId);
+    assertThat(Files.exists(directory)).isFalse();
   }
 
   @Test
