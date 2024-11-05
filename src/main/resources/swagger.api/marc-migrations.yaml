@@ -236,6 +236,10 @@ components:
       properties:
         status:
           $ref: '#/components/schemas/MigrationOperationStatus'
+        publishEvents:
+          description: A flag that indicates if domain events should be published
+          type: boolean
+          default: true
 
     EntityType:
       description: Type of entity for migration
@@ -292,11 +296,6 @@ components:
         value:
           description: Parameter value
           type: string
-
-    bulkResponse:
-      $ref: schemas/bulkResponse.yaml
-    bulkRequest:
-      $ref: schemas/bulkRequest.yaml
 
   parameters:
     TenantId:

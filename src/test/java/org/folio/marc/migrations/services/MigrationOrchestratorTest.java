@@ -2,6 +2,7 @@ package org.folio.marc.migrations.services;
 
 import static org.folio.marc.migrations.services.batch.support.JobConstants.JobParameterNames.ENTITY_TYPE;
 import static org.folio.marc.migrations.services.batch.support.JobConstants.JobParameterNames.OPERATION_ID;
+import static org.folio.marc.migrations.services.batch.support.JobConstants.JobParameterNames.PUBLISH_EVENTS_FLAG;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.notNull;
@@ -16,6 +17,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.SneakyThrows;
+import org.folio.marc.migrations.domain.dto.MigrationOperationStatus;
+import org.folio.marc.migrations.domain.dto.SaveMigrationOperation;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
@@ -49,7 +52,6 @@ class MigrationOrchestratorTest {
     submitMappingTask_positive(EntityType.AUTHORITY);
   }
 
-
   @Test
   void submitInstanceMappingTask_positive() {
     submitMappingTask_positive(EntityType.INSTANCE);
@@ -74,13 +76,13 @@ class MigrationOrchestratorTest {
 
     // Assert
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING),
-        eq(OperationTimeType.MAPPING_START), notNull());
+      eq(OperationTimeType.MAPPING_START), notNull());
     verify(chunkService).prepareChunks(operation);
     verify(jobLauncher).run(job, new JobParameters(
-        Map.of(
-            OPERATION_ID, new JobParameter<>(operationId, String.class),
-            ENTITY_TYPE, new JobParameter<>(operation.getEntityType(), EntityType.class)
-        )));
+      Map.of(
+        OPERATION_ID, new JobParameter<>(operationId, String.class),
+        ENTITY_TYPE, new JobParameter<>(operation.getEntityType(), EntityType.class)
+      )));
     verify(jdbcService).getOperation(operationId);
     verifyNoMoreInteractions(jdbcService);
   }
@@ -135,8 +137,8 @@ class MigrationOrchestratorTest {
     verify(chunkService).prepareChunks(operation);
     verify(jobLauncher).run(job, new JobParameters(
       Map.of(
-          OPERATION_ID, new JobParameter<>(operationId, String.class),
-          ENTITY_TYPE, new JobParameter<>(operation.getEntityType(), EntityType.class)
+        OPERATION_ID, new JobParameter<>(operationId, String.class),
+        ENTITY_TYPE, new JobParameter<>(operation.getEntityType(), EntityType.class)
       )));
     verify(jdbcService).updateOperationStatus(eq(operationId),
       eq(OperationStatusType.DATA_MAPPING_FAILED), eq(OperationTimeType.MAPPING_END), notNull());
@@ -152,6 +154,8 @@ class MigrationOrchestratorTest {
     operation.setStatus(OperationStatusType.DATA_SAVING);
     operation.setEntityType(EntityType.AUTHORITY);
     var operationId = operation.getId().toString();
+    var validSaveOperation = new SaveMigrationOperation()
+      .status(MigrationOperationStatus.DATA_SAVING);
     when(jdbcService.getOperation(operationId)).thenReturn(operation);
     doAnswer(invocation -> {
       ((Runnable) invocation.getArgument(0)).run();
@@ -159,16 +163,17 @@ class MigrationOrchestratorTest {
     }).when(remappingExecutor).execute(any());
 
     // Act
-    service.submitMappingSaveTask(operation).get(200, TimeUnit.MILLISECONDS);
+    service.submitMappingSaveTask(operation, validSaveOperation).get(200, TimeUnit.MILLISECONDS);
 
     // Assert
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_SAVING),
-        eq(OperationTimeType.SAVING_START), notNull());
+      eq(OperationTimeType.SAVING_START), notNull());
     verify(jobLauncher).run(job, new JobParameters(
-        Map.of(
-            OPERATION_ID, new JobParameter<>(operationId, String.class),
-            ENTITY_TYPE, new JobParameter<>(operation.getEntityType(), EntityType.class)
-        )));
+      Map.of(
+        OPERATION_ID, new JobParameter<>(operationId, String.class),
+        ENTITY_TYPE, new JobParameter<>(operation.getEntityType(), EntityType.class),
+        PUBLISH_EVENTS_FLAG, new JobParameter<>(validSaveOperation.getPublishEvents(), Boolean.class)
+      )));
     verify(jdbcService).getOperation(operationId);
     verifyNoMoreInteractions(jdbcService);
   }
@@ -182,6 +187,8 @@ class MigrationOrchestratorTest {
     operation.setStatus(OperationStatusType.DATA_SAVING);
     operation.setEntityType(EntityType.AUTHORITY);
     var operationId = operation.getId().toString();
+    var validSaveOperation = new SaveMigrationOperation()
+      .status(MigrationOperationStatus.DATA_SAVING);
     when(jdbcService.getOperation(operationId)).thenReturn(operation);
     doAnswer(invocation -> {
       ((Runnable) invocation.getArgument(0)).run();
@@ -190,19 +197,20 @@ class MigrationOrchestratorTest {
     doThrow(new IllegalStateException()).when(jobLauncher).run(any(), any());
 
     // Act
-    service.submitMappingSaveTask(operation).get(200, TimeUnit.MILLISECONDS);
+    service.submitMappingSaveTask(operation, validSaveOperation).get(200, TimeUnit.MILLISECONDS);
 
     // Assert
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_SAVING),
-        eq(OperationTimeType.SAVING_START), notNull());
+      eq(OperationTimeType.SAVING_START), notNull());
     verify(jobLauncher).run(job, new JobParameters(
-        Map.of(
-            OPERATION_ID, new JobParameter<>(operationId, String.class),
-            ENTITY_TYPE, new JobParameter<>(operation.getEntityType(), EntityType.class)
-        )));
+      Map.of(
+        OPERATION_ID, new JobParameter<>(operationId, String.class),
+        ENTITY_TYPE, new JobParameter<>(operation.getEntityType(), EntityType.class),
+        PUBLISH_EVENTS_FLAG, new JobParameter<>(validSaveOperation.getPublishEvents(), Boolean.class)
+      )));
     verify(jdbcService).getOperation(operationId);
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_SAVING_FAILED),
-        eq(OperationTimeType.SAVING_END), notNull());
+      eq(OperationTimeType.SAVING_END), notNull());
     verifyNoMoreInteractions(jdbcService);
   }
 }

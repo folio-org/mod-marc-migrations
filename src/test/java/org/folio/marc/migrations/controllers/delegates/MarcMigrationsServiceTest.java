@@ -115,7 +115,7 @@ class MarcMigrationsServiceTest {
 
     // Assert
     verify(operationsService).getOperation(operationId);
-    verify(migrationOrchestrator).submitMappingSaveTask(operation);
+    verify(migrationOrchestrator).submitMappingSaveTask(operation, validSaveOperation);
   }
 
   @Test
