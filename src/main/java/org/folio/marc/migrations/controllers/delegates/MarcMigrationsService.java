@@ -44,12 +44,12 @@ public class MarcMigrationsService {
       .orElseThrow(() -> new NotFoundException(NOT_FOUND_MSG.formatted(operationId)));
   }
 
-  public void saveMigrationOperation(UUID operationId, SaveMigrationOperation saveMigrationOperation) {
+  public void saveMigrationOperation(UUID operationId, SaveMigrationOperation request) {
     log.debug("saveMigrationOperation::Trying to save migration operation by ID '{}'", operationId);
     var operation = operationsService.getOperation(operationId)
         .orElseThrow(() -> new NotFoundException(NOT_FOUND_MSG.formatted(operationId)));
-    validateOperationStatusForSave(saveMigrationOperation, operation);
-    migrationOrchestrator.submitMappingSaveTask(operation);
+    validateOperationStatusForSave(request, operation);
+    migrationOrchestrator.submitMappingSaveTask(operation, request);
   }
 
   private void validateMigrationCreate(NewMigrationOperation newMigrationOperation) {

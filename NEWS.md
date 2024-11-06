@@ -1,3 +1,9 @@
+## v1.0.1 2024-11-08
+### Features
+* Add optional API parameter to control Kafka entity change events for remapping operation saving step ([MODMARCMIG-37](https://folio-org.atlassian.net/browse/MODMARCMIG-37))
+
+---
+
 ## v1.0.0 2024-10-31
 ### New APIs versions
 * Provides `marc-migrations v1.0`

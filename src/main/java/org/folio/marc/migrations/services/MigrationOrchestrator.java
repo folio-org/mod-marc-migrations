@@ -1,14 +1,17 @@
 package org.folio.marc.migrations.services;
 
+import static java.util.concurrent.CompletableFuture.runAsync;
 import static org.folio.marc.migrations.services.batch.support.JobConstants.JobParameterNames.ENTITY_TYPE;
 import static org.folio.marc.migrations.services.batch.support.JobConstants.JobParameterNames.OPERATION_ID;
+import static org.folio.marc.migrations.services.batch.support.JobConstants.JobParameterNames.PUBLISH_EVENTS_FLAG;
 
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import lombok.extern.log4j.Log4j2;
+import org.folio.marc.migrations.domain.dto.SaveMigrationOperation;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
@@ -51,14 +54,14 @@ public class MigrationOrchestrator {
    * Submits asynchronous remapping task, mapping part.
    *
    * @param operation represents migration operation to run mapping for.
-   * */
+   */
   public CompletableFuture<Void> submitMappingTask(Operation operation) {
     var operationId = operation.getId().toString();
     log.info("submitMappingTask:: starting for operation {}", operation.getId());
-    var future = CompletableFuture.runAsync(() -> updateOperationStatus(operationId, OperationStatusType.DATA_MAPPING,
-        OperationTimeType.MAPPING_START), remappingExecutor)
+    var future = runAsync(() -> updateOperationStatus(operationId, OperationStatusType.DATA_MAPPING,
+      OperationTimeType.MAPPING_START), remappingExecutor)
       .thenRun(() -> chunkService.prepareChunks(operation))
-      .thenRun(submitProcessChunksTask(operationId, operation.getEntityType()))
+      .thenRun(submitProcessChunksTask(operationId, operation.getEntityType(), null))
       .handle((unused, throwable) -> {
         if (throwable != null) {
           updateOperationStatus(operationId, OperationStatusType.DATA_MAPPING_FAILED, OperationTimeType.MAPPING_END);
@@ -73,19 +76,21 @@ public class MigrationOrchestrator {
    * Submits asynchronous remapping task, saving part.
    *
    * @param operation represents migration operation to run data saving for mapped operation chunks
-   * */
-  public CompletableFuture<Void> submitMappingSaveTask(Operation operation) {
+   * @param request   save migration request
+   */
+  public CompletableFuture<Void> submitMappingSaveTask(Operation operation, SaveMigrationOperation request) {
     var operationId = operation.getId().toString();
     var entityType = operation.getEntityType();
     log.info("submitSavingTask:: starting for operation {}", operationId);
     updateOperationStatus(operationId, OperationStatusType.DATA_SAVING, OperationTimeType.SAVING_START);
-    var future = CompletableFuture.runAsync(submitProcessChunksTask(operationId, entityType), remappingExecutor)
-        .handle((unused, throwable) -> {
-          if (throwable != null) {
-            updateOperationStatus(operationId, OperationStatusType.DATA_SAVING_FAILED, OperationTimeType.SAVING_END);
-          }
-          return unused;
-        });
+    var future = runAsync(submitProcessChunksTask(operationId, entityType, request.getPublishEvents()),
+      remappingExecutor)
+      .handle((unused, throwable) -> {
+        if (throwable != null) {
+          updateOperationStatus(operationId, OperationStatusType.DATA_SAVING_FAILED, OperationTimeType.SAVING_END);
+        }
+        return unused;
+      });
     log.info("submitSavingTask:: submitted asynchronous execution for operation {}", operationId);
     return future;
   }
@@ -95,15 +100,16 @@ public class MigrationOrchestrator {
     jdbcService.updateOperationStatus(operationId, status, timeType, Timestamp.from(Instant.now()));
   }
 
-  private Runnable submitProcessChunksTask(String operationId, EntityType entityType) {
+  private Runnable submitProcessChunksTask(String operationId, EntityType entityType, Boolean publishEvents) {
     return () -> {
       try {
-        var jobParameters = new JobParameters(
-            Map.of(
-                OPERATION_ID, new JobParameter<>(operationId, String.class),
-                ENTITY_TYPE, new JobParameter<>(entityType, EntityType.class)
-            )
-        );
+        var parameterMap = new HashMap<String, JobParameter<?>>();
+        parameterMap.put(OPERATION_ID, new JobParameter<>(operationId, String.class));
+        parameterMap.put(ENTITY_TYPE, new JobParameter<>(entityType, EntityType.class));
+        if (publishEvents != null) {
+          parameterMap.put(PUBLISH_EVENTS_FLAG, new JobParameter<>(publishEvents, Boolean.class));
+        }
+        var jobParameters = new JobParameters(parameterMap);
         var currentStatus = jdbcService.getOperation(operationId).getStatus();
         if (currentStatus == OperationStatusType.DATA_MAPPING) {
           jobLauncher.run(remappingJob, jobParameters);

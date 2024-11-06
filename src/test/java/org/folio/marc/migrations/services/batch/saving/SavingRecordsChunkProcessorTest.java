@@ -4,13 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.marc.migrations.domain.entities.types.EntityType.AUTHORITY;
 import static org.folio.marc.migrations.domain.entities.types.EntityType.INSTANCE;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.UUID;
 import org.assertj.core.api.SoftAssertions;
-import org.folio.marc.migrations.domain.dto.BulkResponse;
+import org.folio.marc.migrations.client.BulkClient.BulkResponse;
 import org.folio.marc.migrations.domain.entities.ChunkStep;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
@@ -42,9 +43,9 @@ class SavingRecordsChunkProcessorTest {
   @BeforeEach
   public void setUpMocks() {
     BulkResponse bulkResponse = new BulkResponse();
-    bulkResponse.errorsNumber(0);
+    bulkResponse.setErrorsNumber(0);
 
-    when(bulkStorageService.saveEntities(any(), any()))
+    when(bulkStorageService.saveEntities(any(), any(), eq(Boolean.TRUE)))
         .thenReturn(bulkResponse);
   }
 
@@ -53,6 +54,7 @@ class SavingRecordsChunkProcessorTest {
     int numOfRecords = 5;
     var chunk = chunk(numOfRecords, AUTHORITY_OPERATION_ID);
     processor.setEntityType(AUTHORITY);
+    processor.setPublishEventsFlag(Boolean.TRUE);
 
     save_positive(chunk, AUTHORITY);
   }
@@ -62,6 +64,7 @@ class SavingRecordsChunkProcessorTest {
     int numOfRecords = 5;
     var chunk = chunk(numOfRecords, INSTANCE_OPERATION_ID);
     processor.setEntityType(INSTANCE);
+    processor.setPublishEventsFlag(Boolean.TRUE);
 
     save_positive(chunk, INSTANCE);
   }
@@ -74,7 +77,7 @@ class SavingRecordsChunkProcessorTest {
 
     var stepCaptor = ArgumentCaptor.forClass(ChunkStep.class);
     verify(chunkStepJdbcService).createChunkStep(stepCaptor.capture());
-    verify(bulkStorageService).saveEntities(chunk.getEntityChunkFileName(), entityType);
+    verify(bulkStorageService).saveEntities(chunk.getEntityChunkFileName(), entityType, Boolean.TRUE);
     var step = stepCaptor.getValue();
     var operationId = entityType == AUTHORITY ? AUTHORITY_OPERATION_ID : INSTANCE_OPERATION_ID;
 
