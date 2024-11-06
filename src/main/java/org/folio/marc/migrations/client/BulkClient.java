@@ -2,9 +2,9 @@ package org.folio.marc.migrations.client;
 
 import java.net.URI;
 import java.util.Locale;
+import lombok.Data;
 import lombok.Getter;
-import org.folio.marc.migrations.domain.dto.BulkRequest;
-import org.folio.marc.migrations.domain.dto.BulkResponse;
+import lombok.RequiredArgsConstructor;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -50,5 +50,24 @@ public interface BulkClient {
     public static URI mapUri(EntityType entityType) {
       return EntityBulkType.valueOf(entityType.name()).getUri();
     }
+  }
+
+  @Data
+  @RequiredArgsConstructor
+  class BulkRequest {
+
+    private final String recordsFileName;
+    private Boolean publishEvents = true;
+
+  }
+
+  @Data
+  class BulkResponse {
+
+    private String errorRecordsFileName;
+
+    private String errorsFileName;
+
+    private Integer errorsNumber;
   }
 }

@@ -25,9 +25,14 @@ import org.springframework.stereotype.Component;
 @StepScope
 @RequiredArgsConstructor
 public class SavingRecordsChunkProcessor implements ItemProcessor<OperationChunk, DataSavingResult> {
+
   @Setter
   @Value("#{jobParameters['entityType']}")
   private EntityType entityType;
+
+  @Setter
+  @Value("#{jobParameters['publishEventsFlag']}")
+  private Boolean publishEventsFlag;
 
   private final BulkStorageService bulkStorageService;
   private final ChunkStepJdbcService chunkStepJdbcService;
@@ -40,7 +45,7 @@ public class SavingRecordsChunkProcessor implements ItemProcessor<OperationChunk
     var recordsSavingData = new RecordsSavingData(chunk.getOperationId(), chunk.getId(), chunkStep.getId(),
         chunk.getNumOfRecords());
 
-    var saveResponse = bulkStorageService.saveEntities(chunk.getEntityChunkFileName(), entityType);
+    var saveResponse = bulkStorageService.saveEntities(chunk.getEntityChunkFileName(), entityType, publishEventsFlag);
     return new DataSavingResult(recordsSavingData, saveResponse);
   }
 

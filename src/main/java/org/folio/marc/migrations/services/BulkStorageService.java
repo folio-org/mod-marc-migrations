@@ -6,8 +6,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.marc.migrations.client.BulkClient;
-import org.folio.marc.migrations.domain.dto.BulkRequest;
-import org.folio.marc.migrations.domain.dto.BulkResponse;
+import org.folio.marc.migrations.client.BulkClient.BulkRequest;
+import org.folio.marc.migrations.client.BulkClient.BulkResponse;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.springframework.stereotype.Service;
 
@@ -17,12 +17,13 @@ import org.springframework.stereotype.Service;
 public class BulkStorageService {
   private final BulkClient bulkClient;
 
-  public BulkResponse saveEntities(String remoteRecordsFileName, EntityType entityType) {
+  public BulkResponse saveEntities(String remoteRecordsFileName, EntityType entityType, Boolean publishEventsFlag) {
     if (StringUtils.isBlank(remoteRecordsFileName)) {
       return null;
     }
 
     var bulkRequest = new BulkRequest(remoteRecordsFileName);
+    bulkRequest.setPublishEvents(publishEventsFlag);
 
     try {
       return bulkClient.saveBulk(EntityBulkType.mapUri(entityType), bulkRequest);

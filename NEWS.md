@@ -7,7 +7,7 @@
 * Requires `API_NAME vX.Y`
 
 ### Features
-* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
+* Add optional API parameter to control Kafka entity change events for remapping operation saving step ([MODMARCMIG-37](https://folio-org.atlassian.net/browse/MODMARCMIG-37))
 
 ### Bug fixes
 * Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))

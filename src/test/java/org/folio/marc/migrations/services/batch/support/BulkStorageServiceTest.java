@@ -7,10 +7,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.folio.marc.migrations.client.BulkClient;
-import org.folio.marc.migrations.domain.dto.BulkResponse;
+import org.folio.marc.migrations.client.BulkClient.BulkResponse;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.services.BulkStorageService;
 import org.folio.spring.testing.type.UnitTest;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -25,12 +26,17 @@ class BulkStorageServiceTest {
   private @Mock BulkClient bulkClient;
   private @InjectMocks BulkStorageService bulkStorageService;
 
-  private final BulkResponse bulkResponse = new BulkResponse().errorsNumber(0);
+  private final BulkResponse bulkResponse = new BulkResponse();
+
+  @BeforeEach
+  void setUp() {
+    bulkResponse.setErrorsNumber(0);
+  }
 
   @Test
   void shouldSaveAuthorityBulk() {
     when(bulkClient.saveBulk(any(), any())).thenReturn(bulkResponse);
-    var response = bulkStorageService.saveEntities(FILE_NAME, EntityType.AUTHORITY);
+    var response = bulkStorageService.saveEntities(FILE_NAME, EntityType.AUTHORITY, Boolean.TRUE);
 
     verify(bulkClient)
         .saveBulk(argThat(uri -> uri.equals(BulkClient.EntityBulkType.AUTHORITY.getUri())),
@@ -42,7 +48,7 @@ class BulkStorageServiceTest {
   @Test
   void shouldSaveInstanceBulk() {
     when(bulkClient.saveBulk(any(), any())).thenReturn(bulkResponse);
-    var response = bulkStorageService.saveEntities(FILE_NAME, EntityType.INSTANCE);
+    var response = bulkStorageService.saveEntities(FILE_NAME, EntityType.INSTANCE, Boolean.TRUE);
 
     verify(bulkClient)
         .saveBulk(argThat(uri -> uri.equals(BulkClient.EntityBulkType.INSTANCE.getUri())),
@@ -53,7 +59,7 @@ class BulkStorageServiceTest {
 
   @Test
   void shouldReturnNullIfFileNameBlank() {
-    var response = bulkStorageService.saveEntities("", EntityType.AUTHORITY);
+    var response = bulkStorageService.saveEntities("", EntityType.AUTHORITY, Boolean.TRUE);
     assertThat(response).isNull();
   }
 
@@ -62,7 +68,7 @@ class BulkStorageServiceTest {
     when(bulkClient.saveBulk(any(), any()))
         .thenThrow(new RuntimeException("Test"));
 
-    var response = bulkStorageService.saveEntities(FILE_NAME, EntityType.AUTHORITY);
+    var response = bulkStorageService.saveEntities(FILE_NAME, EntityType.AUTHORITY, Boolean.TRUE);
     assertThat(response).isNull();
   }
 }
