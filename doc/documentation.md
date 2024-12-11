@@ -12,6 +12,7 @@
     * [Docker compose](#docker-compose)
   * [Deploying the module](#deploying-the-module)
     * [Environment variables](#environment-variables)
+    * [Reserving the memory space for the module](#reserving-the-memory-space-for-the-module)
   * [Integration](#integration)
     * [Folio modules communication](#folio-modules-communication)
   * [APIs](#apis)
@@ -87,7 +88,7 @@ docker compose up --build --force-recreate --no-deps
 | CHUNK_FETCH_IDS_COUNT            | 500                    | Number of record ids to fetch per query on chunks preparation phase. RECORDS_CHUNK_SIZE should be a divisor for this in order to maintain proper chunk size                                          |
 | CHUNK_PERSIST_COUNT              | 1_000                  | Number of chunks to be constructed before persisting to db                                                                                                                                           |
 | CHUNK_PROCESSING_MAX_PARALLELISM | 4                      | Max thread pool size for chunks processing                                                                                                                                                           |
-| LOCAL_FILE_STORAGE_PATH          | job                    | Local storage path for Authority and Marc bib files during migration                                                                                                                                 |
+| LOCAL_FILE_STORAGE_PATH          | job                    | Local storage path for storing Authority and Marc bib files during migration                                                                                                                         |
 | S3_URL                           | http://localhost:9000/ | S3 compatible service url                                                                                                                                                                            |
 | S3_REGION                        | -                      | S3 compatible service region                                                                                                                                                                         |
 | S3_BUCKET                        | marc-migrations        | S3 compatible service bucket                                                                                                                                                                         |
@@ -96,6 +97,21 @@ docker compose up --build --force-recreate --no-deps
 | S3_IS_AWS                        | false                  | Specify if AWS S3 is used as files storage                                                                                                                                                           |                     |                                                                                                                                                                                                      |
 | S3_RETRY_COUNT                   | 3                      | Specify number of retries if S3 client return any kind of error                                                                                                                                      |                     |                                                                                                                                                                                                      |
 | S3_RETRY_DELAY_MS                | 500                    | Specify millisecond delay between retries if S3 client return any kind of error                                                                                                                      |                     |                                                                                                                                                                                                      |
+
+### Reserving the memory space for the module
+Module needs to reserve a space for storing the temporary files in `LOCAL_FILE_STORAGE_PATH` during migration.
+The space used during the migration process of Authority records and Instance records is calculated as follows:
+
+```SPACE_FOR_AUTHORITY_FILES = NUMBER_OF_AUTHORITY_RECORDS * 2200 bytes```
+
+```SPACE_FOR_INSTANCE_FILES = NUMBER_OF_INSTANCE_RECORDS * 5000 bytes```
+
+where ```NUMBER_OF_AUTHORITY_RECORDS``` and ```NUMBER_OF_INSTANCE_RECORDS``` are the total number of authority and instance records,
+and the values 2200 and 5000 bytes are the average size of the authority and instance records respectively.
+
+Since it is possible to run only one migration operation at a time, the space for the module is equal to the maximum of the above two values:
+
+```SPACE_FOR_MODULE = max(SPACE_FOR_AUTHORITY_FILES, SPACE_FOR_INSTANCE_FILES)```
 
 ## Integration
 ### Folio modules communication

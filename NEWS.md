@@ -13,7 +13,7 @@
 * Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
 
 ### Tech Dept
-* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
+* Update documentation to include information about reserving memory space for the module ([MODMARCMIG-33](https://issues.folio.org/browse/MODMARCMIG-33))
 
 ### Dependencies
 * Bump `LIB_NAME` from `OLD_VERSION` to `NEW_VERSION`
