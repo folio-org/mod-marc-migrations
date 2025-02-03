@@ -24,11 +24,11 @@ public class ModuleTenantService extends TenantService {
   public ModuleTenantService(JdbcTemplate jdbcTemplate,
                              FolioExecutionContext context,
                              FolioSpringLiquibase folioSpringLiquibase,
-                             PrepareSystemUserService systemUserService,
+                             PrepareSystemUserService prepareSystemUserService,
                              AuthorityJdbcService authorityJdbcService,
                              InstanceJdbcService instanceJdbcService) {
     super(jdbcTemplate, context, folioSpringLiquibase);
-    this.systemUserService = systemUserService;
+    this.systemUserService = prepareSystemUserService;
     this.authorityJdbcService = authorityJdbcService;
     this.instanceJdbcService = instanceJdbcService;
   }
