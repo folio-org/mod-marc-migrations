@@ -13,7 +13,7 @@
 * Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
 
 ### Tech Dept
-* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
+* Add users.item.put to tenant endpoint module permissions ([MODMARCMIG-40](https://folio-org.atlassian.net/browse/MODMARCMIG-40))
 
 ### Dependencies
 * Bump `LIB_NAME` from `OLD_VERSION` to `NEW_VERSION`
