@@ -17,18 +17,18 @@ import org.springframework.stereotype.Service;
 @Primary
 public class ModuleTenantService extends TenantService {
 
-  private final PrepareSystemUserService systemUserService;
+  private final PrepareSystemUserService prepareSystemUserService;
   private final AuthorityJdbcService authorityJdbcService;
   private final InstanceJdbcService instanceJdbcService;
 
   public ModuleTenantService(JdbcTemplate jdbcTemplate,
                              FolioExecutionContext context,
                              FolioSpringLiquibase folioSpringLiquibase,
-                             PrepareSystemUserService systemUserService,
+                             PrepareSystemUserService prepareSystemUserService,
                              AuthorityJdbcService authorityJdbcService,
                              InstanceJdbcService instanceJdbcService) {
     super(jdbcTemplate, context, folioSpringLiquibase);
-    this.systemUserService = systemUserService;
+    this.prepareSystemUserService = prepareSystemUserService;
     this.authorityJdbcService = authorityJdbcService;
     this.instanceJdbcService = instanceJdbcService;
   }
@@ -37,7 +37,7 @@ public class ModuleTenantService extends TenantService {
   protected void afterTenantUpdate(TenantAttributes tenantAttributes) {
     log.info("afterTenantUpdate::Initiating additional setup [tenant: {}]", context.getTenantId());
     super.afterTenantUpdate(tenantAttributes);
-    systemUserService.setupSystemUser();
+    prepareSystemUserService.setupSystemUser();
     authorityJdbcService.initViews(context.getTenantId());
     instanceJdbcService.initViews(context.getTenantId());
     log.info("afterTenantUpdate::Completed additional setup [tenant: {}]", context.getTenantId());
