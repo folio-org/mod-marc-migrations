@@ -31,7 +31,7 @@ public class SavingRecordsStepListener implements StepExecutionListener {
     var operationId = stepExecution.getJobParameters().getString(OPERATION_ID);
 
     if (operationId == null) {
-      log.warn("No operationId found in job parameters for jobId " + jobId);
+      log.warn("No operationId found in job parameters for jobId {}", jobId);
       return new ExitStatus(ExitStatus.FAILED.getExitCode(), "No operationId in job params for jobId " + jobId);
     }
     if (ExitStatus.FAILED.getExitCode().equals(exitStatus.getExitCode())) {

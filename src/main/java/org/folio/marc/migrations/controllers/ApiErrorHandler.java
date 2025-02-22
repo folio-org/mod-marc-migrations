@@ -7,7 +7,6 @@ import static org.apache.logging.log4j.Level.WARN;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY;
 
 import java.util.List;
 import java.util.Optional;
@@ -34,19 +33,19 @@ public class ApiErrorHandler {
   @ExceptionHandler(Exception.class)
   public ResponseEntity<Error> handleGlobalExceptions(Exception e) {
     logException(WARN, e);
-    return buildResponseEntity(e, INTERNAL_SERVER_ERROR);
+    return buildUnprocessableResponseEntity(e, INTERNAL_SERVER_ERROR);
   }
 
   @ExceptionHandler(NotFoundException.class)
   public ResponseEntity<Error> handleNotFoundExceptions(NotFoundException e) {
     logException(TRACE, e);
-    return buildResponseEntity(e, NOT_FOUND);
+    return buildUnprocessableResponseEntity(e, NOT_FOUND);
   }
 
   @ExceptionHandler(ApiValidationException.class)
   public ResponseEntity<Error> handleApiValidationException(ApiValidationException e) {
     var parameter = new Parameter(e.getFieldName()).value(e.getFieldValue());
-    return buildResponseEntity(buildError(e, List.of(parameter)), UNPROCESSABLE_ENTITY);
+    return buildUnprocessableResponseEntity(buildError(e, List.of(parameter)));
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -62,7 +61,7 @@ public class ApiErrorHandler {
           .value(String.valueOf(((FieldError) error).getRejectedValue()))))
       .toList();
 
-    return buildResponseEntity(errors.get(0), UNPROCESSABLE_ENTITY);
+    return buildUnprocessableResponseEntity(errors.getFirst());
   }
 
   @ExceptionHandler({
@@ -72,7 +71,7 @@ public class ApiErrorHandler {
   })
   public ResponseEntity<Error> handleValidationException(Exception e) {
     logException(DEBUG, e);
-    return buildResponseEntity(e, BAD_REQUEST);
+    return buildUnprocessableResponseEntity(e, BAD_REQUEST);
   }
 
   @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -84,16 +83,16 @@ public class ApiErrorHandler {
       .map(this::handleValidationException)
       .orElseGet(() -> {
         logException(DEBUG, e);
-        return buildResponseEntity(e, BAD_REQUEST);
+        return buildUnprocessableResponseEntity(e, BAD_REQUEST);
       });
   }
 
-  private static ResponseEntity<Error> buildResponseEntity(Exception exception, HttpStatus status) {
+  private static ResponseEntity<Error> buildUnprocessableResponseEntity(Exception exception, HttpStatus status) {
     return ResponseEntity.status(status).body(buildError(exception, emptyList()));
   }
 
-  private static ResponseEntity<Error> buildResponseEntity(Error errorResponse, HttpStatus status) {
-    return ResponseEntity.status(status).body(errorResponse);
+  private static ResponseEntity<Error> buildUnprocessableResponseEntity(Error errorResponse) {
+    return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(errorResponse);
   }
 
   private static void logException(Level logLevel, Exception e) {

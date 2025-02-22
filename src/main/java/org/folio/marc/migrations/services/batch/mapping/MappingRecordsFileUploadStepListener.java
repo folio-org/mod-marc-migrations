@@ -43,7 +43,7 @@ public class MappingRecordsFileUploadStepListener implements StepExecutionListen
     var filesPath = JOB_FILES_PATH.formatted(props.getLocalFileStoragePath(), jobId);
 
     if (operationId == null) {
-      log.warn("No operationId found in job parameters for jobId " + jobId);
+      log.warn("No operationId found in job parameters for jobId {}", jobId);
       clearLocalFiles(filesPath);
       return new ExitStatus(ExitStatus.FAILED.getExitCode(), "No operationId in job params for jobId " + jobId);
     }

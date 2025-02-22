@@ -41,7 +41,7 @@ class SavingRecordsChunkProcessorTest {
   private @InjectMocks SavingRecordsChunkProcessor processor;
 
   @BeforeEach
-  public void setUpMocks() {
+  void setUpMocks() {
     BulkResponse bulkResponse = new BulkResponse();
     bulkResponse.setErrorsNumber(0);
 

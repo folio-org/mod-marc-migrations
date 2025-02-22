@@ -53,6 +53,6 @@ public class MappingChunkEntityReader implements ItemReader<OperationChunk> {
       return null;
     }
 
-    return currentBatch.get(currentBatch.size() - 1).getId();
+    return currentBatch.getLast().getId();
   }
 }

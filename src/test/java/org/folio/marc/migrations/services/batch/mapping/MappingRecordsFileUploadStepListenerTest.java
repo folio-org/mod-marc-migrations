@@ -61,7 +61,7 @@ class MappingRecordsFileUploadStepListenerTest {
   @AfterEach
   @SneakyThrows
   void deleteDirectory() {
-    FileUtils.deleteDirectory(new File("job"));
+    FileUtils.deleteDirectory(new File(defaultFilePath));
   }
 
   @Test

@@ -16,6 +16,7 @@ import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -90,7 +91,8 @@ class AuthorityJdbcServiceTest extends JdbcServiceTestBase {
     var idTo = UUID.randomUUID();
     var chunkMock = List.of(new MarcRecord(UUID.randomUUID(), null, null, null, null),
       new MarcRecord(UUID.randomUUID(), null, null, null, null));
-    when(jdbcTemplate.query(any(String.class), any(BeanPropertyRowMapper.class))).thenReturn(chunkMock);
+    when(jdbcTemplate.query(any(String.class), ArgumentMatchers.<BeanPropertyRowMapper<MarcRecord>>any()))
+      .thenReturn(chunkMock);
 
     // Act
     var chunk = service.getAuthoritiesChunk(idFrom, idTo);
@@ -98,7 +100,7 @@ class AuthorityJdbcServiceTest extends JdbcServiceTestBase {
     // Assert
     assertThat(chunk).isEqualTo(chunkMock);
     var sqlCaptor = ArgumentCaptor.forClass(String.class);
-    verify(jdbcTemplate).query(sqlCaptor.capture(), any(BeanPropertyRowMapper.class));
+    verify(jdbcTemplate).query(sqlCaptor.capture(), ArgumentMatchers.<BeanPropertyRowMapper<MarcRecord>>any());
     assertThat(sqlCaptor.getValue())
       .contains(idFrom.toString(), idTo.toString(), TENANT_ID);
   }

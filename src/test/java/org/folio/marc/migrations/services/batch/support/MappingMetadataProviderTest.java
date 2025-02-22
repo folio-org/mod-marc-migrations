@@ -33,13 +33,13 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @UnitTest
 @Import(MappingMetadataProviderTest.TestContextConfiguration.class)
@@ -49,7 +49,7 @@ class MappingMetadataProviderTest {
 
   private @Autowired CacheManager cacheManager;
   private @Autowired MappingMetadataProvider provider;
-  private @MockBean MappingMetadataClient client;
+  private @MockitoBean MappingMetadataClient client;
 
   @BeforeEach
   void cleanUpCaches() {

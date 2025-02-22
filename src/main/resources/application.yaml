@@ -1,6 +1,9 @@
 spring:
   application:
     name: mod-marc-migrations
+  threads:
+    virtual:
+      enabled: true
   datasource:
     hikari:
       connectionTimeout: ${DB_CONNECTION_TIMEOUT:30000}
@@ -84,5 +87,5 @@ management:
       base-path: /admin
   endpoint:
     loggers:
-      enabled: true
+      access: unrestricted
 server.port: 8081
