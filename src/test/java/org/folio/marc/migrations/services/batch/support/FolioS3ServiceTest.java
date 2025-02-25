@@ -12,9 +12,9 @@ import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.retry.annotation.EnableRetry;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @UnitTest
 @EnableRetry
@@ -22,7 +22,7 @@ import org.springframework.retry.annotation.EnableRetry;
 @SpringBootTest(classes = FolioS3Service.class, webEnvironment = NONE)
 class FolioS3ServiceTest {
 
-  private @MockBean FolioS3Client s3Client;
+  private @MockitoBean FolioS3Client s3Client;
   private @Autowired FolioS3Service service;
 
   @Test

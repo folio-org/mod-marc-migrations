@@ -56,7 +56,7 @@ public class ChunkJdbcService extends JdbcService {
       log.debug("createChunks:: no chunks to create");
       return;
     }
-    log.debug("createChunks::operationId {}, count {}", chunks.get(0).getOperationId(), chunks.size());
+    log.debug("createChunks::operationId {}, count {}", chunks.getFirst().getOperationId(), chunks.size());
 
     var sql = CREATE_CHUNK.formatted(getSchemaName());
     try {
@@ -73,7 +73,7 @@ public class ChunkJdbcService extends JdbcService {
       });
     } catch (Exception ex) {
       log.warn("createChunks:: unable to batch insert chunks for operation {}: {}",
-        chunks.get(0).getOperationId(), ex.getMessage());
+        chunks.getFirst().getOperationId(), ex.getMessage());
       throw new IllegalStateException(ex);
     }
   }

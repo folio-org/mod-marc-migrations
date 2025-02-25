@@ -1,6 +1,6 @@
-## v1.1.0 YYYY-mm-DD
+## v2.0.0 YYYY-mm-DD
 ### Breaking changes
-* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
+* Upgrade to Java 21 ([MODMARCMIG-42](https://folio-org.atlassian.net/browse/MODMARCMIG-42))
 
 ### New APIs versions
 * Provides `API_NAME vX.Y`

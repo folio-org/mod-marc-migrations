@@ -18,6 +18,7 @@ import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -38,7 +39,8 @@ class ChunkJdbcServiceTest extends JdbcServiceTestBase {
     var limit = 5;
     var chunksMock = List.of(OperationChunk.builder().id(UUID.randomUUID()).build(),
       OperationChunk.builder().id(UUID.randomUUID()).build());
-    when(jdbcTemplate.query(any(String.class), any(BeanPropertyRowMapper.class))).thenReturn(chunksMock);
+    when(jdbcTemplate.query(any(String.class), ArgumentMatchers.<BeanPropertyRowMapper<OperationChunk>>any()))
+      .thenReturn(chunksMock);
 
     // Act
     var chunks = service.getChunks(operationId, idFrom, limit);
@@ -46,7 +48,7 @@ class ChunkJdbcServiceTest extends JdbcServiceTestBase {
     // Assert
     assertThat(chunks).isEqualTo(chunksMock);
     var sqlCaptor = ArgumentCaptor.forClass(String.class);
-    verify(jdbcTemplate).query(sqlCaptor.capture(), any(BeanPropertyRowMapper.class));
+    verify(jdbcTemplate).query(sqlCaptor.capture(), ArgumentMatchers.<BeanPropertyRowMapper<OperationChunk>>any());
     assertThat(sqlCaptor.getValue())
       .contains(operationId, idFrom.toString(), String.valueOf(limit), TENANT_ID);
   }
@@ -58,7 +60,8 @@ class ChunkJdbcServiceTest extends JdbcServiceTestBase {
     var limit = 5;
     var chunksMock = List.of(OperationChunk.builder().id(UUID.randomUUID()).build(),
       OperationChunk.builder().id(UUID.randomUUID()).build());
-    when(jdbcTemplate.query(any(String.class), any(BeanPropertyRowMapper.class))).thenReturn(chunksMock);
+    when(jdbcTemplate.query(any(String.class), ArgumentMatchers.<BeanPropertyRowMapper<OperationChunk>>any()))
+      .thenReturn(chunksMock);
 
     // Act
     var chunks = service.getChunks(operationId, null, limit);
@@ -66,7 +69,7 @@ class ChunkJdbcServiceTest extends JdbcServiceTestBase {
     // Assert
     assertThat(chunks).isEqualTo(chunksMock);
     var sqlCaptor = ArgumentCaptor.forClass(String.class);
-    verify(jdbcTemplate).query(sqlCaptor.capture(), any(BeanPropertyRowMapper.class));
+    verify(jdbcTemplate).query(sqlCaptor.capture(), ArgumentMatchers.<BeanPropertyRowMapper<OperationChunk>>any());
     assertThat(sqlCaptor.getValue())
       .doesNotContain("AND id >");
     assertThat(sqlCaptor.getValue())

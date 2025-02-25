@@ -58,8 +58,9 @@ public class ChunkStepJdbcService extends JdbcService {
 
   public void updateChunkStep(UUID id, StepStatus status, Timestamp stepEndTime, int numOfErrors,
                               String entityErrorChunkFileName, String errorChunkFileName) {
-    log.debug("updateChunkStep::For step {}: status {}, stepEndTime {}, numOfErrors {}",
-        id, status, stepEndTime, numOfErrors);
+    log.debug("updateChunkStep::For step {}: status {}, stepEndTime {}, numOfErrors {}, "
+              + "entityErrorChunkFileName {}, errorChunkFileName {}",
+        id, status, stepEndTime, numOfErrors, entityErrorChunkFileName, errorChunkFileName);
 
     var setFields = """
         status = '%s',

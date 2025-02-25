@@ -117,7 +117,7 @@ class MappingRecordsChunkProcessorTest {
     assertThat(actual.records())
       .hasSize(records.size());
     var actualRecords = new ArrayList<>(actual.records());
-    assertThat(actualRecords.remove(0)).matches(result ->
+    assertThat(actualRecords.removeFirst()).matches(result ->
       result.mappedRecord() == null
         && "test exc".equals(result.errorCause())
         && result.invalidMarcRecord() != null

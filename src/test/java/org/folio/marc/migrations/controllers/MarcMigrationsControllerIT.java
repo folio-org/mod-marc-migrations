@@ -52,14 +52,14 @@ import org.folio.spring.testing.type.IntegrationTest;
 import org.folio.support.IntegrationTestBase;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
 @IntegrationTest
 @DatabaseCleanup(tables = {CHUNK_STEPS_TABLE, CHUNKS_TABLE, OPERATION_TABLE})
 class MarcMigrationsControllerIT extends IntegrationTestBase {
-  private @SpyBean FolioS3Client s3Client;
+  private @MockitoSpyBean FolioS3Client s3Client;
 
   @BeforeAll
   static void beforeAll() {

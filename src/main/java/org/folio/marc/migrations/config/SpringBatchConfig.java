@@ -52,6 +52,7 @@ public class SpringBatchConfig {
     executor.setMaxPoolSize(migrationProperties.getChunkProcessingMaxParallelism());
     executor.setTaskDecorator(FolioExecutionScopeExecutionContextManager::getRunnableWithCurrentFolioContext);
     executor.afterPropertiesSet();
+    executor.setVirtualThreads(true);
     return executor;
   }
 

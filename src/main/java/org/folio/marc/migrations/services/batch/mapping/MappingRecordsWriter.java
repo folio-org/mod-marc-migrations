@@ -39,7 +39,7 @@ public class MappingRecordsWriter implements ItemWriter<MappingComposite<Mapping
   @Override
   public void write(Chunk<? extends MappingComposite<MappingResult>> chunk) {
     //only one because of step config with spring batch size 1
-    var composite = chunk.getItems().get(0);
+    var composite = chunk.getItems().getFirst();
     log.debug("write:: for operationId {}, chunkId {}",
       composite.mappingData().operationId(), composite.mappingData().chunkId());
 

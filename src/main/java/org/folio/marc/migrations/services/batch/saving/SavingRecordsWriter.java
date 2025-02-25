@@ -29,7 +29,7 @@ public class SavingRecordsWriter implements ItemWriter<DataSavingResult> {
 
   @Override
   public void write(Chunk<? extends DataSavingResult> chunk) {
-    var saveResult = chunk.getItems().get(0);
+    var saveResult = chunk.getItems().getFirst();
     var operationId = saveResult.recordsSavingData().operationId();
     var chunkId = saveResult.recordsSavingData().chunkId();
     var stepId = saveResult.recordsSavingData().stepId();
