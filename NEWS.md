@@ -1,24 +1,44 @@
-## v2.0.0 YYYY-mm-DD
+## v2.1.0 YYYY-mm-DD
 ### Breaking changes
-* Upgrade to Java 21 ([MODMARCMIG-42](https://folio-org.atlassian.net/browse/MODMARCMIG-42))
+* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
 
 ### New APIs versions
 * Provides `API_NAME vX.Y`
 * Requires `API_NAME vX.Y`
 
 ### Features
-* Add optional API parameter to control Kafka entity change events for remapping operation saving step ([MODMARCMIG-37](https://folio-org.atlassian.net/browse/MODMARCMIG-37))
+* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
 
 ### Bug fixes
 * Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
 
 ### Tech Dept
-* Add users.item.put to tenant endpoint module permissions ([MODMARCMIG-40](https://folio-org.atlassian.net/browse/MODMARCMIG-40))
+* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
 
 ### Dependencies
 * Bump `LIB_NAME` from `OLD_VERSION` to `NEW_VERSION`
 * Add `LIB_NAME VERSION`
 * Remove `LIB_NAME`
+
+---
+
+## v2.0.0 2025-03-12
+### Breaking changes
+* Upgrade to Java 21 ([MODMARCMIG-42](https://folio-org.atlassian.net/browse/MODMARCMIG-42))
+
+### Features
+* Add optional API parameter to control Kafka entity change events for remapping operation saving step ([MODMARCMIG-37](https://folio-org.atlassian.net/browse/MODMARCMIG-37))
+
+### Tech Dept
+* Add users.item.put to tenant endpoint module permissions ([MODMARCMIG-40](https://folio-org.atlassian.net/browse/MODMARCMIG-40))
+
+### Dependencies
+* Bump `spring-boot` from `3.3.5` to `3.4.3`
+* Bump `folio-spring-support` from `8.2.0` to `9.0.0`
+* Bump `folio-s3-client` from `2.2.0` to `2.3.0`
+* Bump `data-import-processing-core` from `4.3.0` to `4.4.0`
+* Bump `aws-sdk-java` from `2.29.4` to `2.30.38`
+* Bump `mapstruct` from `1.6.2` to `1.6.3`
 
 ---
 
