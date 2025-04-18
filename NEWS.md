@@ -1,3 +1,13 @@
+## v2.0.1 2025-04-18
+
+### Bugfixes
+* Upgrade di-processing-core to v4.4.1 to fix instance Date type field mapping ([MODMARCMIG-55](https://folio-org.atlassian.net/browse/MODMARCMIG-55))
+
+### Dependencies
+* Bump `data-import-processing-core` from `4.4.0` to `4.4.1`
+
+---
+
 ## v2.0.0 2025-03-12
 ### Breaking changes
 * Upgrade to Java 21 ([MODMARCMIG-42](https://folio-org.atlassian.net/browse/MODMARCMIG-42))
