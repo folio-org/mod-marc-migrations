@@ -27,7 +27,7 @@
     </sonar.exclusions>
 
     <folio-spring-support.version>9.0.0</folio-spring-support.version>
-    <data-import-processing-core.version>4.4.0</data-import-processing-core.version>
+    <data-import-processing-core.version>4.4.1</data-import-processing-core.version>
     <folio-s3-client.version>2.3.0</folio-s3-client.version>
     <aws-sdk-java.version>2.30.38</aws-sdk-java.version>
     <mapstruct.version>1.6.3</mapstruct.version>
