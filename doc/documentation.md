@@ -21,6 +21,8 @@
         * [Response](#response)
     * [Tracking the state of MARC Migration operation](#tracking-the-state-of-marc-migration-operation)
         * [Response](#response-1)
+    * [Retirieving the collection of MARC Migration operations](#retirieving-the-collection-of-marc-migration-operations)
+        * [Response](#response-2)
     * [Initiating the Data Saving phase for the MARC Migration operation](#initiating-the-data-saving-phase-for-the-marc-migration-operation)
         * [Request body](#request-body-1)
     * [Full scenario for Authority records migration](#full-scenario-for-authority-records-migration)
@@ -114,11 +116,12 @@ docker compose up --build --force-recreate --no-deps
 ### API marc-migrations
 The API provides management endpoint for MARC Migrations
 
-| METHOD  | URL                              | Required permissions                   | DESCRIPTION                                                       |
-|:--------|:---------------------------------|:---------------------------------------|:------------------------------------------------------------------|
-| POST    | `/marc-migrations`               | `marc-migrations.operations.item.post` | Register new MARC Migration operation                             |
-| GET     | `/marc-migrations/{operationId}` | `marc-migrations.operations.item.get`  | Track the state of MARC Migration operation by operation ID       |
-| PUT     | `/marc-migrations/{operationId}` | `marc-migrations.operations.item.put`  | Initiating the Data Saving phase for the MARC Migration operation |
+| METHOD  | URL                              | Required permissions                        | DESCRIPTION                                                       |
+|:--------|:---------------------------------|:--------------------------------------------|:------------------------------------------------------------------|
+| POST    | `/marc-migrations`               | `marc-migrations.operations.item.post`      | Register new MARC Migration operation                             |
+| GET     | `/marc-migrations`               | `marc-migrations.operations.collection.get` | Get collection of MARC Migration operations                       |
+| GET     | `/marc-migrations/{operationId}` | `marc-migrations.operations.item.get`       | Track the state of MARC Migration operation by operation ID       |
+| PUT     | `/marc-migrations/{operationId}` | `marc-migrations.operations.item.put`       | Initiating the Data Saving phase for the MARC Migration operation |
 
 
 ### Registering MARC Migration operation
@@ -179,6 +182,29 @@ Response will have the following values for ```"status"``` depending on whether 
 * ```"data_mapping_failed"``` or ```"data_saving_failed"``` - job is finished with failure for data mapping or data saving
 
 Also, when the job is finished successfully fields ```"mappedNumOfRecords"``` and ```"savedNumOfRecords"``` should have the values equal to the one from ```"totalNumOfRecords"```
+
+### Retirieving the collection of MARC Migration operations
+
+All existing migration operations can be listed by calling the ```GET /marc-migrations``` endpoint. This will return the collection of all migration operations with their status and other details.
+The API is pageable and accepts `offset` and `limit` (optional) query parameters. Also, using the `entityType` (optional) query parameter migrations operations of specific entity type can be filtered.
+
+```GET /marc-migrations?entityType=authority?offset=0&limit=10```
+##### Response
+```json
+{
+  "migrationOperations": {
+    "id": "99fa24e1-d0de-4f20-a122-5ecfe9dec539",
+    "userId": "acf0af69-a463-458e-adc6-392045739ba0",
+    "entityType": "authority",
+    "operationType": "remapping",
+    "status": "data_mapping",
+    "totalNumOfRecords": 1141,
+    "mappedNumOfRecords": 850,
+    "savedNumOfRecords": 0
+  },
+  "totalRecords": 1
+}
+```
 
 ### Initiating the Data Saving phase for the MARC Migration operation
 

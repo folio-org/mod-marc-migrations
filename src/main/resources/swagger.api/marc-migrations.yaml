@@ -6,6 +6,83 @@ info:
 
 paths:
   /marc-migrations:
+    get:
+      summary: Get MARC migration operations
+      operationId: getMarcMigrations
+      tags:
+        - marc-migrations
+      parameters:
+        - in: query
+          name: offset
+          description: Skip over a number of migrations by specifying an offset value for the query.
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 1000
+            default: 0
+        - in: query
+          name: limit
+          description: Limit the number of migration operations returned in the response.
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 1000
+            default: 100
+        - name: entityType
+          in: query
+          required: false
+          description: Migration Entity Type to filter by
+          schema:
+            $ref: "#/components/schemas/EntityType"
+      responses:
+        '200':
+          description: Retrieved MARC migration operations collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MigrationOperationCollection'
+              example:
+                migrationOperations:
+                  - id: 118dbd8c-5ba0-47a9-a850-34bbb1dbf3b7
+                    userId: 0db8f753-6864-452c-9b49-5362a20188b5
+                    entityType: authority
+                    operationType: remapping
+                    status: new
+                    totalNumOfRecords: 10000
+                  - id: 46669e09-8b45-4ede-afbd-ca73bb89cdb3
+                    userId: 0db8f753-6864-452c-9b49-5362a20188b5
+                    entityType: instance
+                    operationType: remapping
+                    status: new
+                    totalNumOfRecords: 50000
+                totalRecords: 2
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                InvalidMethodArgumentTypeMismatch:
+                  value:
+                    message: "Method parameter 'entityType': Failed to convert value of type 'java.lang.String' to required type"
+                    type: 'MethodArgumentTypeMismatchException'
+                    parameters:
+                      - key: 'entityType'
+                        value: 'unexpected_entity_name'
+        '500':
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                UnexpectedError:
+                  value:
+                    message: 'Unexpected error'
+                    type: 'NullPointerException'
     post:
       summary: Register new MARC migration operation
       operationId: createMarcMigrations
@@ -185,6 +262,21 @@ components:
           $ref: '#/components/schemas/EntityType'
         operationType:
           $ref: '#/components/schemas/OperationType'
+
+    MigrationOperationCollection:
+      type: object
+      properties:
+        totalRecords:
+          description: Total number of records
+          type: integer
+        migrationOperations:
+          description: List of MARC migration operations
+          type: array
+          items:
+            $ref: '#/components/schemas/MigrationOperation'
+      required:
+        - totalRecords
+        - migrationOperations
 
     MigrationOperation:
       type: object
