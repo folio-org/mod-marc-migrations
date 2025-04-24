@@ -56,6 +56,15 @@
           "methods": [
             "GET"
           ],
+          "pathPattern": "/marc-migrations",
+          "permissionsRequired": [
+            "marc-migrations.operations.collection.get"
+          ]
+        },
+        {
+          "methods": [
+            "GET"
+          ],
           "pathPattern": "/marc-migrations/{id}",
           "permissionsRequired": [
             "marc-migrations.operations.item.get"
@@ -117,6 +126,11 @@
       "description": "Create MARC Migrations Operation"
     },
     {
+      "permissionName": "marc-migrations.operations.collection.get",
+      "displayName": "MARC Migrations - Get Marc Migration operations",
+      "description": "Get MARC Migrations Operations"
+    },
+    {
       "permissionName": "marc-migrations.operations.item.get",
       "displayName": "MARC Migrations - Get operation",
       "description": "Get MARC Migrations Operation by ID"
@@ -131,6 +145,7 @@
       "displayName": "MARC Migrations - all permissions",
       "description": "Entire set of permissions needed to use MARC migrations",
       "subPermissions": [
+        "marc-migrations.operations.collection.get",
         "marc-migrations.operations.item.post",
         "marc-migrations.operations.item.get",
         "marc-migrations.operations.item.put"

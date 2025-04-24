@@ -19,6 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.Duration;
 import lombok.SneakyThrows;
 import org.awaitility.core.ThrowingRunnable;
@@ -94,6 +95,7 @@ public class IntegrationTestBase {
   static void setUpClass(@Autowired MockMvc mockMvc, @Autowired DatabaseHelper databaseHelper) {
     IntegrationTestBase.mockMvc = mockMvc;
     IntegrationTestBase.databaseHelper = databaseHelper;
+    MAPPER.registerModule(new JavaTimeModule());
   }
 
   @SneakyThrows

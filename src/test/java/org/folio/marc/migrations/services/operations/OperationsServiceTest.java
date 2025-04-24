@@ -4,9 +4,11 @@ import static org.folio.marc.migrations.domain.entities.types.EntityType.AUTHORI
 import static org.folio.marc.migrations.domain.entities.types.EntityType.INSTANCE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.folio.marc.migrations.domain.entities.Operation;
@@ -23,6 +25,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
@@ -81,5 +86,33 @@ class OperationsServiceTest {
 
     // Assert
     assertEquals(fetchedOperation, result);
+  }
+
+  @Test
+  void getOperations_ReturnsOperations() {
+    // Arrange
+    var expected = new PageImpl<>(List.of(new Operation()));
+    when(repository.findAll(any(Pageable.class))).thenReturn(expected);
+
+    // Act
+    var result = service.getOperations(0, 100, null);
+
+    // Assert
+    assertEquals(expected, result);
+    verify(repository).findAll(any(Pageable.class));
+  }
+
+  @Test
+  void getOperations_ReturnsOperationsForGivenEntityType() {
+    // Arrange
+    var expected = new PageImpl<>(List.of(new Operation()));
+    when(repository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(expected);
+
+    // Act
+    var result = service.getOperations(0, 100, AUTHORITY);
+
+    // Assert
+    assertEquals(expected, result);
+    verify(repository).findAll(any(Specification.class), any(Pageable.class));
   }
 }

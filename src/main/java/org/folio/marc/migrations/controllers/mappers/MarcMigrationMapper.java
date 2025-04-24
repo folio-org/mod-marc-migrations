@@ -2,7 +2,9 @@ package org.folio.marc.migrations.controllers.mappers;
 
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
+import java.util.List;
 import org.folio.marc.migrations.domain.dto.MigrationOperation;
+import org.folio.marc.migrations.domain.dto.MigrationOperationCollection;
 import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.utils.DateUtils;
@@ -10,6 +12,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
 import org.mapstruct.ReportingPolicy;
+import org.springframework.data.domain.Page;
 
 @Mapper(
     unmappedTargetPolicy = ReportingPolicy.IGNORE,
@@ -30,6 +33,14 @@ public interface MarcMigrationMapper {
   Operation toEntity(NewMigrationOperation migrationOperation);
 
   MigrationOperation toDto(Operation operation);
+
+  List<MigrationOperation> toDtoList(Iterable<Operation> authorityNoteTypeIterable);
+
+  default MigrationOperationCollection toDtoCollection(
+      Page<Operation> operations) {
+    var migrationOperations = toDtoList(operations);
+    return new MigrationOperationCollection((int) operations.getTotalElements(), migrationOperations);
+  }
 
   default OffsetDateTime map(Timestamp value) {
     return DateUtils.fromTimestamp(value);
