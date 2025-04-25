@@ -25,6 +25,8 @@ import org.springframework.http.HttpStatus;
 @ExtendWith(MockitoExtension.class)
 class MarcMigrationsControllerTest {
 
+  private static final String TENANT_ID = "tenantId";
+
   private @Mock MarcMigrationsService migrationsService;
   private @Mock ExpirationService expirationService;
   private @InjectMocks MarcMigrationsController migrationsController;
@@ -37,7 +39,7 @@ class MarcMigrationsControllerTest {
     when(migrationsService.createNewMigration(validOperation)).thenReturn(result);
 
     // Act
-    var response = migrationsController.createMarcMigrations("tenantId", validOperation);
+    var response = migrationsController.createMarcMigrations(TENANT_ID, validOperation);
 
     // Assert
     assertEquals(HttpStatus.CREATED, response.getStatusCode());
@@ -53,7 +55,7 @@ class MarcMigrationsControllerTest {
     when(migrationsService.getMarcMigrationById(operationId)).thenReturn(result);
 
     // Act
-    var response = migrationsController.getMarcMigrationById(operationId, "tenantId");
+    var response = migrationsController.getMarcMigrationById(operationId, TENANT_ID);
 
     // Assert
     assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -69,7 +71,7 @@ class MarcMigrationsControllerTest {
     when(migrationsService.getMarcMigrations(0, 100, EntityType.AUTHORITY)).thenReturn(result);
 
     // Act
-    var response = migrationsController.getMarcMigrations(0, 100, EntityType.AUTHORITY);
+    var response = migrationsController.getMarcMigrations(TENANT_ID, 0, 100, EntityType.AUTHORITY);
 
     // Assert
     assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -83,7 +85,7 @@ class MarcMigrationsControllerTest {
     var saveMigrationOperation = new SaveMigrationOperation();
 
     // Act
-    var response = migrationsController.saveMarcMigration(operationId, saveMigrationOperation);
+    var response = migrationsController.saveMarcMigration(operationId, TENANT_ID,  saveMigrationOperation);
 
     // Assert
     assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());

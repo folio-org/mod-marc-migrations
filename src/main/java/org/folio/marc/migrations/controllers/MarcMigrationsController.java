@@ -35,7 +35,7 @@ public class MarcMigrationsController implements MarcMigrationsApi {
   }
 
   @Override
-  public ResponseEntity<MigrationOperationCollection> getMarcMigrations(Integer offset, Integer limit,
+  public ResponseEntity<MigrationOperationCollection> getMarcMigrations(String tenantId, Integer offset, Integer limit,
                                                                         EntityType entityType) {
     return ResponseEntity.ok(migrationsService.getMarcMigrations(offset, limit, entityType));
   }
@@ -46,7 +46,8 @@ public class MarcMigrationsController implements MarcMigrationsApi {
   }
 
   @Override
-  public ResponseEntity<Void> saveMarcMigration(UUID operationId, SaveMigrationOperation saveMigrationOperation) {
+  public ResponseEntity<Void> saveMarcMigration(UUID operationId, String tenantId,
+                                                SaveMigrationOperation saveMigrationOperation) {
     migrationsService.saveMigrationOperation(operationId, saveMigrationOperation);
     return ResponseEntity.noContent().build();
   }
