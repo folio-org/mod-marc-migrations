@@ -7,6 +7,7 @@
 * Requires `API_NAME vX.Y`
 
 ### Features
+* Add API to get collection of migrations operations ([MODMARCMIG-51](https://folio-org.atlassian.net/browse/MODMARCMIG-51))
 * Create scheduled job to clean-up outdated migration jobs from database ([MODMARCMIG-53](https://folio-org.atlassian.net/browse/MODMARCMIG-53))
 
 ### Bug fixes

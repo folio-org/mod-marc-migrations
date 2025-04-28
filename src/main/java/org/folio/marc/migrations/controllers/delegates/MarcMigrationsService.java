@@ -1,10 +1,13 @@
 package org.folio.marc.migrations.controllers.delegates;
 
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.controllers.mappers.MarcMigrationMapper;
+import org.folio.marc.migrations.domain.dto.EntityType;
 import org.folio.marc.migrations.domain.dto.MigrationOperation;
+import org.folio.marc.migrations.domain.dto.MigrationOperationCollection;
 import org.folio.marc.migrations.domain.dto.MigrationOperationStatus;
 import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
 import org.folio.marc.migrations.domain.dto.OperationType;
@@ -42,6 +45,18 @@ public class MarcMigrationsService {
     return operationsService.getOperation(operationId)
       .map(mapper::toDto)
       .orElseThrow(() -> new NotFoundException(NOT_FOUND_MSG.formatted(operationId)));
+  }
+
+  public MigrationOperationCollection getMarcMigrations(Integer offset, Integer limit, EntityType dtoEntityType) {
+    log.debug("getMarcMigrations::Trying to get migration operations by offset={}, limit={}, entityType={}",
+        offset, limit, dtoEntityType == null ? "null" : dtoEntityType.getValue());
+    var entityType = Optional.ofNullable(dtoEntityType)
+        .map(type -> dtoEntityType == EntityType.AUTHORITY
+            ? org.folio.marc.migrations.domain.entities.types.EntityType.AUTHORITY
+            : org.folio.marc.migrations.domain.entities.types.EntityType.INSTANCE)
+        .orElse(null);
+    var operations = operationsService.getOperations(offset, limit, entityType);
+    return mapper.toDtoCollection(operations);
   }
 
   public void saveMigrationOperation(UUID operationId, SaveMigrationOperation request) {

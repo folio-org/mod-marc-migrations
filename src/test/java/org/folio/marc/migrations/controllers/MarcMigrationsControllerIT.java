@@ -7,6 +7,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.folio.marc.migrations.domain.dto.EntityType.AUTHORITY;
+import static org.folio.marc.migrations.domain.dto.EntityType.INSTANCE;
 import static org.folio.marc.migrations.domain.dto.MigrationOperationStatus.DATA_MAPPING;
 import static org.folio.marc.migrations.domain.dto.MigrationOperationStatus.DATA_MAPPING_COMPLETED;
 import static org.folio.marc.migrations.domain.dto.MigrationOperationStatus.DATA_MAPPING_FAILED;
@@ -14,6 +16,7 @@ import static org.folio.marc.migrations.domain.dto.MigrationOperationStatus.DATA
 import static org.folio.marc.migrations.domain.dto.MigrationOperationStatus.DATA_SAVING_COMPLETED;
 import static org.folio.marc.migrations.domain.dto.MigrationOperationStatus.DATA_SAVING_FAILED;
 import static org.folio.marc.migrations.domain.dto.MigrationOperationStatus.NEW;
+import static org.folio.marc.migrations.domain.dto.OperationType.REMAPPING;
 import static org.folio.marc.migrations.domain.entities.types.StepStatus.COMPLETED;
 import static org.folio.support.DatabaseHelper.OPERATION_TABLE;
 import static org.folio.support.TestConstants.TENANT_ID;
@@ -21,6 +24,7 @@ import static org.folio.support.TestConstants.USER_ID;
 import static org.folio.support.TestConstants.marcMigrationEndpoint;
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.notNullValue;
@@ -32,10 +36,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.github.tomakehurst.wiremock.admin.NotFoundException;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
+import java.util.Comparator;
 import java.util.UUID;
 import lombok.SneakyThrows;
 import org.folio.marc.migrations.domain.dto.EntityType;
 import org.folio.marc.migrations.domain.dto.MigrationOperation;
+import org.folio.marc.migrations.domain.dto.MigrationOperationCollection;
 import org.folio.marc.migrations.domain.dto.MigrationOperationStatus;
 import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
 import org.folio.marc.migrations.domain.dto.OperationType;
@@ -53,6 +59,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @IntegrationTest
 @DatabaseCleanup(tables = {OPERATION_TABLE})
@@ -68,16 +75,16 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   void createNewMigrationAuthority_positive() throws Exception {
     // Arrange
     var migrationOperation = new NewMigrationOperation()
-      .operationType(OperationType.REMAPPING)
-      .entityType(EntityType.AUTHORITY);
+      .operationType(REMAPPING)
+      .entityType(AUTHORITY);
 
     // Act & Assert
     var result = tryPost(marcMigrationEndpoint(), migrationOperation)
       .andExpect(status().isCreated())
       .andExpect(jsonPath("id", notNullValue(UUID.class)))
       .andExpect(jsonPath("userId", is(USER_ID)))
-      .andExpect(jsonPath("operationType", is(OperationType.REMAPPING.getValue())))
-      .andExpect(jsonPath("entityType", is(EntityType.AUTHORITY.getValue())))
+      .andExpect(jsonPath("operationType", is(REMAPPING.getValue())))
+      .andExpect(jsonPath("entityType", is(AUTHORITY.getValue())))
       .andExpect(operationStatus(NEW))
       .andExpect(totalRecords(87))
       .andExpect(mappedRecords(0))
@@ -114,7 +121,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   void createNewMigrationInstance_positive() throws Exception {
     // Arrange
     var migrationOperation = new NewMigrationOperation()
-        .operationType(OperationType.REMAPPING)
+        .operationType(REMAPPING)
         .entityType(EntityType.INSTANCE);
 
     // Act & Assert
@@ -122,7 +129,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
         .andExpect(status().isCreated())
         .andExpect(jsonPath("id", notNullValue(UUID.class)))
         .andExpect(jsonPath("userId", is(USER_ID)))
-        .andExpect(jsonPath("operationType", is(OperationType.REMAPPING.getValue())))
+        .andExpect(jsonPath("operationType", is(REMAPPING.getValue())))
         .andExpect(jsonPath("entityType", is(EntityType.INSTANCE.getValue())))
         .andExpect(operationStatus(NEW))
         .andExpect(totalRecords(11))
@@ -164,16 +171,16 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     final var stub = wireMock.stubFor(get(urlPathEqualTo("/mapping-metadata/type/marc-authority"))
       .willReturn(notFound()));
     var migrationOperation = new NewMigrationOperation()
-      .operationType(OperationType.REMAPPING)
-      .entityType(EntityType.AUTHORITY);
+      .operationType(REMAPPING)
+      .entityType(AUTHORITY);
 
     // Act & Assert
     var result = tryPost(marcMigrationEndpoint(), migrationOperation)
       .andExpect(status().isCreated())
       .andExpect(jsonPath("id", notNullValue(UUID.class)))
       .andExpect(jsonPath("userId", is(USER_ID)))
-      .andExpect(jsonPath("operationType", is(OperationType.REMAPPING.getValue())))
-      .andExpect(jsonPath("entityType", is(EntityType.AUTHORITY.getValue())))
+      .andExpect(jsonPath("operationType", is(REMAPPING.getValue())))
+      .andExpect(jsonPath("entityType", is(AUTHORITY.getValue())))
       .andExpect(operationStatus(NEW))
       .andExpect(totalRecords(87))
       .andExpect(mappedRecords(0))
@@ -213,16 +220,16 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     // Arrange
     doThrow(IllegalStateException.class).when(s3Client).upload(any(), any());
     var migrationOperation = new NewMigrationOperation()
-      .operationType(OperationType.REMAPPING)
-      .entityType(EntityType.AUTHORITY);
+      .operationType(REMAPPING)
+      .entityType(AUTHORITY);
 
     // Act & Assert
     var result = tryPost(marcMigrationEndpoint(), migrationOperation)
       .andExpect(status().isCreated())
       .andExpect(jsonPath("id", notNullValue(UUID.class)))
       .andExpect(jsonPath("userId", is(USER_ID)))
-      .andExpect(jsonPath("operationType", is(OperationType.REMAPPING.getValue())))
-      .andExpect(jsonPath("entityType", is(EntityType.AUTHORITY.getValue())))
+      .andExpect(jsonPath("operationType", is(REMAPPING.getValue())))
+      .andExpect(jsonPath("entityType", is(AUTHORITY.getValue())))
       .andExpect(operationStatus(NEW))
       .andExpect(totalRecords(87))
       .andExpect(mappedRecords(0))
@@ -258,7 +265,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   @Test
   void createNewMigration_negative_operationTypeIsNull() throws Exception {
     // Arrange
-    var migrationOperation = new NewMigrationOperation().entityType(EntityType.AUTHORITY);
+    var migrationOperation = new NewMigrationOperation().entityType(AUTHORITY);
 
     // Act & Assert
     tryPost(marcMigrationEndpoint(), migrationOperation)
@@ -272,7 +279,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   @Test
   void createNewMigration_negative_entityTypeIsNull() throws Exception {
     // Arrange
-    var migrationOperation = new NewMigrationOperation().operationType(OperationType.REMAPPING);
+    var migrationOperation = new NewMigrationOperation().operationType(REMAPPING);
 
     // Act & Assert
     tryPost(marcMigrationEndpoint(), migrationOperation)
@@ -288,7 +295,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     // Arrange
     var migrationOperation = new NewMigrationOperation()
       .operationType(OperationType.IMPORT)
-      .entityType(EntityType.AUTHORITY);
+      .entityType(AUTHORITY);
 
     // Act & Assert
     tryPost(marcMigrationEndpoint(), migrationOperation)
@@ -303,8 +310,8 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   void getMigrationById_positive() throws Exception {
     // Arrange
     var migrationOperation = new NewMigrationOperation()
-      .operationType(OperationType.REMAPPING)
-      .entityType(EntityType.AUTHORITY);
+      .operationType(REMAPPING)
+      .entityType(AUTHORITY);
     var postResult = doPost(marcMigrationEndpoint(), migrationOperation).andReturn();
     var operationId = contentAsObj(postResult, MigrationOperation.class).getId();
 
@@ -313,8 +320,8 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
       .andExpect(status().isOk())
       .andExpect(jsonPath("id", is(operationId.toString())))
       .andExpect(jsonPath("userId", is(USER_ID)))
-      .andExpect(jsonPath("operationType", is(OperationType.REMAPPING.getValue())))
-      .andExpect(jsonPath("entityType", is(EntityType.AUTHORITY.getValue())))
+      .andExpect(jsonPath("operationType", is(REMAPPING.getValue())))
+      .andExpect(jsonPath("entityType", is(AUTHORITY.getValue())))
       .andExpect(jsonPath("status",
           oneOf(NEW.getValue(), DATA_MAPPING.getValue(), DATA_MAPPING_COMPLETED.getValue())))
       .andExpect(totalRecords(87))
@@ -325,6 +332,90 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
       assertThat(databaseHelper.getOperation(TENANT_ID, operationId).getStatus())
           .isEqualTo(OperationStatusType.DATA_MAPPING_COMPLETED)
     );
+  }
+
+  @Test
+  @SneakyThrows
+  void getMigrationCollection_positive() {
+    var migrationOperation1 = new NewMigrationOperation()
+        .operationType(REMAPPING)
+        .entityType(AUTHORITY);
+    var migrationOperation2 = new NewMigrationOperation()
+        .operationType(REMAPPING)
+        .entityType(EntityType.INSTANCE);
+    var postResult = doPost(marcMigrationEndpoint(), migrationOperation1).andReturn();
+    var operationId1 = contentAsObj(postResult, MigrationOperation.class).getId();
+    awaitUntilAsserted(() ->
+        assertThat(databaseHelper.getOperation(TENANT_ID, operationId1).getStatus())
+            .isEqualTo(OperationStatusType.DATA_MAPPING_COMPLETED)
+    );
+    postResult = doPost(marcMigrationEndpoint(), migrationOperation2).andReturn();
+    var operationId2 = contentAsObj(postResult, MigrationOperation.class).getId();
+    awaitUntilAsserted(() ->
+        assertThat(databaseHelper.getOperation(TENANT_ID, operationId2).getStatus())
+            .isEqualTo(OperationStatusType.DATA_MAPPING_COMPLETED)
+    );
+    postResult = doPost(marcMigrationEndpoint(), migrationOperation1).andReturn();
+    var operationId3 = contentAsObj(postResult, MigrationOperation.class).getId();
+
+    var response = tryGet(marcMigrationEndpoint())
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("totalRecords", is(3)))
+        .andExpect(jsonPath("migrationOperations", hasSize(3)))
+        .andExpect(jsonPath("migrationOperations[0].id", is(operationId3.toString())))
+        .andExpect(jsonPath("migrationOperations[0].entityType", is(AUTHORITY.getValue())))
+        .andExpect(jsonPath("migrationOperations[0].status",
+            oneOf(NEW.getValue(), DATA_MAPPING.getValue(), DATA_MAPPING_COMPLETED.getValue())))
+        .andExpect(jsonPath("migrationOperations[0].totalNumOfRecords", is(87)))
+        .andExpect(jsonPath("migrationOperations[0].mappedNumOfRecords", lessThanOrEqualTo(87)))
+        .andExpect(jsonPath("migrationOperations[1].id", is(operationId2.toString())))
+        .andExpect(jsonPath("migrationOperations[1].entityType", is(INSTANCE.getValue())))
+        .andExpect(jsonPath("migrationOperations[1].status", is(DATA_MAPPING_COMPLETED.getValue())))
+        .andExpect(jsonPath("migrationOperations[1].totalNumOfRecords", is(11)))
+        .andExpect(jsonPath("migrationOperations[1].mappedNumOfRecords", is(11)))
+        .andExpect(jsonPath("migrationOperations[2].id", is(operationId1.toString())))
+        .andExpect(jsonPath("migrationOperations[2].entityType", is(AUTHORITY.getValue())))
+        .andExpect(jsonPath("migrationOperations[2].status", is(DATA_MAPPING_COMPLETED.getValue())))
+        .andExpect(jsonPath("migrationOperations[2].totalNumOfRecords", is(87)))
+        .andExpect(jsonPath("migrationOperations[2].mappedNumOfRecords", is(87)))
+        .andReturn();
+
+    var dtoCollection = contentAsObj(response, MigrationOperationCollection.class);
+    assertThat(dtoCollection.getMigrationOperations())
+        .extracting(MigrationOperation::getStartTimeMapping)
+        .isSortedAccordingTo(Comparator.reverseOrder());
+
+    tryGet(marcMigrationEndpoint() + "?offset=1")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("totalRecords", is(3)))
+        .andExpect(jsonPath("migrationOperations", hasSize(2)))
+        .andExpect(jsonPath("migrationOperations[0].id", is(operationId2.toString())))
+        .andExpect(jsonPath("migrationOperations[1].id", is(operationId1.toString())));
+
+    tryGet(marcMigrationEndpoint() + "?limit=2")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("totalRecords", is(3)))
+        .andExpect(jsonPath("migrationOperations", hasSize(2)))
+        .andExpect(jsonPath("migrationOperations[0].id", is(operationId3.toString())))
+        .andExpect(jsonPath("migrationOperations[1].id", is(operationId2.toString())));
+
+    tryGet(marcMigrationEndpoint() + "?entityType=%s".formatted(AUTHORITY))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("totalRecords", is(2)))
+        .andExpect(jsonPath("migrationOperations", hasSize(2)))
+        .andExpect(jsonPath("migrationOperations[0].id", is(operationId3.toString())))
+        .andExpect(jsonPath("migrationOperations[1].id", is(operationId1.toString())));
+  }
+
+  @Test
+  void getMigrationCollection_negative_entityTypeIsUnexpected() throws Exception {
+    // Act & Assert
+    tryGet(marcMigrationEndpoint() + "?entityType=unexpected")
+        .andExpect(status().isBadRequest())
+        .andExpect(errorMessageMatches(containsString(
+            "Method parameter 'entityType': Failed to convert value of type 'java.lang.String' to required type"
+                + " 'org.folio.marc.migrations.domain.dto.EntityType'")))
+        .andExpect(errorTypeMatches(MethodArgumentTypeMismatchException.class));
   }
 
   @Test
@@ -343,8 +434,8 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   void saveMigrationAuthority_positive() throws Exception {
     // Arrange
     var migrationOperation = new NewMigrationOperation()
-        .operationType(OperationType.REMAPPING)
-        .entityType(EntityType.AUTHORITY);
+        .operationType(REMAPPING)
+        .entityType(AUTHORITY);
 
     // Act & Assert
     var result = doPost(marcMigrationEndpoint(), migrationOperation)
@@ -390,7 +481,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   void saveMigrationInstance_positive() throws Exception {
     // Arrange
     var migrationOperation = new NewMigrationOperation()
-        .operationType(OperationType.REMAPPING)
+        .operationType(REMAPPING)
         .entityType(EntityType.INSTANCE);
 
     // Act & Assert
@@ -443,8 +534,8 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
         .withBody("{ \"errorsNumber\": \"2\", \"errorRecordsFileName\": \"errorRecordsFileName\", "
             + "\"errorsFileName\": \"errorsFileName\" }")));
     var migrationOperation = new NewMigrationOperation()
-        .operationType(OperationType.REMAPPING)
-        .entityType(EntityType.AUTHORITY);
+        .operationType(REMAPPING)
+        .entityType(AUTHORITY);
 
     // Act & Assert
     var result = doPost(marcMigrationEndpoint(), migrationOperation)
@@ -497,7 +588,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
             .withBody("{ \"errorsNumber\": \"2\", \"errorRecordsFileName\": \"errorRecordsFileName\", "
                 + "\"errorsFileName\": \"errorsFileName\" }")));
     var migrationOperation = new NewMigrationOperation()
-        .operationType(OperationType.REMAPPING)
+        .operationType(REMAPPING)
         .entityType(EntityType.INSTANCE);
 
     // Act & Assert

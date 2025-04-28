@@ -9,11 +9,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.folio.marc.migrations.controllers.mappers.MarcMigrationMapper;
 import org.folio.marc.migrations.domain.dto.EntityType;
 import org.folio.marc.migrations.domain.dto.MigrationOperation;
+import org.folio.marc.migrations.domain.dto.MigrationOperationCollection;
 import org.folio.marc.migrations.domain.dto.MigrationOperationStatus;
 import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
 import org.folio.marc.migrations.domain.dto.OperationType;
@@ -23,6 +25,7 @@ import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.exceptions.ApiValidationException;
 import org.folio.marc.migrations.services.MigrationOrchestrator;
 import org.folio.marc.migrations.services.operations.OperationsService;
+import org.folio.spring.data.OffsetRequest;
 import org.folio.spring.exception.NotFoundException;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
@@ -30,6 +33,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
@@ -97,6 +101,24 @@ class MarcMigrationsServiceTest {
     // Act & Assert
     var exception = assertThrows(NotFoundException.class, () -> migrationsService.getMarcMigrationById(randomId));
     assertThat(exception).hasMessage(NOT_FOUND_MSG, randomId);
+  }
+
+  @Test
+  void getMarcMigrations_Valid_ReturnsMigrationOperations() {
+    // Arrange
+    var offset = 0;
+    var limit = 100;
+    var dtoCollection = new MigrationOperationCollection(1, List.of(new MigrationOperation()));
+    var page = new PageImpl<>(List.of(new Operation()), OffsetRequest.of(offset, limit), 1);
+    when(operationsService.getOperations(offset, limit, null)).thenReturn(page);
+    when(mapper.toDtoCollection(page)).thenReturn(dtoCollection);
+
+    // Act
+    var result = migrationsService.getMarcMigrations(offset, limit, null);
+
+    // Assert
+    assertEquals(dtoCollection, result);
+    verify(operationsService).getOperations(offset, limit, null);
   }
 
   @Test

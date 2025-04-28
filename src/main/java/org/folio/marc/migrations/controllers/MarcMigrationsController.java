@@ -2,7 +2,9 @@ package org.folio.marc.migrations.controllers;
 
 import java.util.UUID;
 import org.folio.marc.migrations.controllers.delegates.MarcMigrationsService;
+import org.folio.marc.migrations.domain.dto.EntityType;
 import org.folio.marc.migrations.domain.dto.MigrationOperation;
+import org.folio.marc.migrations.domain.dto.MigrationOperationCollection;
 import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
 import org.folio.marc.migrations.domain.dto.SaveMigrationOperation;
 import org.folio.marc.migrations.rest.resource.MarcMigrationsApi;
@@ -30,6 +32,12 @@ public class MarcMigrationsController implements MarcMigrationsApi {
                                                                  NewMigrationOperation newMigrationOperation) {
     var operation = migrationsService.createNewMigration(newMigrationOperation);
     return ResponseEntity.status(HttpStatus.CREATED).body(operation);
+  }
+
+  @Override
+  public ResponseEntity<MigrationOperationCollection> getMarcMigrations(Integer offset, Integer limit,
+                                                                        EntityType entityType) {
+    return ResponseEntity.ok(migrationsService.getMarcMigrations(offset, limit, entityType));
   }
 
   @Override
