@@ -37,7 +37,7 @@ public class OperationJdbcService extends JdbcService {
 
   private static final String DELETE_OPERATIONS_OLDER_THAN = """
     DELETE FROM %s.operation
-    WHERE end_time_mapping < '%s'
+    WHERE start_time_mapping < '%s'
     """;
 
   private final BeanPropertyRowMapper<Operation> mapper;
