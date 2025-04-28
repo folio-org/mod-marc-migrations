@@ -50,4 +50,16 @@ class OperationJdbcServiceTest extends JdbcServiceTestBase {
     assertThat(sqlCaptor.getValue())
       .contains(id.toString(), String.valueOf(recordsMapped), String.valueOf(recordsSaved), TENANT_ID);
   }
+
+  @Test
+  void deleteOperationsOlderThan_positive() {
+    var timestamp = Timestamp.from(Instant.now().minusSeconds(3600)); // 1 hour ago
+
+    service.deleteOperationsOlderThan(timestamp);
+
+    var sqlCaptor = ArgumentCaptor.forClass(String.class);
+    verify(jdbcTemplate).update(sqlCaptor.capture());
+    assertThat(sqlCaptor.getValue())
+      .contains("DELETE FROM", "operation", timestamp.toString(), TENANT_ID);
+  }
 }

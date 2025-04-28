@@ -69,6 +69,7 @@ folio:
     chunk-persist-count: ${CHUNK_PERSIST_COUNT:1000}
     chunk-processing-max-parallelism: ${CHUNK_PROCESSING_MAX_PARALLELISM:4}
     local-file-storage-path: ${LOCAL_FILE_STORAGE_PATH:job}
+    job-retention-days: ${JOB_RETENTION_DAYS:7}
   remote-storage:
     endpoint: ${S3_URL:http://localhost:9000/}
     region: ${S3_REGION:}

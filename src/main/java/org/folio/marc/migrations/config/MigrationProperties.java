@@ -35,4 +35,9 @@ public class MigrationProperties {
    * Provides a local storage path for Authority and Marc bib files during migration.
    * */
   private String localFileStoragePath = "job";
+  /**
+   * Amount of days to keep migration related records in the database.
+   * */
+  @Min(1)
+  private int jobRetentionDays = 7;
 }

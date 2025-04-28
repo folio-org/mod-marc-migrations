@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import org.folio.marc.migrations.services.ExpirationService;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
 import org.folio.spring.FolioExecutionContext;
@@ -25,6 +26,7 @@ class ModuleTenantServiceTest {
   private @Mock FolioExecutionContext context;
   private @Mock AuthorityJdbcService authorityJdbcService;
   private @Mock InstanceJdbcService instanceJdbcService;
+  private @Mock ExpirationService expirationService;
 
   private @InjectMocks ModuleTenantService moduleTenantService;
 
@@ -36,6 +38,7 @@ class ModuleTenantServiceTest {
     verify(systemUserService).setupSystemUser();
     verify(authorityJdbcService).initViews(TENANT_ID);
     verify(instanceJdbcService).initViews(TENANT_ID);
+    verify(expirationService).deleteExpiredData();
   }
 
 }

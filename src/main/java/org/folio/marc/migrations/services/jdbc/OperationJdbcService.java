@@ -35,6 +35,11 @@ public class OperationJdbcService extends JdbcService {
     WHERE id = '%s'
     """;
 
+  private static final String DELETE_OPERATIONS_OLDER_THAN = """
+    DELETE FROM %s.operation
+    WHERE end_time_mapping < '%s'
+    """;
+
   private final BeanPropertyRowMapper<Operation> mapper;
 
   public OperationJdbcService(FolioExecutionContext context,
@@ -68,6 +73,12 @@ public class OperationJdbcService extends JdbcService {
       id, recordsMapped, recordsSaved);
 
     var sql = UPDATE_OPERATION_RECORDS.formatted(getSchemaName(), recordsMapped, recordsSaved, id);
+    jdbcTemplate.update(sql);
+  }
+
+  public void deleteOperationsOlderThan(Timestamp date) {
+    log.info("deleteOperationsOlderThan::Deleting operations older than '{}'", date);
+    var sql = DELETE_OPERATIONS_OLDER_THAN.formatted(getSchemaName(), date);
     jdbcTemplate.update(sql);
   }
 }

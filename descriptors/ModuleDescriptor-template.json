@@ -108,6 +108,22 @@
           "permissionsRequired": []
         }
       ]
+    },
+    {
+      "id": "_timer",
+      "version": "1.0",
+      "interfaceType": "system",
+      "handlers": [
+        {
+          "methods": [ "POST" ],
+          "pathPattern": "/marc-migrations/expire",
+          "unit": "day",
+          "delay": "1",
+          "modulePermissions": [
+            "user-tenants.collection.get"
+          ]
+        }
+      ]
     }
   ],
   "permissionSets": [

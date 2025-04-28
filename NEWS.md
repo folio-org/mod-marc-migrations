@@ -7,7 +7,7 @@
 * Requires `API_NAME vX.Y`
 
 ### Features
-* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
+* Create scheduled job to clean-up outdated migration jobs from database ([MODMARCMIG-53](https://folio-org.atlassian.net/browse/MODMARCMIG-53))
 
 ### Bug fixes
 * Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
