@@ -18,7 +18,7 @@
 
 ### Dependencies
 * Bump `LIB_NAME` from `OLD_VERSION` to `NEW_VERSION`
-* Add `LIB_NAME VERSION`
+* Add `vertx-core 4.5.14`
 * Remove `LIB_NAME`
 
 ---
