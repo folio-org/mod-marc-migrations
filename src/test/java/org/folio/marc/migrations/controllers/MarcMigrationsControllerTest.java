@@ -12,6 +12,7 @@ import org.folio.marc.migrations.domain.dto.MigrationOperation;
 import org.folio.marc.migrations.domain.dto.MigrationOperationCollection;
 import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
 import org.folio.marc.migrations.domain.dto.SaveMigrationOperation;
+import org.folio.marc.migrations.services.ExpirationService;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +26,7 @@ import org.springframework.http.HttpStatus;
 class MarcMigrationsControllerTest {
 
   private @Mock MarcMigrationsService migrationsService;
+  private @Mock ExpirationService expirationService;
   private @InjectMocks MarcMigrationsController migrationsController;
 
   @Test
@@ -87,5 +89,15 @@ class MarcMigrationsControllerTest {
     assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
     verify(migrationsService).saveMigrationOperation(operationId, saveMigrationOperation);
 
+  }
+
+  @Test
+  void expireMigrationJobs_ReturnsAcceptedResponse() {
+    // Act
+    var response = migrationsController.expireMigrationJobs();
+
+    // Assert
+    assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
+    verify(expirationService).deleteExpiredData();
   }
 }

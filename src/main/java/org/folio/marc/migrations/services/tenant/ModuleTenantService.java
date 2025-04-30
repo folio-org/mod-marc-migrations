@@ -1,6 +1,7 @@
 package org.folio.marc.migrations.services.tenant;
 
 import lombok.extern.log4j.Log4j2;
+import org.folio.marc.migrations.services.ExpirationService;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
 import org.folio.spring.FolioExecutionContext;
@@ -20,17 +21,19 @@ public class ModuleTenantService extends TenantService {
   private final PrepareSystemUserService prepareSystemUserService;
   private final AuthorityJdbcService authorityJdbcService;
   private final InstanceJdbcService instanceJdbcService;
+  private final ExpirationService expirationService;
 
   public ModuleTenantService(JdbcTemplate jdbcTemplate,
                              FolioExecutionContext context,
                              FolioSpringLiquibase folioSpringLiquibase,
                              PrepareSystemUserService prepareSystemUserService,
                              AuthorityJdbcService authorityJdbcService,
-                             InstanceJdbcService instanceJdbcService) {
+                             InstanceJdbcService instanceJdbcService, ExpirationService expirationService) {
     super(jdbcTemplate, context, folioSpringLiquibase);
     this.prepareSystemUserService = prepareSystemUserService;
     this.authorityJdbcService = authorityJdbcService;
     this.instanceJdbcService = instanceJdbcService;
+    this.expirationService = expirationService;
   }
 
   @Override
@@ -40,6 +43,7 @@ public class ModuleTenantService extends TenantService {
     prepareSystemUserService.setupSystemUser();
     authorityJdbcService.initViews(context.getTenantId());
     instanceJdbcService.initViews(context.getTenantId());
+    expirationService.deleteExpiredData();
     log.info("afterTenantUpdate::Completed additional setup [tenant: {}]", context.getTenantId());
   }
 }

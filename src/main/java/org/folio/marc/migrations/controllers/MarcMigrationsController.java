@@ -8,9 +8,11 @@ import org.folio.marc.migrations.domain.dto.MigrationOperationCollection;
 import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
 import org.folio.marc.migrations.domain.dto.SaveMigrationOperation;
 import org.folio.marc.migrations.rest.resource.MarcMigrationsApi;
+import org.folio.marc.migrations.services.ExpirationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @Validated
@@ -18,9 +20,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class MarcMigrationsController implements MarcMigrationsApi {
 
   private final MarcMigrationsService migrationsService;
+  private final ExpirationService expirationService;
 
-  public MarcMigrationsController(MarcMigrationsService migrationsService) {
+  public MarcMigrationsController(MarcMigrationsService migrationsService, ExpirationService expirationService) {
     this.migrationsService = migrationsService;
+    this.expirationService = expirationService;
   }
 
   @Override
@@ -45,5 +49,20 @@ public class MarcMigrationsController implements MarcMigrationsApi {
   public ResponseEntity<Void> saveMarcMigration(UUID operationId, SaveMigrationOperation saveMigrationOperation) {
     migrationsService.saveMigrationOperation(operationId, saveMigrationOperation);
     return ResponseEntity.noContent().build();
+  }
+
+  /**
+   * POST /marc-migrations/expire.
+   *
+   * @return Successfully expired marc migration jobs (status code 202)
+   *         or Internal server error. (status code 500)
+   */
+  @PostMapping(
+    value = "/marc-migrations/expire",
+    produces = { "application/json" }
+  )
+  public ResponseEntity<Void> expireMigrationJobs() {
+    expirationService.deleteExpiredData();
+    return ResponseEntity.status(HttpStatus.ACCEPTED).build();
   }
 }
