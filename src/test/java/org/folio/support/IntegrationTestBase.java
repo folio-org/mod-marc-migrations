@@ -73,22 +73,27 @@ public class IntegrationTestBase {
 
   @NotNull
   protected static ResultMatcher errorParameterValueMatches(Matcher<String> matcher) {
-    return jsonPath("parameters.[0].value", matcher);
+    return jsonPath("$.errors[0].parameters[0].value", matcher);
   }
 
   @NotNull
   protected static ResultMatcher errorParameterKeyMatches(Matcher<String> matcher) {
-    return jsonPath("parameters.[0].key", matcher);
+    return jsonPath("$.errors[0].parameters[0].key", matcher);
   }
 
   @NotNull
   protected static ResultMatcher errorTypeMatches(Class<?> exceptionClass) {
-    return jsonPath("type", is(exceptionClass.getSimpleName()));
+    return jsonPath("$.errors[0].type", is(exceptionClass.getSimpleName()));
   }
 
   @NotNull
   protected static ResultMatcher errorMessageMatches(Matcher<String> matcher) {
-    return jsonPath("message", matcher);
+    return jsonPath("$.errors[0].message", matcher);
+  }
+
+  @NotNull
+  protected static ResultMatcher errorCodeMatches(Matcher<String> matcher) {
+    return jsonPath("$.errors[0].code", matcher);
   }
 
   @BeforeAll

@@ -34,8 +34,8 @@ import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.github.tomakehurst.wiremock.admin.NotFoundException;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
+import jakarta.validation.ConstraintViolationException;
 import java.util.Comparator;
 import java.util.UUID;
 import lombok.SneakyThrows;
@@ -51,6 +51,7 @@ import org.folio.marc.migrations.domain.entities.types.OperationStep;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
 import org.folio.marc.migrations.exceptions.ApiValidationException;
 import org.folio.s3.client.FolioS3Client;
+import org.folio.spring.exception.NotFoundException;
 import org.folio.spring.testing.extension.DatabaseCleanup;
 import org.folio.spring.testing.type.IntegrationTest;
 import org.folio.support.IntegrationTestBase;
@@ -270,10 +271,12 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     // Act & Assert
     tryPost(marcMigrationEndpoint(), migrationOperation)
       .andExpect(status().isUnprocessableEntity())
-      .andExpect(errorMessageMatches(is("must not be null")))
-      .andExpect(errorTypeMatches(MethodArgumentNotValidException.class))
-      .andExpect(errorParameterKeyMatches(is("operationType")))
-      .andExpect(errorParameterValueMatches(is("null")));
+        .andExpect(jsonPath("$.total_records", is(1)))
+        .andExpect(errorMessageMatches(containsString("must not be null")))
+        .andExpect(errorTypeMatches(MethodArgumentNotValidException.class))
+        .andExpect(errorCodeMatches(is("validation_error")))
+        .andExpect(errorParameterKeyMatches(is("operationType")))
+        .andExpect(errorParameterValueMatches(is("null")));
   }
 
   @Test
@@ -284,8 +287,10 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     // Act & Assert
     tryPost(marcMigrationEndpoint(), migrationOperation)
       .andExpect(status().isUnprocessableEntity())
-      .andExpect(errorMessageMatches(is("must not be null")))
+      .andExpect(jsonPath("$.total_records", is(1)))
+      .andExpect(errorMessageMatches(containsString("must not be null")))
       .andExpect(errorTypeMatches(MethodArgumentNotValidException.class))
+      .andExpect(errorCodeMatches(is("validation_error")))
       .andExpect(errorParameterKeyMatches(is("entityType")))
       .andExpect(errorParameterValueMatches(is("null")));
   }
@@ -300,8 +305,10 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     // Act & Assert
     tryPost(marcMigrationEndpoint(), migrationOperation)
       .andExpect(status().isUnprocessableEntity())
+      .andExpect(jsonPath("$.total_records", is(1)))
       .andExpect(errorMessageMatches(containsString("Unexpected value")))
       .andExpect(errorTypeMatches(ApiValidationException.class))
+      .andExpect(errorCodeMatches(is("validation_error")))
       .andExpect(errorParameterKeyMatches(is("operationType")))
       .andExpect(errorParameterValueMatches(is("import")));
   }
@@ -408,14 +415,29 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   }
 
   @Test
-  void getMigrationCollection_negative_entityTypeIsUnexpected() throws Exception {
+  void getMigrationCollection_negative_invalidQueryParams() throws Exception {
     // Act & Assert
     tryGet(marcMigrationEndpoint() + "?entityType=unexpected")
         .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.total_records", is(1)))
         .andExpect(errorMessageMatches(containsString(
-            "Method parameter 'entityType': Failed to convert value of type 'java.lang.String' to required type"
-                + " 'org.folio.marc.migrations.domain.dto.EntityType'")))
-        .andExpect(errorTypeMatches(MethodArgumentTypeMismatchException.class));
+            "Method parameter 'entityType': Failed to convert value of type 'java.lang.String' to required type")))
+        .andExpect(errorTypeMatches(MethodArgumentTypeMismatchException.class))
+        .andExpect(errorCodeMatches(is("validation_error")));
+
+    tryGet(marcMigrationEndpoint() + "?offset=1001")
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.total_records", is(1)))
+        .andExpect(errorMessageMatches(containsString("must be less than or equal to 1000")))
+        .andExpect(errorTypeMatches(ConstraintViolationException.class))
+        .andExpect(errorCodeMatches(is("validation_error")));
+
+    tryGet(marcMigrationEndpoint() + "?limit=1001")
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.total_records", is(1)))
+        .andExpect(errorMessageMatches(containsString("must be less than or equal to 1000")))
+        .andExpect(errorTypeMatches(ConstraintViolationException.class))
+        .andExpect(errorCodeMatches(is("validation_error")));
   }
 
   @Test
@@ -426,8 +448,10 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     // Act & Assert
     tryGet(marcMigrationEndpoint(randomId))
       .andExpect(status().isNotFound())
+      .andExpect(jsonPath("$.total_records", is(1)))
       .andExpect(errorMessageMatches(containsString("MARC migration operation was not found")))
-      .andExpect(errorTypeMatches(NotFoundException.class));
+      .andExpect(errorTypeMatches(NotFoundException.class))
+      .andExpect(errorCodeMatches(is("not_found_error")));
   }
 
   @Test
