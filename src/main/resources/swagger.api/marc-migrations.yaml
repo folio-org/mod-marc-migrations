@@ -13,6 +13,9 @@ info:
     The API supports migration operations for different entity types (authority, instance) 
     and operation types (remapping).
 
+tags:
+  - name: marc-migrations
+    description: MARC migration operations
 
 paths:
   /marc-migrations:
@@ -313,6 +316,155 @@ paths:
                     message: 'Unexpected error'
                     type: 'NullPointerException'
 
+  /marc-migrations/{operationId}/error-report:
+    post:
+      summary: Create error report for a migration operation
+      description: Combines all error records in one report.
+      operationId: createErrorReport
+      tags:
+        - marc-migrations
+      parameters:
+        - in: path
+          name: operationId
+          description: The UUID of a MARC migration operation
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 474d0af6-028f-4d15-8354-d2fc10c71a68
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '204':
+          description: Error report creation initiated successfully.
+        '400':
+          description: Bad request - Invalid input parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: MARC migration operation was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /marc-migrations/{operationId}/error-report/errors:
+    get:
+      summary: Get error reports for a migration operation
+      description: Retrieves a list of error reports for a specific migration operation with pagination.
+      operationId: getMigrationErrors
+      tags:
+        - marc-migrations
+      parameters:
+        - in: path
+          name: operationId
+          description: The UUID of a MARC migration operation
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 474d0af6-028f-4d15-8354-d2fc10c71a68
+        - in: query
+          name: offset
+          description: Skip over a number of error reports by specifying an offset value for the query.
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 1000
+            default: 0
+        - in: query
+          name: limit
+          description: Limit the number of error reports returned in the response.
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 1000
+            default: 100
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Retrieved error reports collection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorReportCollection'
+        '400':
+          description: Bad request - Invalid input parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: MARC migration operation was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Error report generation is in progress or not started yet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /marc-migrations/{operationId}/error-report/status:
+    get:
+      summary: Get status of error report generation
+      description: Provides the current status of error report generation for a specific migration operation.
+      operationId: getErrorReportStatus
+      tags:
+        - marc-migrations
+      parameters:
+        - in: path
+          name: operationId
+          description: The UUID of a MARC migration operation
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 474d0af6-028f-4d15-8354-d2fc10c71a68
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Retrieved error report generation status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorReportStatus'
+        '400':
+          description: Bad request - Invalid input parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: MARC migration operation was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
   schemas:
     NewMigrationOperation:
@@ -326,6 +478,67 @@ components:
           $ref: '#/components/schemas/EntityType'
         operationType:
           $ref: '#/components/schemas/OperationType'
+
+    ErrorReport:
+      description: Error report for a migration operation.
+      type: object
+      required:
+        - operationId
+        - chunkId
+        - stage
+        - chunkStatus
+        - recordId
+        - errorMessage
+      properties:
+        operationId:
+          description: ID of the migration operation.
+          type: string
+          format: uuid
+        chunkId:
+          description: ID of the chunk where the error occurred.
+          type: string
+        stage:
+          description: Stage of the migration process where the error occurred.
+          type: string
+        chunkStatus:
+          description: Status of the chunk.
+          type: string
+        recordId:
+          description: ID of the record that caused the error.
+          type: string
+        errorMessage:
+          description: Error message.
+          type: string
+
+    ErrorReportCollection:
+      description: Collection of error reports with pagination information.
+      type: object
+      required:
+        - errorReports
+      properties:
+        errorReports:
+          description: List of error reports for the current page.
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorReport'
+
+    ErrorReportStatus:
+      description: Status of error report generation
+      type: object
+      required:
+        - status
+      properties:
+        operationId:
+          description: ID of the migration operation.
+          type: string
+          format: uuid
+        status:
+          description: Current status of error report generation
+          type: string
+          enum:
+            - not_started
+            - in_progress
+            - completed
 
     MigrationOperationCollection:
       description: Collection of MARC migration operations with pagination information.
@@ -493,4 +706,4 @@ components:
       in: header
       name: X-Okapi-Token
 security:
-  - ApiKey: []
+  - ApiKey: [ ]

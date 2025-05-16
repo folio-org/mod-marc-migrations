@@ -6,6 +6,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.controllers.mappers.MarcMigrationMapper;
 import org.folio.marc.migrations.domain.dto.EntityType;
+import org.folio.marc.migrations.domain.dto.ErrorReport;
+import org.folio.marc.migrations.domain.dto.ErrorReportCollection;
+import org.folio.marc.migrations.domain.dto.ErrorReportStatus;
 import org.folio.marc.migrations.domain.dto.MigrationOperation;
 import org.folio.marc.migrations.domain.dto.MigrationOperationCollection;
 import org.folio.marc.migrations.domain.dto.MigrationOperationStatus;
@@ -16,7 +19,9 @@ import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.exceptions.ApiValidationException;
 import org.folio.marc.migrations.services.MigrationOrchestrator;
+import org.folio.marc.migrations.services.operations.OperationErrorReportService;
 import org.folio.marc.migrations.services.operations.OperationsService;
+import org.folio.spring.data.OffsetRequest;
 import org.folio.spring.exception.NotFoundException;
 import org.springframework.stereotype.Service;
 
@@ -30,6 +35,7 @@ public class MarcMigrationsService {
   private final MarcMigrationMapper mapper;
   private final OperationsService operationsService;
   private final MigrationOrchestrator migrationOrchestrator;
+  private final OperationErrorReportService errorReportsService;
 
   public MigrationOperation createNewMigration(NewMigrationOperation newMigrationOperation) {
     log.debug("createNewMigration::Trying to create new migration operation: {}", newMigrationOperation);
@@ -49,12 +55,12 @@ public class MarcMigrationsService {
 
   public MigrationOperationCollection getMarcMigrations(Integer offset, Integer limit, EntityType dtoEntityType) {
     log.debug("getMarcMigrations::Trying to get migration operations by offset={}, limit={}, entityType={}",
-        offset, limit, dtoEntityType == null ? "null" : dtoEntityType.getValue());
+      offset, limit, dtoEntityType == null ? "null" : dtoEntityType.getValue());
     var entityType = Optional.ofNullable(dtoEntityType)
-        .map(type -> dtoEntityType == EntityType.AUTHORITY
-            ? org.folio.marc.migrations.domain.entities.types.EntityType.AUTHORITY
-            : org.folio.marc.migrations.domain.entities.types.EntityType.INSTANCE)
-        .orElse(null);
+      .map(type -> dtoEntityType == EntityType.AUTHORITY
+                   ? org.folio.marc.migrations.domain.entities.types.EntityType.AUTHORITY
+                   : org.folio.marc.migrations.domain.entities.types.EntityType.INSTANCE)
+      .orElse(null);
     var operations = operationsService.getOperations(offset, limit, entityType);
     return mapper.toDtoCollection(operations);
   }
@@ -62,9 +68,46 @@ public class MarcMigrationsService {
   public void saveMigrationOperation(UUID operationId, SaveMigrationOperation request) {
     log.debug("saveMigrationOperation::Trying to save migration operation by ID '{}'", operationId);
     var operation = operationsService.getOperation(operationId)
-        .orElseThrow(() -> new NotFoundException(NOT_FOUND_MSG.formatted(operationId)));
+      .orElseThrow(() -> new NotFoundException(NOT_FOUND_MSG.formatted(operationId)));
     validateOperationStatusForSave(request, operation);
     migrationOrchestrator.submitMappingSaveTask(operation, request);
+  }
+
+  public void createErrorReport(UUID operationId, String tenantId) {
+    log.debug("createErrorReport::Trying to create error report for migration operation by ID '{}'", operationId);
+    var operation = operationsService.getOperation(operationId)
+      .orElseThrow(() -> new NotFoundException(NOT_FOUND_MSG.formatted(operationId)));
+    errorReportsService.initiateErrorReport(operation, tenantId)
+      .whenComplete((v, ex) -> {
+        if (ex != null) {
+          log.error("Error creating error report for operation {}: {}", operationId, ex.getMessage(), ex);
+          throw new IllegalStateException("Error creating error report", ex);
+        }
+      });
+  }
+
+  public ErrorReportStatus getErrorReportStatus(UUID operationId) {
+    log.debug("getErrorReportStatus::Trying to get error report status for operation ID '{}'", operationId);
+    return errorReportsService.getErrorReport(operationId)
+      .map(operationErrorReport ->
+        new ErrorReportStatus(ErrorReportStatus.StatusEnum.fromValue(operationErrorReport.getStatus().name()))
+          .operationId(operationId))
+      .orElseThrow(() -> new NotFoundException(NOT_FOUND_MSG.formatted(operationId)));
+  }
+
+  public ErrorReportCollection getErrorReportEntries(UUID operationId, Integer offset, Integer limit) {
+    log.debug("getErrorReportEntries::Trying to get error report entries for operation ID '{}'", operationId);
+    var offsetRequest = new OffsetRequest(offset, limit);
+    var reports = errorReportsService.getErrorReportEntries(operationId, offsetRequest)
+      .stream()
+      .map(operationError -> new ErrorReport(operationError.getReportId(),
+        operationError.getChunkId().toString(),
+        operationError.getOperationStep().name(),
+        operationError.getChunkStatus().name(),
+        operationError.getRecordId(), operationError.getErrorMessage()))
+      .toList();
+    return new ErrorReportCollection()
+      .errorReports(reports);
   }
 
   private void validateMigrationCreate(NewMigrationOperation newMigrationOperation) {

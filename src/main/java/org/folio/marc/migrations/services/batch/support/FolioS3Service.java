@@ -1,5 +1,8 @@
 package org.folio.marc.migrations.services.batch.support;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.s3.client.FolioS3Client;
@@ -20,5 +23,15 @@ public class FolioS3Service {
     backoff = @Backoff(delayExpression = "${folio.remote-storage.retryDelayMs}"))
   public void uploadFile(String localPath, String remotePath) {
     s3Client.upload(localPath, remotePath);
+  }
+
+  public List<String> readFile(String remotePath) {
+    try (var inputStream = s3Client.read(remotePath);
+         var reader = new BufferedReader(new InputStreamReader(inputStream))) {
+      return reader.lines().toList();
+    } catch (Exception e) {
+      log.error("readFile::Error reading file [filename: {}]", remotePath, e);
+      throw new IllegalStateException("Error reading file: " + remotePath, e);
+    }
   }
 }

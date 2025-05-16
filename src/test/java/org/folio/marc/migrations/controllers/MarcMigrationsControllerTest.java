@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.UUID;
 import org.folio.marc.migrations.controllers.delegates.MarcMigrationsService;
 import org.folio.marc.migrations.domain.dto.EntityType;
+import org.folio.marc.migrations.domain.dto.ErrorReportCollection;
+import org.folio.marc.migrations.domain.dto.ErrorReportStatus;
 import org.folio.marc.migrations.domain.dto.MigrationOperation;
 import org.folio.marc.migrations.domain.dto.MigrationOperationCollection;
 import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
@@ -101,5 +103,48 @@ class MarcMigrationsControllerTest {
     // Assert
     assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
     verify(expirationService).deleteExpiredData();
+  }
+
+  @Test
+  void createErrorReport_ReturnsNoContentResponse() {
+    // Arrange
+    UUID operationId = UUID.randomUUID();
+
+    // Act
+    var response = migrationsController.createErrorReport(operationId, TENANT_ID);
+
+    // Assert
+    assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+    verify(migrationsService).createErrorReport(operationId, TENANT_ID);
+  }
+
+  @Test
+  void getErrorReportStatus_ReturnsOkResponse() {
+    // Arrange
+    UUID operationId = UUID.randomUUID();
+    ErrorReportStatus status = new ErrorReportStatus();
+    when(migrationsService.getErrorReportStatus(operationId)).thenReturn(status);
+
+    // Act
+    var response = migrationsController.getErrorReportStatus(operationId, TENANT_ID);
+
+    // Assert
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals(status, response.getBody());
+  }
+
+  @Test
+  void getMigrationErrors_ReturnsOkResponse() {
+    // Arrange
+    UUID operationId = UUID.randomUUID();
+    ErrorReportCollection errorReportCollection = new ErrorReportCollection();
+    when(migrationsService.getErrorReportEntries(operationId, 0, 100)).thenReturn(errorReportCollection);
+
+    // Act
+    var response = migrationsController.getMigrationErrors(operationId, TENANT_ID, 0, 100);
+
+    // Assert
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals(errorReportCollection, response.getBody());
   }
 }

@@ -9,6 +9,7 @@
 ### Features
 * Add API to get collection of migrations operations ([MODMARCMIG-51](https://folio-org.atlassian.net/browse/MODMARCMIG-51))
 * Create scheduled job to clean-up outdated migration jobs from database ([MODMARCMIG-53](https://folio-org.atlassian.net/browse/MODMARCMIG-53))
+* Create endpoints that will provide an error report ([MODMARCMIG-52](https://folio-org.atlassian.net/browse/MODMARCMIG-52))
 
 ### Bug fixes
 * Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))

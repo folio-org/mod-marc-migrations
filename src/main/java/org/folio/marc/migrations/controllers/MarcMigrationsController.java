@@ -3,6 +3,8 @@ package org.folio.marc.migrations.controllers;
 import java.util.UUID;
 import org.folio.marc.migrations.controllers.delegates.MarcMigrationsService;
 import org.folio.marc.migrations.domain.dto.EntityType;
+import org.folio.marc.migrations.domain.dto.ErrorReportCollection;
+import org.folio.marc.migrations.domain.dto.ErrorReportStatus;
 import org.folio.marc.migrations.domain.dto.MigrationOperation;
 import org.folio.marc.migrations.domain.dto.MigrationOperationCollection;
 import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
@@ -28,10 +30,26 @@ public class MarcMigrationsController implements MarcMigrationsApi {
   }
 
   @Override
+  public ResponseEntity<Void> createErrorReport(UUID operationId, String tenantId) {
+    migrationsService.createErrorReport(operationId, tenantId);
+    return ResponseEntity.noContent().build();
+  }
+
+  @Override
   public ResponseEntity<MigrationOperation> createMarcMigrations(String tenantId,
                                                                  NewMigrationOperation newMigrationOperation) {
     var operation = migrationsService.createNewMigration(newMigrationOperation);
     return ResponseEntity.status(HttpStatus.CREATED).body(operation);
+  }
+
+  @Override
+  public ResponseEntity<ErrorReportStatus> getErrorReportStatus(UUID operationId, String tenantId) {
+    return ResponseEntity.ok(migrationsService.getErrorReportStatus(operationId));
+  }
+
+  @Override
+  public ResponseEntity<MigrationOperation> getMarcMigrationById(UUID operationId, String tenantId) {
+    return ResponseEntity.ok(migrationsService.getMarcMigrationById(operationId));
   }
 
   @Override
@@ -41,8 +59,9 @@ public class MarcMigrationsController implements MarcMigrationsApi {
   }
 
   @Override
-  public ResponseEntity<MigrationOperation> getMarcMigrationById(UUID operationId, String tenantId) {
-    return ResponseEntity.ok(migrationsService.getMarcMigrationById(operationId));
+  public ResponseEntity<ErrorReportCollection> getMigrationErrors(UUID operationId, String tenantId, Integer offset,
+                                                                  Integer limit) {
+    return ResponseEntity.ok(migrationsService.getErrorReportEntries(operationId, offset, limit));
   }
 
   @Override
