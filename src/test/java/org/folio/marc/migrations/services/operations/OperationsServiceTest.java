@@ -37,6 +37,7 @@ class OperationsServiceTest {
   private @Mock OperationRepository repository;
   private @Mock AuthorityJdbcService authorityJdbcService;
   private @Mock InstanceJdbcService instanceJdbcService;
+  private @Mock OperationErrorReportService errorReportService;
   private @InjectMocks OperationsService service;
 
   @Test
@@ -66,12 +67,14 @@ class OperationsServiceTest {
 
     // Assert
     verify(repository).save(captor.capture());
+    var createdOperation = captor.getValue();
+    verify(errorReportService).createErrorReport(createdOperation);
     assertNotNull(result);
-    assertEquals(userId, captor.getValue().getUserId());
-    assertEquals(OperationStatusType.NEW, captor.getValue().getStatus());
-    assertEquals(10, captor.getValue().getTotalNumOfRecords());
-    assertEquals(0, captor.getValue().getMappedNumOfRecords());
-    assertEquals(0, captor.getValue().getSavedNumOfRecords());
+    assertEquals(userId, createdOperation.getUserId());
+    assertEquals(OperationStatusType.NEW, createdOperation.getStatus());
+    assertEquals(10, createdOperation.getTotalNumOfRecords());
+    assertEquals(0, createdOperation.getMappedNumOfRecords());
+    assertEquals(0, createdOperation.getSavedNumOfRecords());
   }
 
   @Test

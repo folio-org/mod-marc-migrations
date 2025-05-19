@@ -5,6 +5,8 @@ import static org.folio.marc.migrations.controllers.delegates.MarcMigrationsServ
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -12,6 +14,7 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import org.folio.marc.migrations.controllers.mappers.MarcMigrationMapper;
 import org.folio.marc.migrations.domain.dto.EntityType;
 import org.folio.marc.migrations.domain.dto.MigrationOperation;
@@ -21,9 +24,15 @@ import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
 import org.folio.marc.migrations.domain.dto.OperationType;
 import org.folio.marc.migrations.domain.dto.SaveMigrationOperation;
 import org.folio.marc.migrations.domain.entities.Operation;
+import org.folio.marc.migrations.domain.entities.OperationError;
+import org.folio.marc.migrations.domain.entities.OperationErrorReport;
+import org.folio.marc.migrations.domain.entities.types.ErrorReportStatus;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
+import org.folio.marc.migrations.domain.entities.types.OperationStep;
+import org.folio.marc.migrations.domain.entities.types.StepStatus;
 import org.folio.marc.migrations.exceptions.ApiValidationException;
 import org.folio.marc.migrations.services.MigrationOrchestrator;
+import org.folio.marc.migrations.services.operations.OperationErrorReportService;
 import org.folio.marc.migrations.services.operations.OperationsService;
 import org.folio.spring.data.OffsetRequest;
 import org.folio.spring.exception.NotFoundException;
@@ -42,6 +51,7 @@ class MarcMigrationsServiceTest {
   private @Mock MarcMigrationMapper mapper;
   private @Mock OperationsService operationsService;
   private @Mock MigrationOrchestrator migrationOrchestrator;
+  private @Mock OperationErrorReportService errorReportsService;
   private @InjectMocks MarcMigrationsService migrationsService;
 
   @Test
@@ -130,7 +140,7 @@ class MarcMigrationsServiceTest {
     operation.setStatus(OperationStatusType.DATA_MAPPING_COMPLETED);
     when(operationsService.getOperation(operationId)).thenReturn(Optional.of(operation));
     var validSaveOperation = new SaveMigrationOperation()
-        .status(MigrationOperationStatus.DATA_SAVING);
+      .status(MigrationOperationStatus.DATA_SAVING);
 
     // Act
     migrationsService.saveMigrationOperation(operationId, validSaveOperation);
@@ -144,13 +154,13 @@ class MarcMigrationsServiceTest {
   void saveMigration_NotExists_ThrowsNotFoundException() {
     // Arrange
     var validSaveOperation = new SaveMigrationOperation()
-        .status(MigrationOperationStatus.DATA_SAVING);
+      .status(MigrationOperationStatus.DATA_SAVING);
     var operationId = UUID.randomUUID();
     when(operationsService.getOperation(operationId)).thenReturn(Optional.empty());
 
     // Act
     var exception = assertThrows(NotFoundException.class,
-        () -> migrationsService.saveMigrationOperation(operationId, validSaveOperation));
+      () -> migrationsService.saveMigrationOperation(operationId, validSaveOperation));
 
     // Assert
     assertThat(exception).hasMessage(NOT_FOUND_MSG, operationId);
@@ -167,12 +177,104 @@ class MarcMigrationsServiceTest {
     operation.setStatus(OperationStatusType.DATA_MAPPING_FAILED);
     when(operationsService.getOperation(operationId)).thenReturn(Optional.of(operation));
     var validSaveOperation = new SaveMigrationOperation()
-        .status(MigrationOperationStatus.DATA_SAVING);
+      .status(MigrationOperationStatus.DATA_SAVING);
 
     // Act & Assert
     assertThrows(ApiValidationException.class,
-        () -> migrationsService.saveMigrationOperation(operationId, validSaveOperation));
+      () -> migrationsService.saveMigrationOperation(operationId, validSaveOperation));
     verify(operationsService).getOperation(operationId);
     verifyNoInteractions(migrationOrchestrator);
+  }
+
+  @Test
+  void createErrorReport_Success() {
+    // Arrange
+    var operationId = UUID.randomUUID();
+    var tenantId = "testTenant";
+    var operation = new Operation();
+    when(operationsService.getOperation(operationId)).thenReturn(Optional.of(operation));
+    when(errorReportsService.initiateErrorReport(operation, tenantId))
+      .thenReturn(CompletableFuture.completedFuture(null));
+
+    // Act
+    migrationsService.createErrorReport(operationId, tenantId);
+
+    // Assert
+    verify(operationsService).getOperation(operationId);
+    verify(errorReportsService).initiateErrorReport(operation, tenantId);
+  }
+
+  @Test
+  void createErrorReport_NotFound_ThrowsNotFoundException() {
+    // Arrange
+    var operationId = UUID.randomUUID();
+    var tenantId = "testTenant";
+    when(operationsService.getOperation(operationId)).thenReturn(Optional.empty());
+
+    // Act & Assert
+    var exception = assertThrows(NotFoundException.class,
+      () -> migrationsService.createErrorReport(operationId, tenantId));
+    assertThat(exception).hasMessage(NOT_FOUND_MSG, operationId);
+    verifyNoInteractions(errorReportsService);
+  }
+
+  @Test
+  void getErrorReportStatus_Success() {
+    // Arrange
+    var operationId = UUID.randomUUID();
+    var errorReport = new OperationErrorReport();
+    errorReport.setStatus(ErrorReportStatus.IN_PROGRESS);
+    when(errorReportsService.getErrorReport(operationId)).thenReturn(Optional.of(errorReport));
+
+    // Act
+    var result = migrationsService.getErrorReportStatus(operationId);
+
+    // Assert
+    assertNotNull(result);
+    assertEquals(operationId, result.getOperationId());
+    assertEquals("in_progress", result.getStatus().getValue());
+  }
+
+  @Test
+  void getErrorReportStatus_NotFound_ThrowsNotFoundException() {
+    // Arrange
+    var operationId = UUID.randomUUID();
+    when(errorReportsService.getErrorReport(operationId)).thenReturn(Optional.empty());
+
+    // Act & Assert
+    var exception = assertThrows(NotFoundException.class,
+      () -> migrationsService.getErrorReportStatus(operationId));
+    assertThat(exception).hasMessage(NOT_FOUND_MSG, operationId);
+  }
+
+  @Test
+  void getErrorReportEntries_Success() {
+    // Arrange
+    final var operationId = UUID.randomUUID();
+    final var offset = 0;
+    final var limit = 10;
+    var operationError = new OperationError();
+    operationError.setReportId(UUID.randomUUID());
+    operationError.setChunkId(UUID.randomUUID());
+    operationError.setOperationStep(OperationStep.DATA_MAPPING);
+    operationError.setChunkStatus(StepStatus.FAILED);
+    operationError.setRecordId("record1");
+    operationError.setErrorMessage("Test error");
+
+    when(errorReportsService.getErrorReportEntries(eq(operationId), any(OffsetRequest.class)))
+      .thenReturn(List.of(operationError));
+
+    // Act
+    var result = migrationsService.getErrorReportEntries(operationId, offset, limit);
+
+    // Assert
+    assertNotNull(result);
+    assertThat(result.getErrorReports()).hasSize(1);
+    var errorReport = result.getErrorReports().getFirst();
+    assertEquals(operationError.getReportId(), errorReport.getOperationId());
+    assertEquals(operationError.getChunkId().toString(), errorReport.getChunkId());
+    assertEquals(operationError.getChunkStatus().name(), errorReport.getChunkStatus());
+    assertEquals(operationError.getRecordId(), errorReport.getRecordId());
+    assertEquals(operationError.getErrorMessage(), errorReport.getErrorMessage());
   }
 }
