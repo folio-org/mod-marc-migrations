@@ -34,6 +34,7 @@
     <lombok.mapstruct-binding.version>0.2.0</lombok.mapstruct-binding.version>
 
     <checkstyle.version>10.21.4</checkstyle.version>
+    <folio-module-descriptor-validator.version>1.0.1</folio-module-descriptor-validator.version>
     <maven-openapi-generator-plugin.version>7.12.0</maven-openapi-generator-plugin.version>
     <maven-copy-rename-plugin.version>1.0.1</maven-copy-rename-plugin.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
@@ -155,6 +156,19 @@
             <phase>initialize</phase>
             <goals>
               <goal>clean</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.folio</groupId>
+        <artifactId>folio-module-descriptor-validator</artifactId>
+        <version>1.0.1</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>validate</goal>
             </goals>
           </execution>
         </executions>
@@ -406,10 +420,23 @@
   <repositories>
     <repository>
       <id>folio-nexus</id>
-      <name>FOLIO Maven Repository</name>
+      <name>FOLIO Maven repository</name>
       <url>https://repository.folio.org/repository/maven-folio</url>
     </repository>
+    <repository>
+      <id>index-data-nexus</id>
+      <name>FOLIO Maven repository</name>
+      <url>https://maven.indexdata.com</url>
+    </repository>
   </repositories>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>folio-nexus</id>
+      <name>FOLIO Maven repository</name>
+      <url>https://repository.folio.org/repository/maven-folio</url>
+    </pluginRepository>
+  </pluginRepositories>
 
   <distributionManagement>
     <repository>

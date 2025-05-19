@@ -38,7 +38,7 @@
   "provides": [
     {
       "id": "marc-migrations",
-      "version": "1.0",
+      "version": "1.1",
       "handlers": [
         {
           "methods": [
@@ -72,6 +72,33 @@
           "modulePermissions": [
             "inventory-storage.authorities.bulk.post",
             "inventory-storage.instances.bulk.post"
+          ]
+        },
+        {
+          "methods": [
+            "POST"
+          ],
+          "pathPattern": "/marc-migrations/{id}/error-report",
+          "permissionsRequired": [
+            "marc-migrations.operations.error-report.post"
+          ]
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "pathPattern": "/marc-migrations/{operationId}/error-report/status",
+          "permissionsRequired": [
+            "marc-migrations.operations.error-report.status.item.get"
+          ]
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "pathPattern": "/marc-migrations/{operationId}/error-report/errors",
+          "permissionsRequired": [
+            "marc-migrations.operations.error-report.errors.collection.get"
           ]
         }
       ]
@@ -127,13 +154,31 @@
       "description": "Save MARC Migrations Operation by ID"
     },
     {
+      "permissionName": "marc-migrations.operations.error-report.post",
+      "displayName": "MARC Migrations - Initialize error report",
+      "description": "Initialize error report for MARC Migrations Operation"
+    },
+    {
+      "permissionName": "marc-migrations.operations.error-report.status.item.get",
+      "displayName": "MARC Migrations - Get error report status",
+      "description": "Get error report status for MARC Migrations Operation"
+    },
+    {
+      "permissionName": "marc-migrations.operations.error-report.errors.collection.get",
+      "displayName": "MARC Migrations - Get error report errors collection",
+      "description": "Get error report errors collection for MARC Migrations Operation"
+    },
+    {
       "permissionName": "marc-migrations.all",
       "displayName": "MARC Migrations - all permissions",
       "description": "Entire set of permissions needed to use MARC migrations",
       "subPermissions": [
         "marc-migrations.operations.item.post",
         "marc-migrations.operations.item.get",
-        "marc-migrations.operations.item.put"
+        "marc-migrations.operations.item.put",
+        "marc-migrations.operations.error-report.post",
+        "marc-migrations.operations.error-report.status.item.get",
+        "marc-migrations.operations.error-report.errors.collection.get"
       ]
     }
   ],

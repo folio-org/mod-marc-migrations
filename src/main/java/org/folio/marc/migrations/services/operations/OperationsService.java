@@ -22,6 +22,7 @@ public class OperationsService {
   private final OperationRepository repository;
   private final AuthorityJdbcService authorityJdbcService;
   private final InstanceJdbcService instanceJdbcService;
+  private final OperationErrorReportService errorReportService;
 
   public Operation createOperation(Operation operation) {
     log.info("createOperation::Preparing new operation: {}", operation);
@@ -36,7 +37,9 @@ public class OperationsService {
     operation.setMappedNumOfRecords(0);
     operation.setSavedNumOfRecords(0);
     log.info("createOperation::Saving new operation: {}", operation);
-    return repository.save(operation);
+    var createdOperation = repository.save(operation);
+    errorReportService.createErrorReport(createdOperation);
+    return createdOperation;
   }
 
   public Optional<Operation> getOperation(UUID operationId) {
