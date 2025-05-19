@@ -1,12 +1,14 @@
 package org.folio.marc.migrations.services.jdbc;
 
 import java.sql.Timestamp;
+import java.util.List;
 import java.util.UUID;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.domain.entities.ChunkStep;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
 import org.folio.spring.FolioExecutionContext;
 import org.hibernate.type.SqlTypes;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -25,8 +27,12 @@ public class ChunkStepJdbcService extends JdbcService {
     WHERE id = '%s';
     """;
 
-  public ChunkStepJdbcService(FolioExecutionContext context, JdbcTemplate jdbcTemplate) {
+  private final BeanPropertyRowMapper<ChunkStep> mapper;
+
+  public ChunkStepJdbcService(FolioExecutionContext context, JdbcTemplate jdbcTemplate,
+                              BeanPropertyRowMapper<ChunkStep> mapper) {
     super(jdbcTemplate, context);
+    this.mapper = mapper;
   }
 
   public void createChunkStep(ChunkStep chunkStep) {
@@ -70,5 +76,14 @@ public class ChunkStepJdbcService extends JdbcService {
         """.formatted(status, entityErrorChunkFileName, errorChunkFileName, stepEndTime, numOfErrors);
     var sql = UPDATE_CHUNK_STEP.formatted(getSchemaName(), setFields, id);
     jdbcTemplate.update(sql);
+  }
+
+  public List<ChunkStep> getChunkStepsByOperationIdAndStatus(UUID operationId, StepStatus status) {
+    log.debug("getChunkStepsByOperationId::For operationId {}, status {}", operationId, status);
+    var sql = """
+        SELECT * FROM %s.operation_chunk_step
+        WHERE operation_id = ? AND status = ?::stepstatus;
+        """.formatted(getSchemaName());
+    return jdbcTemplate.query(sql, mapper, operationId, status.name());
   }
 }

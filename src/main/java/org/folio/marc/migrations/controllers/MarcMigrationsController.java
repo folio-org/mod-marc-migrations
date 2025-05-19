@@ -2,6 +2,8 @@ package org.folio.marc.migrations.controllers;
 
 import java.util.UUID;
 import org.folio.marc.migrations.controllers.delegates.MarcMigrationsService;
+import org.folio.marc.migrations.domain.dto.ErrorReportCollection;
+import org.folio.marc.migrations.domain.dto.ErrorReportStatus;
 import org.folio.marc.migrations.domain.dto.MigrationOperation;
 import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
 import org.folio.marc.migrations.domain.dto.SaveMigrationOperation;
@@ -22,10 +24,21 @@ public class MarcMigrationsController implements MarcMigrationsApi {
   }
 
   @Override
+  public ResponseEntity<Void> createErrorReport(UUID operationId, String tenantId) {
+    migrationsService.createErrorReport(operationId, tenantId);
+    return ResponseEntity.noContent().build();
+  }
+
+  @Override
   public ResponseEntity<MigrationOperation> createMarcMigrations(String tenantId,
                                                                  NewMigrationOperation newMigrationOperation) {
     var operation = migrationsService.createNewMigration(newMigrationOperation);
     return ResponseEntity.status(HttpStatus.CREATED).body(operation);
+  }
+
+  @Override
+  public ResponseEntity<ErrorReportStatus> getErrorReportStatus(UUID operationId, String tenantId) {
+    return ResponseEntity.ok(migrationsService.getErrorReportStatus(operationId));
   }
 
   @Override
@@ -34,7 +47,14 @@ public class MarcMigrationsController implements MarcMigrationsApi {
   }
 
   @Override
-  public ResponseEntity<Void> saveMarcMigration(UUID operationId, SaveMigrationOperation saveMigrationOperation) {
+  public ResponseEntity<ErrorReportCollection> getMigrationErrors(UUID operationId, String tenantId, Integer offset,
+                                                                  Integer limit) {
+    return ResponseEntity.ok(migrationsService.getErrorReportEntries(operationId, offset, limit));
+  }
+
+  @Override
+  public ResponseEntity<Void> saveMarcMigration(UUID operationId, String tenantId,
+                                                SaveMigrationOperation saveMigrationOperation) {
     migrationsService.saveMigrationOperation(operationId, saveMigrationOperation);
     return ResponseEntity.noContent().build();
   }
