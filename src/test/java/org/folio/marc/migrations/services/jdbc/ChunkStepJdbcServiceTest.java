@@ -18,6 +18,8 @@ import org.folio.spring.testing.type.UnitTest;
 import org.hibernate.type.SqlTypes;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -106,5 +108,73 @@ class ChunkStepJdbcServiceTest extends JdbcServiceTestBase {
       .contains("status");
     assertThat(result)
       .isEqualTo(expectedResult);
+  }
+
+  @Test
+  void updateChunkStep_correctly() {
+    // Arrange
+    var id = UUID.randomUUID();
+    var status = StepStatus.IN_PROGRESS;
+    var stepEndTime = Timestamp.from(Instant.now());
+
+    // Act
+    service.updateChunkStep(id, status, stepEndTime);
+
+    // Assert
+    var sqlCaptor = ArgumentCaptor.forClass(String.class);
+    verify(jdbcTemplate).update(sqlCaptor.capture());
+    assertThat(sqlCaptor.getValue())
+        .contains(id.toString())
+        .contains(status.name())
+        .contains(stepEndTime.toString());
+  }
+
+  @Test
+  void getChunkStepByChunkIdAndOperationStep_positive() {
+    // Arrange
+    var chunkId = UUID.randomUUID();
+    var operationStep = OperationStep.DATA_MAPPING;
+    var expectedChunkStep = ChunkStep.builder()
+        .id(UUID.randomUUID())
+        .operationChunkId(chunkId)
+        .operationStep(operationStep)
+        .build();
+
+    when(jdbcTemplate.queryForObject(anyString(), eq(mapper), eq(chunkId), eq(operationStep.name())))
+        .thenReturn(expectedChunkStep);
+
+    // Act
+    var result = service.getChunkStepByChunkIdAndOperationStep(chunkId, operationStep);
+
+    // Assert
+    var sqlCaptor = ArgumentCaptor.forClass(String.class);
+    verify(jdbcTemplate).queryForObject(sqlCaptor.capture(), eq(mapper), eq(chunkId), eq(operationStep.name()));
+    assertThat(sqlCaptor.getValue())
+        .contains("operation_chunk_step")
+        .contains("operation_chunk_id")
+        .contains("operation_step");
+    assertThat(result).isEqualTo(expectedChunkStep);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void existsChunkStepByChunkId_withExpectedResult(boolean expectedResult) {
+    // Arrange
+    var chunkId = UUID.randomUUID();
+
+    when(jdbcTemplate.queryForObject(anyString(), eq(Boolean.class), eq(chunkId)))
+        .thenReturn(expectedResult);
+
+    // Act
+    var result = service.existsChunkStepByChunkId(chunkId);
+
+    // Assert
+    var sqlCaptor = ArgumentCaptor.forClass(String.class);
+    verify(jdbcTemplate).queryForObject(sqlCaptor.capture(), eq(Boolean.class), eq(chunkId));
+    assertThat(sqlCaptor.getValue())
+        .contains("operation_chunk_step")
+        .contains("operation_chunk_id")
+        .contains(TENANT_ID);
+    assertThat(result).isEqualTo(expectedResult);
   }
 }

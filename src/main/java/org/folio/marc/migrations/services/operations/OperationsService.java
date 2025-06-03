@@ -1,5 +1,6 @@
 package org.folio.marc.migrations.services.operations;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
 import org.folio.spring.FolioExecutionContext;
 import org.folio.spring.data.OffsetRequest;
+import org.folio.spring.exception.NotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -23,12 +25,14 @@ import org.springframework.stereotype.Service;
 public class OperationsService {
 
   private static final String ORDER_BY_FIELD = "startTimeMapping";
+  private static final String NOT_FOUND_MSG = "MARC migration operation was not found [id: %s]";
 
   private final FolioExecutionContext context;
   private final OperationRepository repository;
   private final AuthorityJdbcService authorityJdbcService;
   private final InstanceJdbcService instanceJdbcService;
   private final OperationErrorReportService errorReportService;
+  private final ChunkService chunkService;
 
   public Operation createOperation(Operation operation) {
     log.info("createOperation::Preparing new operation: {}", operation);
@@ -46,6 +50,20 @@ public class OperationsService {
     var createdOperation = repository.save(operation);
     errorReportService.createErrorReport(createdOperation);
     return createdOperation;
+  }
+
+  public Operation retryOperation(UUID operationId, List<UUID> chunkIds) {
+    var operation = getOperation(operationId).orElseThrow(() ->
+        new NotFoundException(NOT_FOUND_MSG.formatted(operationId)));
+    log.info("retryOperation::Preparing operation: {}", operation);
+    var numOfRecords = chunkService.getNumberOfRecords(chunkIds);
+    if (numOfRecords == 0) {
+      throw new NotFoundException("No records found in the provided chunk IDs");
+    }
+    operation.setStatus(OperationStatusType.DATA_MAPPING);
+    operation.setEndTimeMapping(null);
+    log.info("retryOperation::Saving operation: {}", operation);
+    return repository.save(operation);
   }
 
   public Optional<Operation> getOperation(UUID operationId) {

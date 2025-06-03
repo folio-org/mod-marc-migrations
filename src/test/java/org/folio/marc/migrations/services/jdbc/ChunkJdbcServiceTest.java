@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.support.TestConstants.TENANT_ID;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -127,5 +128,148 @@ class ChunkJdbcServiceTest extends JdbcServiceTestBase {
     verify(jdbcTemplate).update(sqlCaptor.capture());
     assertThat(sqlCaptor.getValue())
       .contains(id.toString(), status.name(), TENANT_ID);
+  }
+
+  @Test
+  void getChunks_ReturnsExpectedResult() {
+    // Arrange
+    var ids = List.of(UUID.randomUUID(), UUID.randomUUID());
+    var expectedChunks = List.of(OperationChunk.builder()
+      .id(UUID.randomUUID())
+      .build(),
+        OperationChunk.builder()
+          .id(UUID.randomUUID())
+          .build());
+
+    when(jdbcTemplate.query(anyString(), ArgumentMatchers.<BeanPropertyRowMapper<OperationChunk>>any(),
+        eq(ids.toArray())))
+      .thenReturn(expectedChunks);
+
+    // Act
+    var result = service.getChunks(ids);
+
+    // Assert
+    var sqlCaptor = ArgumentCaptor.forClass(String.class);
+    verify(jdbcTemplate).query(sqlCaptor.capture(), ArgumentMatchers.<BeanPropertyRowMapper<OperationChunk>>any(),
+        eq(ids.toArray()));
+    assertThat(sqlCaptor.getValue()).contains("operation_chunk")
+      .contains("id IN");
+    assertThat(result).isEqualTo(expectedChunks);
+  }
+
+  @Test
+  void updateChunkStatus_UpdatesSuccessfully() {
+    // Arrange
+    var ids = List.of(UUID.randomUUID(), UUID.randomUUID());
+    var status = OperationStatusType.DATA_MAPPING;
+
+    // Act
+    service.updateChunkStatus(ids, status);
+
+    // Assert
+    var sqlCaptor = ArgumentCaptor.forClass(String.class);
+    verify(jdbcTemplate).batchUpdate(sqlCaptor.capture(), eq(ids), eq(ids.size()), any());
+    assertThat(sqlCaptor.getValue()).contains("operation_chunk")
+      .contains("status =")
+      .contains("id =");
+  }
+
+  @Test
+  void updateChunkStatus_negative_batchUpdateException() {
+    // Arrange
+    var ids = List.of(UUID.randomUUID(), UUID.randomUUID());
+    var status = OperationStatusType.DATA_MAPPING;
+    var exceptionMessage = "Batch update failed";
+    when(jdbcTemplate.batchUpdate(anyString(), eq(ids), eq(ids.size()), any()))
+        .thenThrow(new IllegalArgumentException(exceptionMessage));
+
+    // Act & Assert
+    var exception = assertThrows(IllegalStateException.class, () -> service.updateChunkStatus(ids, status));
+    assertThat(exception.getMessage()).contains(exceptionMessage);
+
+    var sqlCaptor = ArgumentCaptor.forClass(String.class);
+    verify(jdbcTemplate).batchUpdate(sqlCaptor.capture(), eq(ids), eq(ids.size()), any());
+    assertThat(sqlCaptor.getValue()).contains("operation_chunk").contains("status =").contains("id =");
+  }
+
+  @Test
+  void updateChunkStatus_negative_nullIds() {
+    // Act
+    service.updateChunkStatus(null, OperationStatusType.DATA_MAPPING);
+
+    // Assert
+    verifyNoInteractions(jdbcTemplate);
+  }
+
+  @Test
+  void updateChunkStatus_negative_emptyIds() {
+    // Act
+    service.updateChunkStatus(List.of(), OperationStatusType.DATA_MAPPING);
+
+    // Assert
+    verifyNoInteractions(jdbcTemplate);
+  }
+
+  @Test
+  void getNumberOfRecords_ReturnsExpectedCount() {
+    // Arrange
+    var ids = List.of(UUID.randomUUID(), UUID.randomUUID());
+    var expectedCount = 42;
+
+    when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), eq(ids.toArray()))).thenReturn(expectedCount);
+
+    // Act
+    var result = service.getNumberOfRecords(ids);
+
+    // Assert
+    var sqlCaptor = ArgumentCaptor.forClass(String.class);
+    verify(jdbcTemplate).queryForObject(sqlCaptor.capture(), eq(Integer.class), eq(ids.toArray()));
+    assertThat(sqlCaptor.getValue()).contains("operation_chunk")
+      .contains("SUM(num_of_records)");
+    assertThat(result).isEqualTo(expectedCount);
+  }
+
+  @Test
+  void getNumberOfRecords_ReturnsZeroForEmptyIds() {
+    // Act
+    var result = service.getNumberOfRecords(List.of());
+
+    // Assert
+    assertThat(result).isZero();
+    verifyNoInteractions(jdbcTemplate);
+  }
+
+  @Test
+  void getNumberOfRecords_ReturnsZeroForNullResult() {
+    // Arrange
+    var ids = List.of(UUID.randomUUID(), UUID.randomUUID());
+    when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), eq(ids.toArray())))
+        .thenReturn(null);
+
+    // Act
+    var result = service.getNumberOfRecords(ids);
+
+    // Assert
+    assertThat(result).isZero();
+    var sqlCaptor = ArgumentCaptor.forClass(String.class);
+    verify(jdbcTemplate).queryForObject(sqlCaptor.capture(), eq(Integer.class), eq(ids.toArray()));
+    assertThat(sqlCaptor.getValue()).contains("operation_chunk").contains("SUM(num_of_records");
+  }
+
+  @Test
+  void getNumberOfRecords_negative_queryForObjectException() {
+    // Arrange
+    var ids = List.of(UUID.randomUUID(), UUID.randomUUID());
+    var exceptionMessage = "Query failed";
+    when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), eq(ids.toArray())))
+        .thenThrow(new IllegalArgumentException(exceptionMessage));
+
+    // Act & Assert
+    var exception = assertThrows(IllegalStateException.class, () -> service.getNumberOfRecords(ids));
+    assertThat(exception.getMessage()).contains(exceptionMessage);
+
+    var sqlCaptor = ArgumentCaptor.forClass(String.class);
+    verify(jdbcTemplate).queryForObject(sqlCaptor.capture(), eq(Integer.class), eq(ids.toArray()));
+    assertThat(sqlCaptor.getValue()).contains("operation_chunk").contains("SUM(num_of_records");
   }
 }

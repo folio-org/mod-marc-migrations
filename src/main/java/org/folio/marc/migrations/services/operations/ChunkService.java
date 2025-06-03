@@ -60,6 +60,14 @@ public class ChunkService {
     log.info("prepareChunks:: finished for operation {}", operation.getId());
   }
 
+  public int getNumberOfRecords(List<UUID> ids) {
+    return chunkJdbcService.getNumberOfRecords(ids);
+  }
+
+  public void updateChunkStatus(List<UUID> ids, OperationStatusType status) {
+    chunkJdbcService.updateChunkStatus(ids, status);
+  }
+
   private void addChunksForRecordIds(Operation operation, List<OperationChunk> chunks, List<UUID> recordIds) {
     if (recordIds.isEmpty()) {
       return;

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.domain.entities.ChunkStep;
+import org.folio.marc.migrations.domain.entities.types.OperationStep;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
 import org.folio.spring.FolioExecutionContext;
 import org.hibernate.type.SqlTypes;
@@ -26,6 +27,19 @@ public class ChunkStepJdbcService extends JdbcService {
     SET %s
     WHERE id = '%s';
     """;
+
+  private static final String GET_CHUNK_STEP = """
+      SELECT * FROM %s.operation_chunk_step
+      WHERE operation_chunk_id = ?
+      AND operation_step = ?::operationstep;
+      """;
+
+  private static final String EXISTS_CHUNK_STEP = """
+      SELECT EXISTS (
+          SELECT 1 FROM %s.operation_chunk_step
+          WHERE operation_chunk_id = ?
+      );
+      """;
 
   private final BeanPropertyRowMapper<ChunkStep> mapper;
 
@@ -79,6 +93,16 @@ public class ChunkStepJdbcService extends JdbcService {
     jdbcTemplate.update(sql);
   }
 
+  public void updateChunkStep(UUID id, StepStatus status, Timestamp stepStartTime) {
+    log.debug("updateChunkStep::For step {}: status {}, stepStartTime {}", id, status, stepStartTime);
+    var setFields = """
+        status = '%s',
+        step_start_time = '%s'
+        """.formatted(status, stepStartTime);
+    var sql = UPDATE_CHUNK_STEP.formatted(getSchemaName(), setFields, id);
+    jdbcTemplate.update(sql);
+  }
+
   public List<ChunkStep> getChunkStepsByOperationIdAndStatus(UUID operationId, StepStatus status) {
     log.debug("getChunkStepsByOperationId::For operationId {}, status {}", operationId, status);
     var sql = """
@@ -86,5 +110,17 @@ public class ChunkStepJdbcService extends JdbcService {
         WHERE operation_id = ? AND status = ?::stepstatus;
         """.formatted(getSchemaName());
     return jdbcTemplate.query(sql, mapper, operationId, status.name());
+  }
+
+  public ChunkStep getChunkStepByChunkIdAndOperationStep(UUID chunkId, OperationStep step) {
+    log.debug("getChunkStepByChunkIdAndOperationStep::For chunkId {}, operation step {}", chunkId, step);
+    var sql = GET_CHUNK_STEP.formatted(getSchemaName());
+    return jdbcTemplate.queryForObject(sql, mapper, chunkId, step.name());
+  }
+
+  public boolean existsChunkStepByChunkId(UUID chunkId) {
+    log.debug("existsChunkStepByChunkId::Checking existence for chunkId {}", chunkId);
+    var sql = EXISTS_CHUNK_STEP.formatted(getSchemaName());
+    return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, Boolean.class, chunkId));
   }
 }

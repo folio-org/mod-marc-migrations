@@ -5,6 +5,7 @@ import static org.folio.marc.migrations.domain.entities.types.OperationStatusTyp
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -19,6 +20,7 @@ import org.folio.marc.migrations.config.MigrationProperties;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
+import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.ChunkJdbcService;
 import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
@@ -42,9 +44,9 @@ class ChunkServiceTest {
 
   @BeforeEach
   void beforeEach() {
-    when(props.getChunkSize()).thenReturn(2); //number of records in one chunk
-    when(props.getChunkFetchIdsCount()).thenReturn(4); //number of records to fetch in one query
-    when(props.getChunkPersistCount()).thenReturn(4); //number of chunks to persist into db at a time
+    lenient().when(props.getChunkSize()).thenReturn(2); //number of records in one chunk
+    lenient().when(props.getChunkFetchIdsCount()).thenReturn(4); //number of records to fetch in one query
+    lenient().when(props.getChunkPersistCount()).thenReturn(4); //number of chunks to persist into db at a time
   }
 
   void prepareChunks_positive(EntityType entityType, List<List<UUID>> recordIdsMock) {
@@ -102,6 +104,34 @@ class ChunkServiceTest {
     when(instanceJdbcService.getInstanceIdsChunk(any(), any()))
         .thenReturn(recordIdsMock.get(1), recordIdsMock.get(2), emptyList());
     prepareChunks_positive(EntityType.INSTANCE, recordIdsMock);
+  }
+
+  @Test
+  void getNumberOfRecords_ReturnsCorrectCount() {
+    // Arrange
+    var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+    var expectedCount = 42;
+    when(chunkJdbcService.getNumberOfRecords(chunkIds)).thenReturn(expectedCount);
+
+    // Act
+    var actualCount = service.getNumberOfRecords(chunkIds);
+
+    // Assert
+    assertEquals(expectedCount, actualCount);
+    verify(chunkJdbcService).getNumberOfRecords(chunkIds);
+  }
+
+  @Test
+  void updateChunkStatus_CallsJdbcServiceWithCorrectArguments() {
+    // Arrange
+    var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+    var status = OperationStatusType.DATA_MAPPING;
+
+    // Act
+    service.updateChunkStatus(chunkIds, status);
+
+    // Assert
+    verify(chunkJdbcService).updateChunkStatus(chunkIds, status);
   }
 
   private List<List<UUID>> getRecordIdsMocks() {
