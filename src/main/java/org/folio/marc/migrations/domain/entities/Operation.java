@@ -67,5 +67,4 @@ public class Operation {
 
   @Column(name = "end_time_saving")
   private Timestamp endTimeSaving;
-
 }

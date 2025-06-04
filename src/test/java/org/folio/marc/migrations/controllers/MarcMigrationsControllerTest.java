@@ -46,7 +46,6 @@ class MarcMigrationsControllerTest {
     // Assert
     assertEquals(HttpStatus.CREATED, response.getStatusCode());
     assertEquals(result, response.getBody());
-
   }
 
   @Test
@@ -92,7 +91,6 @@ class MarcMigrationsControllerTest {
     // Assert
     assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
     verify(migrationsService).saveMigrationOperation(operationId, saveMigrationOperation);
-
   }
 
   @Test

@@ -46,7 +46,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @SpringBootTest(classes = MappingMetadataProvider.class, webEnvironment = NONE)
 class MappingMetadataProviderTest {
 
-
   private @Autowired CacheManager cacheManager;
   private @Autowired MappingMetadataProvider provider;
   private @MockitoBean MappingMetadataClient client;

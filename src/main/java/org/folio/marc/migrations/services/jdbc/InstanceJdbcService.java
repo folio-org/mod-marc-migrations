@@ -24,7 +24,8 @@ public class InstanceJdbcService extends JdbcService {
   private static final String CREATE_MARC_BIB_VIEW_SQL = """
     CREATE OR REPLACE VIEW %1$s.marc_bib_view
            AS
-         SELECT r.id as marc_id, r.external_id as instance_id, mr.content as marc, r.state, (i.jsonb ->> '_version')::int as version
+         SELECT r.id as marc_id, r.external_id as instance_id, mr.content as marc, r.state,
+         (i.jsonb ->> '_version')::int as version
          FROM %1$s.records_lb_view r
          LEFT JOIN %1$s.marc_records_lb_view mr ON mr.id = r.id
          LEFT JOIN %1$s.instance_view i ON i.id = r.external_id

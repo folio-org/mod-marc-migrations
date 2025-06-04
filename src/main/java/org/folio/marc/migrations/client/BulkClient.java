@@ -58,7 +58,6 @@ public interface BulkClient {
 
     private final String recordsFileName;
     private Boolean publishEvents = true;
-
   }
 
   @Data

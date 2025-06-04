@@ -267,5 +267,4 @@ public class IntegrationTestBase {
       return new DatabaseHelper(metadata, jdbcTemplate);
     }
   }
-
 }

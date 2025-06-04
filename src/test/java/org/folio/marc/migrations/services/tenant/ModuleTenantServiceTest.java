@@ -40,5 +40,4 @@ class ModuleTenantServiceTest {
     verify(instanceJdbcService).initViews(TENANT_ID);
     verify(expirationService).deleteExpiredData();
   }
-
 }

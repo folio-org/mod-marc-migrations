@@ -9,6 +9,5 @@ public enum OperationStatusType {
   DATA_SAVING,
   DATA_SAVING_COMPLETED,
   DATA_SAVING_FAILED
-
 }
 

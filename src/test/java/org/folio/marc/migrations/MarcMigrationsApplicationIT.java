@@ -47,5 +47,4 @@ class MarcMigrationsApplicationIT extends IntegrationTestBase {
             .content("{\"module_to\": \"mod-1.0.0\"}"))
         .andExpect(status().is2xxSuccessful());
   }
-
 }
