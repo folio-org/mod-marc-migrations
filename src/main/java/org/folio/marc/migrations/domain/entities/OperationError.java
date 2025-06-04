@@ -37,5 +37,4 @@ public class OperationError {
   private String recordId;
   @Column(name = "error_message")
   private String errorMessage;
-
 }

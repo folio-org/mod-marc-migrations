@@ -61,5 +61,4 @@ public class ChunkStep {
 
   @Column(nullable = false)
   private Integer numOfErrors;
-
 }

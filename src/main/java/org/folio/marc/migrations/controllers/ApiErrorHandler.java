@@ -143,5 +143,4 @@ public class ApiErrorHandler {
       .type(e.getClass().getSimpleName())
       .parameters(parameters);
   }
-
 }

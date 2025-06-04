@@ -62,5 +62,4 @@ public class OperationChunk {
 
   @Column(nullable = false)
   private Integer numOfRecords;
-
 }
