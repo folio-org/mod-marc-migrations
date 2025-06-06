@@ -4,6 +4,7 @@ import static org.folio.marc.migrations.domain.entities.types.EntityType.AUTHORI
 import static org.folio.marc.migrations.domain.entities.types.EntityType.INSTANCE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -18,6 +19,7 @@ import org.folio.marc.migrations.domain.repositories.OperationRepository;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
 import org.folio.spring.FolioExecutionContext;
+import org.folio.spring.exception.NotFoundException;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,6 +40,7 @@ class OperationsServiceTest {
   private @Mock AuthorityJdbcService authorityJdbcService;
   private @Mock InstanceJdbcService instanceJdbcService;
   private @Mock OperationErrorReportService errorReportService;
+  private @Mock ChunkService chunkService;
   private @InjectMocks OperationsService service;
 
   @Test
@@ -117,5 +120,58 @@ class OperationsServiceTest {
     // Assert
     assertEquals(expected, result);
     verify(repository).findAll(any(Specification.class), any(Pageable.class));
+  }
+
+  @Test
+  void retryOperation_UpdatesOperationSuccessfully() {
+    // Arrange
+    var operation = new Operation();
+    var operationId = UUID.randomUUID();
+    var totalNumOfRecords = 100;
+    var mappedNumOfRecords = 2;
+    operation.setId(operationId);
+    operation.setStatus(OperationStatusType.DATA_MAPPING_FAILED);
+    operation.setTotalNumOfRecords(totalNumOfRecords);
+    operation.setMappedNumOfRecords(mappedNumOfRecords);
+    var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+
+    when(repository.findById(operationId)).thenReturn(Optional.of(operation));
+    when(chunkService.getNumberOfRecords(chunkIds)).thenReturn(totalNumOfRecords);
+    when(repository.save(any(Operation.class))).thenReturn(operation);
+
+    // Act
+    var result = service.retryOperation(operationId, chunkIds);
+
+    // Assert
+    assertEquals(OperationStatusType.DATA_MAPPING, result.getStatus());
+    assertEquals(totalNumOfRecords, result.getTotalNumOfRecords());
+    assertEquals(mappedNumOfRecords, result.getMappedNumOfRecords());
+    verify(repository).save(operation);
+  }
+
+  @Test
+  void retryOperation_ThrowsNotFoundException_WhenNoRecordsFound() {
+    // Arrange
+    var operationId = UUID.randomUUID();
+    var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+    var operation = new Operation();
+
+    when(repository.findById(operationId)).thenReturn(Optional.of(operation));
+    when(chunkService.getNumberOfRecords(chunkIds)).thenReturn(0);
+
+    // Act & Assert
+    assertThrows(NotFoundException.class, () -> service.retryOperation(operationId, chunkIds));
+  }
+
+  @Test
+  void retryOperation_ThrowsNotFoundException_WhenOperationNotFound() {
+    // Arrange
+    var operationId = UUID.randomUUID();
+    var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+
+    when(repository.findById(operationId)).thenReturn(Optional.empty());
+
+    // Act & Assert
+    assertThrows(NotFoundException.class, () -> service.retryOperation(operationId, chunkIds));
   }
 }

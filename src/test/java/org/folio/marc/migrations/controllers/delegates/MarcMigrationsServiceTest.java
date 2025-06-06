@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import org.folio.marc.migrations.config.MigrationProperties;
 import org.folio.marc.migrations.controllers.mappers.MarcMigrationMapper;
 import org.folio.marc.migrations.domain.dto.EntityType;
 import org.folio.marc.migrations.domain.dto.MigrationOperation;
@@ -39,6 +40,7 @@ import org.folio.spring.exception.NotFoundException;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -52,6 +54,7 @@ class MarcMigrationsServiceTest {
   private @Mock OperationsService operationsService;
   private @Mock MigrationOrchestrator migrationOrchestrator;
   private @Mock OperationErrorReportService errorReportsService;
+  private @Mock MigrationProperties props;
   private @InjectMocks MarcMigrationsService migrationsService;
 
   @Test
@@ -276,5 +279,73 @@ class MarcMigrationsServiceTest {
     assertEquals(operationError.getChunkStatus().name(), errorReport.getChunkStatus());
     assertEquals(operationError.getRecordId(), errorReport.getRecordId());
     assertEquals(operationError.getErrorMessage(), errorReport.getErrorMessage());
+  }
+
+  @Test
+  void retryMarcMigration_ValidInput_ReturnsMigrationOperation() {
+    // Arrange
+    var operationId = UUID.randomUUID();
+    var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+    var operation = new Operation();
+    var operationDto = new MigrationOperation();
+    when(operationsService.retryOperation(operationId, chunkIds)).thenReturn(operation);
+    when(mapper.toDto(operation)).thenReturn(operationDto);
+    when(props.getChunkRetryingMaxIdsCount()).thenReturn(1000);
+
+    // Act
+    var result = migrationsService.retryMarcMigration(operationId, chunkIds);
+
+    // Assert
+    assertNotNull(result);
+    assertEquals(operationDto, result);
+    verify(operationsService).retryOperation(operationId, chunkIds);
+    verify(migrationOrchestrator).submitRetryMappingTask(operation, chunkIds);
+  }
+
+  @Test
+  void retryMarcMigration_InvalidChunkIds_ThrowsApiValidationException() {
+    // Act
+    Executable executable = () -> migrationsService.retryMarcMigration(UUID.randomUUID(), List.of());
+
+    // Assert
+    ApiValidationException exception = assertThrows(ApiValidationException.class, executable);
+    assertNotNull(exception);
+    verifyNoInteractions(operationsService);
+    verifyNoInteractions(migrationOrchestrator);
+  }
+
+  @Test
+  void retryMarcMigration_OperationNotFound_ThrowsNotFoundException() {
+    // Arrange
+    var operationId = UUID.randomUUID();
+    var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+    var maxChunkIdsCount = 1000;
+    when(props.getChunkRetryingMaxIdsCount()).thenReturn(maxChunkIdsCount);
+    when(operationsService.retryOperation(operationId, chunkIds))
+      .thenThrow(new NotFoundException(NOT_FOUND_MSG.formatted(operationId)));
+
+    // Act & Assert
+    var exception = assertThrows(NotFoundException.class, () -> migrationsService.retryMarcMigration(
+        operationId, chunkIds));
+    assertThat(exception).hasMessage(NOT_FOUND_MSG, operationId);
+    verify(operationsService).retryOperation(operationId, chunkIds);
+    verifyNoInteractions(migrationOrchestrator);
+  }
+
+  @Test
+  void retryMarcMigration_ChunkIdsExceedMaxSize_ThrowsApiValidationException() {
+    // Arrange
+    var operationId = UUID.randomUUID();
+    var maxChunkIdsCount = 2;
+    var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+    when(props.getChunkRetryingMaxIdsCount()).thenReturn(maxChunkIdsCount);
+
+    // Act & Assert
+    var exception = assertThrows(ApiValidationException.class, () -> migrationsService.retryMarcMigration(
+        operationId, chunkIds));
+    assertNotNull(exception);
+    assertThat(exception).hasMessage("The maximum allowed number of chunk IDs is '2', but received '3'.");
+    verifyNoInteractions(operationsService);
+    verifyNoInteractions(migrationOrchestrator);
   }
 }

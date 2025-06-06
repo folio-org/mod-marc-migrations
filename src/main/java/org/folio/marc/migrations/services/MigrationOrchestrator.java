@@ -1,13 +1,17 @@
 package org.folio.marc.migrations.services;
 
 import static java.util.concurrent.CompletableFuture.runAsync;
+import static org.folio.marc.migrations.services.batch.support.JobConstants.JobParameterNames.CHUNK_IDS;
 import static org.folio.marc.migrations.services.batch.support.JobConstants.JobParameterNames.ENTITY_TYPE;
 import static org.folio.marc.migrations.services.batch.support.JobConstants.JobParameterNames.OPERATION_ID;
 import static org.folio.marc.migrations.services.batch.support.JobConstants.JobParameterNames.PUBLISH_EVENTS_FLAG;
+import static org.folio.marc.migrations.services.batch.support.JobConstants.JobParameterNames.TIMESTAMP;
 
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import lombok.extern.log4j.Log4j2;
@@ -35,18 +39,21 @@ public class MigrationOrchestrator {
   private final JobLauncher jobLauncher;
   private final Job remappingJob;
   private final Job remappingSaveJob;
+  private final Job remappingRetryJob;
 
   public MigrationOrchestrator(ChunkService chunkService,
                                OperationJdbcService jdbcService,
                                JobLauncher jobLauncher,
                                @Qualifier("remappingJob") Job remappingJob,
                                @Qualifier("remappingSaveJob") Job remappingSaveJob,
+                               @Qualifier("remappingRetryJob") Job remappingRetryJob,
                                FolioExecutor remappingExecutor) {
     this.chunkService = chunkService;
     this.jdbcService = jdbcService;
     this.jobLauncher = jobLauncher;
     this.remappingJob = remappingJob;
     this.remappingSaveJob = remappingSaveJob;
+    this.remappingRetryJob = remappingRetryJob;
     this.remappingExecutor = remappingExecutor;
   }
 
@@ -69,6 +76,23 @@ public class MigrationOrchestrator {
         return unused;
       });
     log.info("submitMappingTask:: submitted asynchronous execution for operation {}", operationId);
+    return future;
+  }
+
+  public CompletableFuture<Void> submitRetryMappingTask(Operation operation, List<UUID> chunkIds) {
+    var operationId = operation.getId()
+      .toString();
+    log.info("submitRetryMappingTask:: starting retry for operation {}", operation.getId());
+    var future = runAsync(() ->
+        chunkService.updateChunkStatus(chunkIds, OperationStatusType.DATA_MAPPING), remappingExecutor)
+      .thenRun(submitProcessRetryChunksTask(operationId, operation.getEntityType(), chunkIds))
+      .handle((unused, throwable) -> {
+        if (throwable != null) {
+          updateOperationStatus(operationId, OperationStatusType.DATA_MAPPING_FAILED, OperationTimeType.MAPPING_END);
+        }
+        return unused;
+      });
+    log.info("submitRetryMappingTask:: submitted asynchronous execution for operation {}", operationId);
     return future;
   }
 
@@ -116,6 +140,23 @@ public class MigrationOrchestrator {
         } else if (currentStatus == OperationStatusType.DATA_SAVING) {
           jobLauncher.run(remappingSaveJob, jobParameters);
         }
+      } catch (Exception ex) {
+        log.warn("Error running job for operation {}: {} - {}", operationId, ex.getCause(), ex.getMessage());
+        throw new IllegalStateException(ex);
+      }
+    };
+  }
+
+  private Runnable submitProcessRetryChunksTask(String operationId, EntityType entityType, List<UUID> chunkIds) {
+    return () -> {
+      try {
+        var parameterMap = new HashMap<String, JobParameter<?>>();
+        parameterMap.put(OPERATION_ID, new JobParameter<>(operationId, String.class));
+        parameterMap.put(ENTITY_TYPE, new JobParameter<>(entityType, EntityType.class));
+        parameterMap.put(CHUNK_IDS, new JobParameter<>(chunkIds, List.class));
+        parameterMap.put(TIMESTAMP, new JobParameter<>(Timestamp.from(Instant.now()).toString(), String.class));
+        var jobParameters = new JobParameters(parameterMap);
+        jobLauncher.run(remappingRetryJob, jobParameters);
       } catch (Exception ex) {
         log.warn("Error running job for operation {}: {} - {}", operationId, ex.getCause(), ex.getMessage());
         throw new IllegalStateException(ex);
