@@ -107,21 +107,6 @@ class ChunkServiceTest {
   }
 
   @Test
-  void getNumberOfRecords_ReturnsCorrectCount() {
-    // Arrange
-    var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
-    var expectedCount = 42;
-    when(chunkJdbcService.getNumberOfRecords(chunkIds)).thenReturn(expectedCount);
-
-    // Act
-    var actualCount = service.getNumberOfRecords(chunkIds);
-
-    // Assert
-    assertEquals(expectedCount, actualCount);
-    verify(chunkJdbcService).getNumberOfRecords(chunkIds);
-  }
-
-  @Test
   void updateChunkStatus_CallsJdbcServiceWithCorrectArguments() {
     // Arrange
     var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());

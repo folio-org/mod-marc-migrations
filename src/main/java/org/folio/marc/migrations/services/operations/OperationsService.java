@@ -1,6 +1,5 @@
 package org.folio.marc.migrations.services.operations;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -52,14 +51,10 @@ public class OperationsService {
     return createdOperation;
   }
 
-  public Operation retryOperation(UUID operationId, List<UUID> chunkIds) {
+  public Operation retryOperation(UUID operationId) {
     var operation = getOperation(operationId).orElseThrow(() ->
         new NotFoundException(NOT_FOUND_MSG.formatted(operationId)));
     log.info("retryOperation::Preparing operation: {}", operation);
-    var numOfRecords = chunkService.getNumberOfRecords(chunkIds);
-    if (numOfRecords == 0) {
-      throw new NotFoundException("No records found in the provided chunk IDs");
-    }
     operation.setStatus(OperationStatusType.DATA_MAPPING);
     operation.setEndTimeMapping(null);
     log.info("retryOperation::Saving operation: {}", operation);

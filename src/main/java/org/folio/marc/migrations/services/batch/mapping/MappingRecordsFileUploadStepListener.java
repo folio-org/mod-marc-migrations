@@ -50,7 +50,6 @@ public class MappingRecordsFileUploadStepListener implements StepExecutionListen
     if (ExitStatus.FAILED.getExitCode().equals(exitStatus.getExitCode())) {
       log.warn("afterStep:: job {} failed for operation {}: {}", jobId, operationId, exitStatus.getExitDescription());
       try {
-        // The /retry endpoint will process these files to perform the operation
         log.warn("afterStep:: upload local files even if the job failed.");
         uploadLocalFiles(filesPath, operationId);
       } catch (Exception e) {

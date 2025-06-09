@@ -133,14 +133,12 @@ class OperationsServiceTest {
     operation.setStatus(OperationStatusType.DATA_MAPPING_FAILED);
     operation.setTotalNumOfRecords(totalNumOfRecords);
     operation.setMappedNumOfRecords(mappedNumOfRecords);
-    var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
 
     when(repository.findById(operationId)).thenReturn(Optional.of(operation));
-    when(chunkService.getNumberOfRecords(chunkIds)).thenReturn(totalNumOfRecords);
     when(repository.save(any(Operation.class))).thenReturn(operation);
 
     // Act
-    var result = service.retryOperation(operationId, chunkIds);
+    var result = service.retryOperation(operationId);
 
     // Assert
     assertEquals(OperationStatusType.DATA_MAPPING, result.getStatus());
@@ -150,28 +148,13 @@ class OperationsServiceTest {
   }
 
   @Test
-  void retryOperation_ThrowsNotFoundException_WhenNoRecordsFound() {
-    // Arrange
-    var operationId = UUID.randomUUID();
-    var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
-    var operation = new Operation();
-
-    when(repository.findById(operationId)).thenReturn(Optional.of(operation));
-    when(chunkService.getNumberOfRecords(chunkIds)).thenReturn(0);
-
-    // Act & Assert
-    assertThrows(NotFoundException.class, () -> service.retryOperation(operationId, chunkIds));
-  }
-
-  @Test
   void retryOperation_ThrowsNotFoundException_WhenOperationNotFound() {
     // Arrange
     var operationId = UUID.randomUUID();
-    var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
 
     when(repository.findById(operationId)).thenReturn(Optional.empty());
 
     // Act & Assert
-    assertThrows(NotFoundException.class, () -> service.retryOperation(operationId, chunkIds));
+    assertThrows(NotFoundException.class, () -> service.retryOperation(operationId));
   }
 }

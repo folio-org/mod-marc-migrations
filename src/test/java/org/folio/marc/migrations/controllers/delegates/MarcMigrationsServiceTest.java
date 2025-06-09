@@ -288,7 +288,7 @@ class MarcMigrationsServiceTest {
     var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
     var operation = new Operation();
     var operationDto = new MigrationOperation();
-    when(operationsService.retryOperation(operationId, chunkIds)).thenReturn(operation);
+    when(operationsService.retryOperation(operationId)).thenReturn(operation);
     when(mapper.toDto(operation)).thenReturn(operationDto);
     when(props.getChunkRetryingMaxIdsCount()).thenReturn(1000);
 
@@ -298,7 +298,7 @@ class MarcMigrationsServiceTest {
     // Assert
     assertNotNull(result);
     assertEquals(operationDto, result);
-    verify(operationsService).retryOperation(operationId, chunkIds);
+    verify(operationsService).retryOperation(operationId);
     verify(migrationOrchestrator).submitRetryMappingTask(operation, chunkIds);
   }
 
@@ -321,14 +321,14 @@ class MarcMigrationsServiceTest {
     var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
     var maxChunkIdsCount = 1000;
     when(props.getChunkRetryingMaxIdsCount()).thenReturn(maxChunkIdsCount);
-    when(operationsService.retryOperation(operationId, chunkIds))
+    when(operationsService.retryOperation(operationId))
       .thenThrow(new NotFoundException(NOT_FOUND_MSG.formatted(operationId)));
 
     // Act & Assert
     var exception = assertThrows(NotFoundException.class, () -> migrationsService.retryMarcMigration(
         operationId, chunkIds));
     assertThat(exception).hasMessage(NOT_FOUND_MSG, operationId);
-    verify(operationsService).retryOperation(operationId, chunkIds);
+    verify(operationsService).retryOperation(operationId);
     verifyNoInteractions(migrationOrchestrator);
   }
 

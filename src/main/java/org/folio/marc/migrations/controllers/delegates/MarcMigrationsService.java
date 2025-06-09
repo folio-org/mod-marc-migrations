@@ -52,7 +52,7 @@ public class MarcMigrationsService {
   public MigrationOperation retryMarcMigration(UUID operationId, List<UUID> chunkIds) {
     log.debug("retryMarcMigration::Trying to retry the migration for the chunkIds: {}", chunkIds);
     validateMigrationRetry(chunkIds);
-    var operation = operationsService.retryOperation(operationId, chunkIds);
+    var operation = operationsService.retryOperation(operationId);
     migrationOrchestrator.submitRetryMappingTask(operation, chunkIds);
     return mapper.toDto(operation);
   }

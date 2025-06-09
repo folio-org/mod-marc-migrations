@@ -31,12 +31,6 @@ public class ChunkJdbcService extends JdbcService {
       WHERE id IN (%s)
       """;
 
-  private static final String GET_NUMBER_OF_RECORDS = """
-      SELECT SUM(num_of_records) AS total_sum
-      FROM %s.operation_chunk
-      WHERE id IN (%s)
-      """;
-
   private static final String UPDATE_CHUNK = """
     UPDATE %s.operation_chunk
     SET status = '%s'
@@ -131,26 +125,6 @@ public class ChunkJdbcService extends JdbcService {
       });
     } catch (Exception ex) {
       log.warn("updateChunkStatus:: failed to update status to {} for ids {}: {}", status, ids, ex.getMessage());
-      throw new IllegalStateException(ex);
-    }
-  }
-
-  public int getNumberOfRecords(List<UUID> ids) {
-    if (ids == null || ids.isEmpty()) {
-      log.debug("getNumberOfRecords:: no ids provided");
-      return 0;
-    }
-    log.debug("getNumberOfRecords:: count number of records for ids {}", ids);
-
-    var placeholders = String.join(",", ids.stream()
-      .map(id -> "?")
-      .toList());
-    var sql = GET_NUMBER_OF_RECORDS.formatted(getSchemaName(), placeholders);
-    try {
-      var result = jdbcTemplate.queryForObject(sql, Integer.class, ids.toArray());
-      return result != null ? result : 0;
-    } catch (Exception ex) {
-      log.warn("getNumberOfRecords:: failed to count number of records for ids {}: {}", ids, ex.getMessage());
       throw new IllegalStateException(ex);
     }
   }
