@@ -698,7 +698,6 @@ components:
       type: string
       enum:
         - new
-        - retrying
         - data_mapping
         - data_mapping_completed
         - data_mapping_failed
