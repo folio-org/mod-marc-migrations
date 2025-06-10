@@ -14,6 +14,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
+import org.folio.marc.migrations.domain.entities.types.ErrorReportStatus;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.repositories.OperationRepository;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
@@ -145,6 +146,7 @@ class OperationsServiceTest {
     assertEquals(totalNumOfRecords, result.getTotalNumOfRecords());
     assertEquals(mappedNumOfRecords, result.getMappedNumOfRecords());
     verify(repository).save(operation);
+    verify(errorReportService).updateErrorReportStatus(operationId, ErrorReportStatus.NOT_STARTED);
   }
 
   @Test

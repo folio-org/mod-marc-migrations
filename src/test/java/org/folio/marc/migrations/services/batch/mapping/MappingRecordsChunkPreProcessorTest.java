@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.marc.migrations.domain.entities.types.EntityType.AUTHORITY;
 import static org.folio.marc.migrations.domain.entities.types.EntityType.INSTANCE;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -24,6 +25,7 @@ import org.folio.marc.migrations.services.domain.RecordsMappingData;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
 import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
+import org.folio.marc.migrations.services.jdbc.OperationErrorJdbcService;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,6 +44,7 @@ class MappingRecordsChunkPreProcessorTest {
   private @Mock AuthorityJdbcService authorityJdbcService;
   private @Mock ChunkStepJdbcService chunkStepJdbcService;
   private @Mock InstanceJdbcService instanceJdbcService;
+  private @Mock OperationErrorJdbcService operationErrorJdbcService;
   private @InjectMocks MappingRecordsChunkPreProcessor processor;
 
   @Test
@@ -91,11 +94,12 @@ class MappingRecordsChunkPreProcessorTest {
 
     var marcRecords = List.of(new MarcRecord(null, null, null, null, null));
 
-    when(chunkStepJdbcService.existsChunkStepByChunkId(chunk.getId())).thenReturn(true);
     when(chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_MAPPING))
       .thenReturn(existingChunkStep);
     when(authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
         .thenReturn(marcRecords);
+    doNothing().when(operationErrorJdbcService)
+        .deleteOperationErrorsByReportIdAndChunkId(chunk.getOperationId(), chunk.getId());
 
     processor.setEntityType(EntityType.AUTHORITY);
 
@@ -109,6 +113,39 @@ class MappingRecordsChunkPreProcessorTest {
     assertThat(timestampCaptor.getValue()).isNotNull();
 
     assert result != null;
+    assertThat(result.records()).hasSize(marcRecords.size())
+      .containsAll(marcRecords);
+  }
+
+  @Test
+  void process_createChunkStepForDataMappingStatus() {
+    // Arrange
+    var chunk = OperationChunk.builder()
+      .id(UUID.randomUUID())
+      .operationId(UUID.randomUUID())
+      .startRecordId(UUID.randomUUID())
+      .endRecordId(UUID.randomUUID())
+      .numOfRecords(5)
+      .status(OperationStatusType.DATA_MAPPING)
+      .build();
+
+    var marcRecords = List.of(new MarcRecord(null, null, null, null, null));
+    when(chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_MAPPING))
+        .thenReturn(null);
+    when(authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
+        .thenReturn(marcRecords);
+
+    processor.setEntityType(EntityType.AUTHORITY);
+    var stepCaptor = ArgumentCaptor.forClass(ChunkStep.class);
+
+    // Act
+    var result = processor.process(chunk);
+
+    // Assert
+    assert result != null;
+    verify(chunkStepJdbcService).createChunkStep(stepCaptor.capture());
+    var step = stepCaptor.getValue();
+    assertChunkStep(chunk, step);
     assertThat(result.records()).hasSize(marcRecords.size())
       .containsAll(marcRecords);
   }

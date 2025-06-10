@@ -34,13 +34,6 @@ public class ChunkStepJdbcService extends JdbcService {
       AND operation_step = ?::operationstep;
       """;
 
-  private static final String EXISTS_CHUNK_STEP = """
-      SELECT EXISTS (
-          SELECT 1 FROM %s.operation_chunk_step
-          WHERE operation_chunk_id = ?
-      );
-      """;
-
   private final BeanPropertyRowMapper<ChunkStep> mapper;
 
   public ChunkStepJdbcService(FolioExecutionContext context, JdbcTemplate jdbcTemplate,
@@ -97,7 +90,8 @@ public class ChunkStepJdbcService extends JdbcService {
     log.debug("updateChunkStep::For step {}: status {}, stepStartTime {}", id, status, stepStartTime);
     var setFields = """
         status = '%s',
-        step_start_time = '%s'
+        step_start_time = '%s',
+        num_of_errors = 0
         """.formatted(status, stepStartTime);
     var sql = UPDATE_CHUNK_STEP.formatted(getSchemaName(), setFields, id);
     jdbcTemplate.update(sql);
@@ -115,12 +109,12 @@ public class ChunkStepJdbcService extends JdbcService {
   public ChunkStep getChunkStepByChunkIdAndOperationStep(UUID chunkId, OperationStep step) {
     log.debug("getChunkStepByChunkIdAndOperationStep::For chunkId {}, operation step {}", chunkId, step);
     var sql = GET_CHUNK_STEP.formatted(getSchemaName());
-    return jdbcTemplate.queryForObject(sql, mapper, chunkId, step.name());
-  }
-
-  public boolean existsChunkStepByChunkId(UUID chunkId) {
-    log.debug("existsChunkStepByChunkId::Checking existence for chunkId {}", chunkId);
-    var sql = EXISTS_CHUNK_STEP.formatted(getSchemaName());
-    return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, Boolean.class, chunkId));
+    var results = jdbcTemplate.query(sql, mapper, chunkId, step.name());
+    if (results.isEmpty()) {
+      log.warn("getChunkStepByChunkIdAndOperationStep:: No ChunkStep found for chunkId {} and operation step {}",
+          chunkId, step);
+      return null;
+    }
+    return results.getFirst();
   }
 }

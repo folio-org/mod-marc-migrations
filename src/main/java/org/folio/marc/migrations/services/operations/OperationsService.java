@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
+import org.folio.marc.migrations.domain.entities.types.ErrorReportStatus;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.repositories.OperationRepository;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
@@ -58,7 +59,9 @@ public class OperationsService {
     operation.setStatus(OperationStatusType.DATA_MAPPING);
     operation.setEndTimeMapping(null);
     log.info("retryOperation::Saving operation: {}", operation);
-    return repository.save(operation);
+    var updatedOperation = repository.save(operation);
+    errorReportService.updateErrorReportStatus(operation.getId(), ErrorReportStatus.NOT_STARTED);
+    return updatedOperation;
   }
 
   public Optional<Operation> getOperation(UUID operationId) {

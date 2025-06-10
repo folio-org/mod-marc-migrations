@@ -20,6 +20,7 @@ import org.folio.marc.migrations.services.domain.RecordsMappingData;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
 import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
+import org.folio.marc.migrations.services.jdbc.OperationErrorJdbcService;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,6 +37,7 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
   private final AuthorityJdbcService authorityJdbcService;
   private final ChunkStepJdbcService chunkStepJdbcService;
   private final InstanceJdbcService instanceJdbcService;
+  private final OperationErrorJdbcService operationErrorJdbcService;
 
   @Setter
   @Value("#{jobParameters['entityType']}")
@@ -45,13 +47,17 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
   public MappingComposite<MarcRecord> process(OperationChunk chunk) {
     log.trace("process:: for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
     ChunkStep chunkStep;
-    if (OperationStatusType.DATA_MAPPING.equals(chunk.getStatus())
-        && chunkStepJdbcService.existsChunkStepByChunkId(chunk.getId())) {
-      log.debug("process:: Updating existing chunk step for operation {} chunk {}",
-          chunk.getOperationId(), chunk.getId());
-      chunkStep = chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(),
-          OperationStep.DATA_MAPPING);
-      chunkStepJdbcService.updateChunkStep(chunkStep.getId(), StepStatus.IN_PROGRESS, Timestamp.from(Instant.now()));
+    if (!OperationStatusType.NEW.equals(chunk.getStatus())) {
+      chunkStep = chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_MAPPING);
+      if (chunkStep != null) {
+        log.debug("process:: Updating existing chunk step for operation {} chunk {}", chunk.getOperationId(),
+            chunk.getId());
+        chunkStepJdbcService.updateChunkStep(chunkStep.getId(), StepStatus.IN_PROGRESS, Timestamp.from(Instant.now()));
+        operationErrorJdbcService.deleteOperationErrorsByReportIdAndChunkId(chunk.getOperationId(), chunk.getId());
+      } else {
+        log.debug("process:: Creating new chunk step for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
+        chunkStep = createChunkStep(chunk);
+      }
     } else {
       log.debug("process:: Creating new chunk step for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
       chunkStep = createChunkStep(chunk);
