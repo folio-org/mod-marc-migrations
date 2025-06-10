@@ -20,7 +20,7 @@ import org.folio.marc.migrations.services.domain.RecordsMappingData;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
 import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
-import org.folio.marc.migrations.services.jdbc.OperationErrorJdbcService;
+import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,7 +37,7 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
   private final AuthorityJdbcService authorityJdbcService;
   private final ChunkStepJdbcService chunkStepJdbcService;
   private final InstanceJdbcService instanceJdbcService;
-  private final OperationErrorJdbcService operationErrorJdbcService;
+  private final OperationJdbcService operationJdbcService;
 
   @Setter
   @Value("#{jobParameters['entityType']}")
@@ -53,7 +53,7 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
         log.debug("process:: Updating existing chunk step for operation {} chunk {}", chunk.getOperationId(),
             chunk.getId());
         chunkStepJdbcService.updateChunkStep(chunkStep.getId(), StepStatus.IN_PROGRESS, Timestamp.from(Instant.now()));
-        operationErrorJdbcService.deleteOperationErrorsByReportIdAndChunkId(chunk.getOperationId(), chunk.getId());
+        reduceMappedNumOfRecords(chunk, chunkStep.getNumOfErrors());
       } else {
         log.debug("process:: Creating new chunk step for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
         chunkStep = createChunkStep(chunk);
@@ -79,6 +79,15 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
       chunk.getEntityChunkFileName(), chunk.getNumOfRecords(), chunkStep.getEntityErrorChunkFileName(),
       chunkStep.getErrorChunkFileName());
     return new MappingComposite<>(mappingData, records);
+  }
+
+  private void reduceMappedNumOfRecords(OperationChunk chunk, Integer numOfErrors) {
+    if (numOfErrors > 0) {
+      var reducedMappedNumOfRecords = chunk.getNumOfRecords() - numOfErrors;
+      if (reducedMappedNumOfRecords > 0) {
+        operationJdbcService.updateOperationMappedNumber(chunk.getOperationId(), reducedMappedNumOfRecords);
+      }
+    }
   }
 
   private ChunkStep createChunkStep(OperationChunk chunk) {

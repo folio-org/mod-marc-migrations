@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -19,6 +20,7 @@ import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.repositories.OperationRepository;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
+import org.folio.marc.migrations.services.jdbc.OperationErrorJdbcService;
 import org.folio.spring.FolioExecutionContext;
 import org.folio.spring.exception.NotFoundException;
 import org.folio.spring.testing.type.UnitTest;
@@ -41,7 +43,7 @@ class OperationsServiceTest {
   private @Mock AuthorityJdbcService authorityJdbcService;
   private @Mock InstanceJdbcService instanceJdbcService;
   private @Mock OperationErrorReportService errorReportService;
-  private @Mock ChunkService chunkService;
+  private @Mock OperationErrorJdbcService operationErrorJdbcService;
   private @InjectMocks OperationsService service;
 
   @Test
@@ -137,6 +139,7 @@ class OperationsServiceTest {
 
     when(repository.findById(operationId)).thenReturn(Optional.of(operation));
     when(repository.save(any(Operation.class))).thenReturn(operation);
+    doNothing().when(operationErrorJdbcService).deleteOperationErrorsByReportId(operationId);
 
     // Act
     var result = service.retryOperation(operationId);

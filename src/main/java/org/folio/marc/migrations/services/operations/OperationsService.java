@@ -11,6 +11,7 @@ import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.repositories.OperationRepository;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
+import org.folio.marc.migrations.services.jdbc.OperationErrorJdbcService;
 import org.folio.spring.FolioExecutionContext;
 import org.folio.spring.data.OffsetRequest;
 import org.folio.spring.exception.NotFoundException;
@@ -32,7 +33,7 @@ public class OperationsService {
   private final AuthorityJdbcService authorityJdbcService;
   private final InstanceJdbcService instanceJdbcService;
   private final OperationErrorReportService errorReportService;
-  private final ChunkService chunkService;
+  private final OperationErrorJdbcService operationErrorJdbcService;
 
   public Operation createOperation(Operation operation) {
     log.info("createOperation::Preparing new operation: {}", operation);
@@ -61,6 +62,7 @@ public class OperationsService {
     log.info("retryOperation::Saving operation: {}", operation);
     var updatedOperation = repository.save(operation);
     errorReportService.updateErrorReportStatus(operation.getId(), ErrorReportStatus.NOT_STARTED);
+    operationErrorJdbcService.deleteOperationErrorsByReportId(operationId);
     return updatedOperation;
   }
 
