@@ -218,6 +218,74 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /marc-migrations/{operationId}/save/retry:
+    post:
+      summary: Retry saving MARC migration operations
+      description: Retry saving MARC migration operations for the specified chunk IDs.
+      operationId: retrySaveMarcMigrations
+      tags:
+        - marc-migrations
+      parameters:
+        - in: path
+          name: operationId
+          description: The UUID of a MARC migration operation.
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 884d0af6-028f-4d15-8354-d2fc10c71a88
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+                format: uuid
+              example:
+                - 584d0af6-028f-4d15-8354-d2fc10c71a08
+                - 884d0af6-028f-4d15-8354-d2fc10c71a08
+      responses:
+        '204':
+          description: MARC migration operation successfully updated.
+        '400':
+          description: Bad request - Invalid input parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                InvalidUUIDFormat:
+                  value:
+                    message: 'Invalid UUID format'
+                    type: 'IllegalArgumentException'
+                    parameters:
+                      - key: 'operationId'
+                        value: 'invalid-uuid-format'
+        '404':
+          description: MARC migration operation was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                OperationNotFound:
+                  value:
+                    message: 'MARC migration operation was not found [id: 884d0af6-028f-4d15-8354-d2fc10c71a88]'
+                    type: 'NotFoundException'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                UnexpectedError:
+                  value:
+                    message: 'Unexpected error'
+                    type: 'NullPointerException'
   /marc-migrations/{operationId}:
     get:
       summary: Get MARC migration operation by ID
