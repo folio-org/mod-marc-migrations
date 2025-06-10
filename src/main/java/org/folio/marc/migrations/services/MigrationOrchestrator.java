@@ -15,12 +15,14 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.marc.migrations.domain.dto.SaveMigrationOperation;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.services.domain.OperationTimeType;
 import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
+import org.folio.marc.migrations.services.jdbc.SpringBatchExecutionParamsJdbcService;
 import org.folio.marc.migrations.services.operations.ChunkService;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParameter;
@@ -36,24 +38,30 @@ public class MigrationOrchestrator {
   private final ExecutorService remappingExecutor;
   private final ChunkService chunkService;
   private final OperationJdbcService jdbcService;
+  private final SpringBatchExecutionParamsJdbcService executionParamsJdbcService;
   private final JobLauncher jobLauncher;
   private final Job remappingJob;
   private final Job remappingSaveJob;
   private final Job remappingRetryJob;
+  private final Job remappingRetrySaveJob;
 
   public MigrationOrchestrator(ChunkService chunkService,
                                OperationJdbcService jdbcService,
+                               SpringBatchExecutionParamsJdbcService executionParamsJdbcService,
                                JobLauncher jobLauncher,
                                @Qualifier("remappingJob") Job remappingJob,
                                @Qualifier("remappingSaveJob") Job remappingSaveJob,
                                @Qualifier("remappingRetryJob") Job remappingRetryJob,
+                                @Qualifier("remappingRetrySaveJob") Job remappingRetrySaveJob,
                                FolioExecutor remappingExecutor) {
     this.chunkService = chunkService;
     this.jdbcService = jdbcService;
+    this.executionParamsJdbcService = executionParamsJdbcService;
     this.jobLauncher = jobLauncher;
     this.remappingJob = remappingJob;
     this.remappingSaveJob = remappingSaveJob;
     this.remappingRetryJob = remappingRetryJob;
+    this.remappingRetrySaveJob = remappingRetrySaveJob;
     this.remappingExecutor = remappingExecutor;
   }
 
@@ -119,6 +127,24 @@ public class MigrationOrchestrator {
     return future;
   }
 
+  public CompletableFuture<Void> submitMappingSaveRetryTask(Operation operation, List<UUID> chunkIds) {
+    var operationId = operation.getId().toString();
+    var entityType = operation.getEntityType();
+    log.info("submitMappingSaveRetryTask:: starting for operation {}", operationId);
+    updateOperationStatus(operationId, OperationStatusType.DATA_SAVING, OperationTimeType.SAVING_START);
+    var publishEventsFlag = executionParamsJdbcService.getBatchExecutionParam(PUBLISH_EVENTS_FLAG, operationId);
+    var future = runAsync(submitProcessRetrySaveChunksTask(operationId, entityType, chunkIds, publishEventsFlag),
+      remappingExecutor)
+      .handle((unused, throwable) -> {
+        if (throwable != null) {
+          updateOperationStatus(operationId, OperationStatusType.DATA_SAVING_FAILED, OperationTimeType.SAVING_END);
+        }
+        return unused;
+      });
+    log.info("submitMappingSaveRetryTask:: submitted asynchronous execution for operation {}", operationId);
+    return future;
+  }
+
   private void updateOperationStatus(String operationId, OperationStatusType status,
                                      OperationTimeType timeType) {
     jdbcService.updateOperationStatus(operationId, status, timeType, Timestamp.from(Instant.now()));
@@ -157,6 +183,27 @@ public class MigrationOrchestrator {
         parameterMap.put(TIMESTAMP, new JobParameter<>(Timestamp.from(Instant.now()).toString(), String.class));
         var jobParameters = new JobParameters(parameterMap);
         jobLauncher.run(remappingRetryJob, jobParameters);
+      } catch (Exception ex) {
+        log.warn("Error running job for operation {}: {} - {}", operationId, ex.getCause(), ex.getMessage());
+        throw new IllegalStateException(ex);
+      }
+    };
+  }
+
+  private Runnable submitProcessRetrySaveChunksTask(String operationId, EntityType entityType, List<UUID> chunkIds,
+                                                String publishEvents) {
+    return () -> {
+      try {
+        var parameterMap = new HashMap<String, JobParameter<?>>();
+        parameterMap.put(OPERATION_ID, new JobParameter<>(operationId, String.class));
+        parameterMap.put(ENTITY_TYPE, new JobParameter<>(entityType, EntityType.class));
+        parameterMap.put(CHUNK_IDS, new JobParameter<>(chunkIds, List.class));
+        parameterMap.put(TIMESTAMP, new JobParameter<>(Timestamp.from(Instant.now()).toString(), String.class));
+        if (StringUtils.isNotEmpty(publishEvents)) {
+          parameterMap.put(PUBLISH_EVENTS_FLAG, new JobParameter<>(Boolean.parseBoolean(publishEvents), Boolean.class));
+        }
+        var jobParameters = new JobParameters(parameterMap);
+        jobLauncher.run(remappingRetrySaveJob, jobParameters);
       } catch (Exception ex) {
         log.warn("Error running job for operation {}: {} - {}", operationId, ex.getCause(), ex.getMessage());
         throw new IllegalStateException(ex);

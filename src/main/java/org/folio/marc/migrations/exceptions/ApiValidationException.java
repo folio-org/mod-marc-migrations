@@ -52,6 +52,10 @@ public class ApiValidationException extends RuntimeException {
     return new ApiValidationException("data save", "status", value);
   }
 
+  public static ApiValidationException notAllowedRetryForOperationStatus(String value) {
+    return new ApiValidationException("retry", "status", value);
+  }
+
   public static ApiValidationException maxSizeExceeded(int maxSize, int actualSize) {
     return new ApiValidationException(maxSize, actualSize);
   }

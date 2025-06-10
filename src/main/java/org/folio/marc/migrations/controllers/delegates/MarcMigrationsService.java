@@ -21,6 +21,7 @@ import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.exceptions.ApiValidationException;
 import org.folio.marc.migrations.services.MigrationOrchestrator;
+import org.folio.marc.migrations.services.jdbc.OperationErrorJdbcService;
 import org.folio.marc.migrations.services.operations.OperationErrorReportService;
 import org.folio.marc.migrations.services.operations.OperationsService;
 import org.folio.spring.data.OffsetRequest;
@@ -39,6 +40,7 @@ public class MarcMigrationsService {
   private final OperationsService operationsService;
   private final MigrationOrchestrator migrationOrchestrator;
   private final OperationErrorReportService errorReportsService;
+  private final OperationErrorJdbcService operationErrorJdbcService;
 
   public MigrationOperation createNewMigration(NewMigrationOperation newMigrationOperation) {
     log.debug("createNewMigration::Trying to create new migration operation: {}", newMigrationOperation);
@@ -82,6 +84,18 @@ public class MarcMigrationsService {
       .orElseThrow(() -> new NotFoundException(NOT_FOUND_MSG.formatted(operationId)));
     validateOperationStatusForSave(request, operation);
     migrationOrchestrator.submitMappingSaveTask(operation, request);
+  }
+
+  public void retryMigrationSaveOperation(UUID operationId, List<UUID> chunkIds) {
+    log.debug("retryMigrationSaveOperation::Retry saving migration operation by ID '{}'", operationId);
+    var operation = operationsService.getOperation(operationId)
+      .orElseThrow(() -> new NotFoundException(NOT_FOUND_MSG.formatted(operationId)));
+    if (operation.getStatus() != OperationStatusType.DATA_SAVING_FAILED) {
+      throw ApiValidationException.notAllowedRetryForOperationStatus(operation.getStatus().name());
+    }
+    validateMigrationRetry(chunkIds);
+    deleteOperationErrors(operationId);
+    migrationOrchestrator.submitMappingSaveRetryTask(operation, chunkIds);
   }
 
   public void createErrorReport(UUID operationId, String tenantId) {
@@ -147,5 +161,14 @@ public class MarcMigrationsService {
     if (chunkIds.size() > props.getChunkRetryingMaxIdsCount()) {
       throw ApiValidationException.maxSizeExceeded(props.getChunkRetryingMaxIdsCount(), chunkIds.size());
     }
+  }
+
+  private void deleteOperationErrors(UUID operationId) {
+    log.debug("deleteOperationErrors::Updating error report status to NOT_STARTED for operation ID '{}'", operationId);
+    errorReportsService.updateErrorReportStatus(operationId,
+        org.folio.marc.migrations.domain.entities.types.ErrorReportStatus.NOT_STARTED);
+
+    log.debug("deleteOperationErrors::Deleting operation errors for operation ID '{}'", operationId);
+    operationErrorJdbcService.deleteOperationErrorsByReportId(operationId);
   }
 }
