@@ -32,6 +32,11 @@ public class MigrationProperties {
   @Min(1)
   private int chunkProcessingMaxParallelism = 4;
   /**
+    * Provides the maximum number of chunk IDs for retrying.
+   * */
+  @Min(1)
+  private int chunkRetryingMaxIdsCount = 1000;
+  /**
    * Provides a local storage path for Authority and Marc bib files during migration.
    * */
   private String localFileStoragePath = "job";

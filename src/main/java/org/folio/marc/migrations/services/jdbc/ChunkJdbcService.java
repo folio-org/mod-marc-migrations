@@ -25,11 +25,23 @@ public class ChunkJdbcService extends JdbcService {
     LIMIT %s;
     """;
 
+  private static final String GET_CHUNKS_BY_IDS = """
+      SELECT *
+      FROM %s.operation_chunk
+      WHERE id IN (%s)
+      """;
+
   private static final String UPDATE_CHUNK = """
     UPDATE %s.operation_chunk
     SET status = '%s'
     WHERE id = '%s';
     """;
+
+  private static final String UPDATE_CHUNKS = """
+      UPDATE %s.operation_chunk
+      SET status = ?::operationstatus
+      WHERE id = ?
+      """;
 
   private static final String CREATE_CHUNK = """
     INSERT INTO %s.operation_chunk
@@ -49,6 +61,19 @@ public class ChunkJdbcService extends JdbcService {
     var idFilter = idFrom == null ? "" : "AND id > '%s'".formatted(idFrom);
     var sql = GET_CHUNKS.formatted(getSchemaName(), operationId, idFilter, count);
     return jdbcTemplate.query(sql, mapper);
+  }
+
+  public List<OperationChunk> getChunks(List<UUID> ids) {
+    if (ids == null || ids.isEmpty()) {
+      log.debug("getChunks:: no ids provided");
+      return List.of();
+    }
+    log.debug("getChunks:: fetching chunks for ids {}", ids);
+    var placeholders = String.join(",", ids.stream()
+        .map(id -> "?")
+        .toList());
+    var sql = GET_CHUNKS_BY_IDS.formatted(getSchemaName(), placeholders);
+    return jdbcTemplate.query(sql, mapper, ids.toArray());
   }
 
   public void createChunks(List<OperationChunk> chunks) {
@@ -83,5 +108,24 @@ public class ChunkJdbcService extends JdbcService {
 
     var sql = UPDATE_CHUNK.formatted(getSchemaName(), status, id);
     jdbcTemplate.update(sql);
+  }
+
+  public void updateChunkStatus(List<UUID> ids, OperationStatusType status) {
+    if (ids == null || ids.isEmpty()) {
+      log.debug("updateChunkStatus:: no ids provided");
+      return;
+    }
+    log.debug("updateChunkStatus:: updating status to {} for ids {}", status, ids);
+
+    var sql = UPDATE_CHUNKS.formatted(getSchemaName());
+    try {
+      jdbcTemplate.batchUpdate(sql, ids, ids.size(), (PreparedStatement ps, UUID id) -> {
+        ps.setString(1, status.name());
+        ps.setObject(2, id);
+      });
+    } catch (Exception ex) {
+      log.warn("updateChunkStatus:: failed to update status to {} for ids {}: {}", status, ids, ex.getMessage());
+      throw new IllegalStateException(ex);
+    }
   }
 }

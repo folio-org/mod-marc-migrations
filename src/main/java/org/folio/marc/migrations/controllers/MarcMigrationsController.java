@@ -1,5 +1,6 @@
 package org.folio.marc.migrations.controllers;
 
+import java.util.List;
 import java.util.UUID;
 import org.folio.marc.migrations.controllers.delegates.MarcMigrationsService;
 import org.folio.marc.migrations.domain.dto.EntityType;
@@ -40,6 +41,14 @@ public class MarcMigrationsController implements MarcMigrationsApi {
                                                                  NewMigrationOperation newMigrationOperation) {
     var operation = migrationsService.createNewMigration(newMigrationOperation);
     return ResponseEntity.status(HttpStatus.CREATED).body(operation);
+  }
+
+  @Override
+  public ResponseEntity<MigrationOperation> retryMarcMigrations(UUID operationId, String tenantId,
+                                                                List<UUID> chunkIds) {
+    var operation = migrationsService.retryMarcMigration(operationId, chunkIds);
+    return ResponseEntity.status(HttpStatus.CREATED)
+      .body(operation);
   }
 
   @Override

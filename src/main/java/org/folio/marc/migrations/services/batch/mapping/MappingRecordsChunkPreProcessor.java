@@ -12,6 +12,7 @@ import org.folio.marc.migrations.domain.entities.ChunkStep;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
+import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.entities.types.OperationStep;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
 import org.folio.marc.migrations.services.domain.MappingComposite;
@@ -19,6 +20,7 @@ import org.folio.marc.migrations.services.domain.RecordsMappingData;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
 import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
+import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +37,7 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
   private final AuthorityJdbcService authorityJdbcService;
   private final ChunkStepJdbcService chunkStepJdbcService;
   private final InstanceJdbcService instanceJdbcService;
+  private final OperationJdbcService operationJdbcService;
 
   @Setter
   @Value("#{jobParameters['entityType']}")
@@ -43,7 +46,22 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
   @Override
   public MappingComposite<MarcRecord> process(OperationChunk chunk) {
     log.trace("process:: for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
-    var chunkStep = createChunkStep(chunk);
+    ChunkStep chunkStep;
+    if (!OperationStatusType.NEW.equals(chunk.getStatus())) {
+      chunkStep = chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_MAPPING);
+      if (chunkStep != null) {
+        log.debug("process:: Updating existing chunk step for operation {} chunk {}", chunk.getOperationId(),
+            chunk.getId());
+        chunkStepJdbcService.updateChunkStep(chunkStep.getId(), StepStatus.IN_PROGRESS, Timestamp.from(Instant.now()));
+        reduceMappedNumOfRecords(chunk, chunkStep.getNumOfErrors());
+      } else {
+        log.debug("process:: Creating new chunk step for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
+        chunkStep = createChunkStep(chunk);
+      }
+    } else {
+      log.debug("process:: Creating new chunk step for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
+      chunkStep = createChunkStep(chunk);
+    }
 
     var records = (entityType == EntityType.AUTHORITY)
         ? authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()) :
@@ -61,6 +79,15 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
       chunk.getEntityChunkFileName(), chunk.getNumOfRecords(), chunkStep.getEntityErrorChunkFileName(),
       chunkStep.getErrorChunkFileName());
     return new MappingComposite<>(mappingData, records);
+  }
+
+  private void reduceMappedNumOfRecords(OperationChunk chunk, Integer numOfErrors) {
+    if (numOfErrors > 0) {
+      var reducedMappedNumOfRecords = chunk.getNumOfRecords() - numOfErrors;
+      if (reducedMappedNumOfRecords > 0) {
+        operationJdbcService.updateOperationMappedNumber(chunk.getOperationId(), reducedMappedNumOfRecords);
+      }
+    }
   }
 
   private ChunkStep createChunkStep(OperationChunk chunk) {
