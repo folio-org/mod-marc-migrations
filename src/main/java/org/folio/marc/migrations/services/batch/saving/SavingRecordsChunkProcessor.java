@@ -9,6 +9,7 @@ import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.domain.entities.ChunkStep;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
+import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.entities.types.OperationStep;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
 import org.folio.marc.migrations.services.BulkStorageService;
@@ -40,8 +41,25 @@ public class SavingRecordsChunkProcessor implements ItemProcessor<OperationChunk
   @Override
   public DataSavingResult process(OperationChunk chunk) {
     log.trace("process:: for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
-
-    var chunkStep = createChunkStep(chunk);
+    ChunkStep chunkStep;
+    if (OperationStatusType.DATA_SAVING_FAILED.equals(chunk.getStatus())) {
+      chunkStep = chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_SAVING);
+      if (chunkStep != null) {
+        log.debug("process:: Updating existing chunk step for operation {} chunk {}", chunk.getOperationId(),
+            chunk.getId());
+        chunkStepJdbcService.updateChunkStep(chunkStep.getId(), StepStatus.IN_PROGRESS, Timestamp.from(Instant.now()));
+        var recordsSavingData = new RecordsSavingData(chunk.getOperationId(), chunk.getId(), chunkStep.getId(),
+            chunkStep.getNumOfErrors());
+        var saveResponse = bulkStorageService.saveEntities(chunkStep.getEntityErrorChunkFileName(), entityType,
+            publishEventsFlag);
+        return new DataSavingResult(recordsSavingData, saveResponse);
+      } else {
+        log.debug("process:: Creating new chunk step for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
+        chunkStep = createChunkStep(chunk);
+      }
+    } else {
+      chunkStep = createChunkStep(chunk);
+    }
     var recordsSavingData = new RecordsSavingData(chunk.getOperationId(), chunk.getId(), chunkStep.getId(),
         chunk.getNumOfRecords());
 
