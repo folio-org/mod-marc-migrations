@@ -408,6 +408,7 @@ class MarcMigrationsServiceTest {
 
   @Test
   void retryMigrationSaveOperation_EmptyChunkIds_ThrowsApiValidationException() {
+    // Arrange
     var operationId = UUID.randomUUID();
     var operation = new Operation();
     operation.setId(operationId);
@@ -415,8 +416,10 @@ class MarcMigrationsServiceTest {
     when(operationsService.getOperation(operationId)).thenReturn(Optional.of(operation));
 
     // Act & Assert
-    var exception = assertThrows(ApiValidationException.class,
-        () -> migrationsService.retryMigrationSaveOperation(operationId, List.of()));
+    Executable executable = () -> migrationsService.retryMigrationSaveOperation(operationId, List.of());
+    var exception = assertThrows(ApiValidationException.class, executable);
+
+    // Assert
     assertThat(exception).hasMessage("validateMigrationRetry:: no chunk IDs provided");
     verifyNoInteractions(errorReportsService);
     verifyNoInteractions(operationErrorJdbcService);
