@@ -27,6 +27,7 @@ import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.services.batch.support.JobConstants;
 import org.folio.marc.migrations.services.domain.OperationTimeType;
 import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
+import org.folio.marc.migrations.services.jdbc.SpringBatchExecutionParamsJdbcService;
 import org.folio.marc.migrations.services.operations.ChunkService;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Assertions;
@@ -50,6 +51,7 @@ class MigrationOrchestratorTest {
   private @Mock JobLauncher jobLauncher;
   private @Mock Job job;
   private @Mock FolioExecutor remappingExecutor;
+  private @Mock SpringBatchExecutionParamsJdbcService executionParamsJdbcService;
   private @InjectMocks MigrationOrchestrator service;
 
   @Test
@@ -278,6 +280,91 @@ class MigrationOrchestratorTest {
     verify(jobLauncher).run(eq(job), jobParametersCaptor.capture());
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING_FAILED),
         eq(OperationTimeType.MAPPING_END), notNull());
+    verifyNoMoreInteractions(jdbcService);
+
+    // Verify captured JobParameters
+    var capturedParameters = jobParametersCaptor.getValue();
+    assertThat(capturedParameters.getParameters()).containsKey(JobConstants.JobParameterNames.TIMESTAMP);
+    var capturedTimestamp = capturedParameters.getParameters()
+      .get(JobConstants.JobParameterNames.TIMESTAMP)
+      .getValue();
+    assertThat(capturedTimestamp).isInstanceOf(String.class);
+  }
+
+  @SneakyThrows
+  @Test
+  void submitMappingSaveRetryTask_positive() {
+    // Arrange
+    var operation = new Operation();
+    operation.setId(UUID.randomUUID());
+    operation.setStatus(OperationStatusType.DATA_SAVING);
+    operation.setEntityType(EntityType.AUTHORITY);
+    var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+    var operationId = operation.getId().toString();
+
+    when(executionParamsJdbcService.getBatchExecutionParam(PUBLISH_EVENTS_FLAG, operationId)).thenReturn("true");
+    doAnswer(invocation -> {
+      ((Runnable) invocation.getArgument(0)).run();
+      return null;
+    }).when(remappingExecutor)
+      .execute(any());
+
+    // Captor for JobParameters
+    ArgumentCaptor<JobParameters> jobParametersCaptor = ArgumentCaptor.forClass(JobParameters.class);
+
+    // Act
+    service.submitMappingSaveRetryTask(operation, chunkIds)
+      .get(200, TimeUnit.MILLISECONDS);
+
+    // Assert
+    verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_SAVING),
+        eq(OperationTimeType.SAVING_START), notNull());
+    verify(jobLauncher).run(eq(job), jobParametersCaptor.capture());
+    verifyNoMoreInteractions(jdbcService);
+
+    // Verify captured JobParameters
+    var capturedParameters = jobParametersCaptor.getValue();
+    assertThat(capturedParameters.getParameters()).containsKey(JobConstants.JobParameterNames.TIMESTAMP);
+    var capturedTimestamp = capturedParameters.getParameters()
+      .get(JobConstants.JobParameterNames.TIMESTAMP)
+      .getValue();
+    assertThat(capturedTimestamp).isInstanceOf(String.class);
+  }
+
+  @SneakyThrows
+  @Test
+  void submitMappingSaveRetryTask_negative_shouldFailAndUpdateOperationStatus_whenBatchJobFails() {
+    // Arrange
+    var operation = new Operation();
+    operation.setId(UUID.randomUUID());
+    operation.setStatus(OperationStatusType.DATA_SAVING);
+    operation.setEntityType(EntityType.AUTHORITY);
+    var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+    var operationId = operation.getId()
+      .toString();
+
+    when(executionParamsJdbcService.getBatchExecutionParam(PUBLISH_EVENTS_FLAG, operationId)).thenReturn("true");
+    doAnswer(invocation -> {
+      ((Runnable) invocation.getArgument(0)).run();
+      return null;
+    }).when(remappingExecutor)
+      .execute(any());
+    doThrow(new IllegalStateException()).when(jobLauncher)
+      .run(any(), any());
+
+    // Captor for JobParameters
+    ArgumentCaptor<JobParameters> jobParametersCaptor = ArgumentCaptor.forClass(JobParameters.class);
+
+    // Act
+    service.submitMappingSaveRetryTask(operation, chunkIds)
+      .get(200, TimeUnit.MILLISECONDS);
+
+    // Assert
+    verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_SAVING),
+        eq(OperationTimeType.SAVING_START), notNull());
+    verify(jobLauncher).run(eq(job), jobParametersCaptor.capture());
+    verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_SAVING_FAILED),
+        eq(OperationTimeType.SAVING_END), notNull());
     verifyNoMoreInteractions(jdbcService);
 
     // Verify captured JobParameters
