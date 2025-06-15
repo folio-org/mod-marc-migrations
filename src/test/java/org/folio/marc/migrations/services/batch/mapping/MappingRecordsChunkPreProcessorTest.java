@@ -3,16 +3,19 @@ package org.folio.marc.migrations.services.batch.mapping;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.marc.migrations.domain.entities.types.EntityType.AUTHORITY;
 import static org.folio.marc.migrations.domain.entities.types.EntityType.INSTANCE;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
+import lombok.SneakyThrows;
 import org.assertj.core.api.SoftAssertions;
 import org.folio.marc.migrations.domain.entities.ChunkStep;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
@@ -21,6 +24,7 @@ import org.folio.marc.migrations.domain.entities.types.EntityType;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.entities.types.OperationStep;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
+import org.folio.marc.migrations.services.batch.support.FolioS3Service;
 import org.folio.marc.migrations.services.domain.RecordsMappingData;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
@@ -45,6 +49,9 @@ class MappingRecordsChunkPreProcessorTest {
   private @Mock ChunkStepJdbcService chunkStepJdbcService;
   private @Mock InstanceJdbcService instanceJdbcService;
   private @Mock OperationJdbcService operationJdbcService;
+  private @Mock FolioS3Service s3Service;
+  private @Mock ObjectMapper objectMapper;
+  private @Mock JsonNode jsonNode;
   private @InjectMocks MappingRecordsChunkPreProcessor processor;
 
   @Test
@@ -72,6 +79,7 @@ class MappingRecordsChunkPreProcessorTest {
     process_positive(chunk, marcRecords);
   }
 
+  @SneakyThrows
   @Test
   void process_UpdatesExistingChunkStepForDataMappingStatus() {
     // Arrange
@@ -91,14 +99,20 @@ class MappingRecordsChunkPreProcessorTest {
       .operationStep(OperationStep.DATA_MAPPING)
       .status(StepStatus.IN_PROGRESS)
       .numOfErrors(0)
+      .entityErrorChunkFileName("entity-error-file")
       .build();
 
     var marcRecords = List.of(new MarcRecord(null, null, null, null, null));
 
     when(chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_MAPPING))
       .thenReturn(existingChunkStep);
-    when(authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
-        .thenReturn(marcRecords);
+    var id = UUID.randomUUID();
+    var errorLine = "{\"marcId\": \"%s\"}".formatted(id);
+    when(s3Service.readFile(anyString())).thenReturn(List.of(errorLine));
+    when(objectMapper.readTree(errorLine)).thenReturn(jsonNode);
+    when(jsonNode.get("marcId")).thenReturn(jsonNode);
+    when(jsonNode.asText()).thenReturn(id.toString());
+    when(authorityJdbcService.getAuthorities(List.of(id))).thenReturn(marcRecords);
 
     processor.setEntityType(EntityType.AUTHORITY);
 
@@ -143,7 +157,6 @@ class MappingRecordsChunkPreProcessorTest {
         .thenReturn(existingChunkStep);
     when(authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
         .thenReturn(marcRecords);
-    doNothing().when(operationJdbcService).updateOperationMappedNumber(chunk.getOperationId(), 2);
 
     processor.setEntityType(EntityType.AUTHORITY);
 

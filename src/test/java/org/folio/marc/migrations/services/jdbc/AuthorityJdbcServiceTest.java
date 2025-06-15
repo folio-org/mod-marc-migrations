@@ -1,6 +1,7 @@
 package org.folio.marc.migrations.services.jdbc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.folio.support.TestConstants.TENANT_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -103,5 +104,52 @@ class AuthorityJdbcServiceTest extends JdbcServiceTestBase {
     verify(jdbcTemplate).query(sqlCaptor.capture(), ArgumentMatchers.<BeanPropertyRowMapper<MarcRecord>>any());
     assertThat(sqlCaptor.getValue())
       .contains(idFrom.toString(), idTo.toString(), TENANT_ID);
+  }
+
+  @Test
+  void getAuthorities_positive() {
+    // Arrange
+    var ids = List.of(UUID.randomUUID(), UUID.randomUUID());
+    var recordsMock = List.of(
+        new MarcRecord(UUID.randomUUID(), null, null, null, null),
+        new MarcRecord(UUID.randomUUID(), null, null, null, null)
+    );
+    when(jdbcTemplate.query(any(String.class), ArgumentMatchers.<BeanPropertyRowMapper<MarcRecord>>any(),
+        eq(ids.toArray())))
+        .thenReturn(recordsMock);
+
+    // Act
+    var records = service.getAuthorities(ids);
+
+    // Assert
+    assertThat(records).isEqualTo(recordsMock);
+    var sqlCaptor = ArgumentCaptor.forClass(String.class);
+    verify(jdbcTemplate).query(sqlCaptor.capture(), ArgumentMatchers.<BeanPropertyRowMapper<MarcRecord>>any(),
+        eq(ids.toArray()));
+    assertThat(sqlCaptor.getValue())
+        .contains(String.join(",", ids.stream().map(id -> "?").toList()), TENANT_ID);
+  }
+
+  @Test
+  void getAuthorities_negative_emptyIds() {
+    // Act
+    var records = service.getAuthorities(List.of());
+
+    // Assert
+    assertThat(records).isEmpty();
+  }
+
+  @Test
+  void getAuthorities_negative_databaseError() {
+    // Arrange
+    var ids = List.of(UUID.randomUUID(), UUID.randomUUID());
+    when(jdbcTemplate.query(any(String.class), ArgumentMatchers.<BeanPropertyRowMapper<MarcRecord>>any(),
+        eq(ids.toArray())))
+        .thenThrow(new RuntimeException("Database error"));
+
+    // Act & Assert
+    assertThatThrownBy(() -> service.getAuthorities(ids))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessageContaining("Database error");
   }
 }
