@@ -35,6 +35,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class MigrationOrchestrator {
 
+  private static final String ERROR_RUNNING_JOB_MESSAGE = "Error running job for operation {}: {} - {}";
   private final ExecutorService remappingExecutor;
   private final ChunkService chunkService;
   private final OperationJdbcService jdbcService;
@@ -167,7 +168,7 @@ public class MigrationOrchestrator {
           jobLauncher.run(remappingSaveJob, jobParameters);
         }
       } catch (Exception ex) {
-        log.warn("Error running job for operation {}: {} - {}", operationId, ex.getCause(), ex.getMessage());
+        log.warn(ERROR_RUNNING_JOB_MESSAGE, operationId, ex.getCause(), ex.getMessage());
         throw new IllegalStateException(ex);
       }
     };
@@ -184,7 +185,7 @@ public class MigrationOrchestrator {
         var jobParameters = new JobParameters(parameterMap);
         jobLauncher.run(remappingRetryJob, jobParameters);
       } catch (Exception ex) {
-        log.warn("Error running job for operation {}: {} - {}", operationId, ex.getCause(), ex.getMessage());
+        log.warn(ERROR_RUNNING_JOB_MESSAGE, operationId, ex.getCause(), ex.getMessage());
         throw new IllegalStateException(ex);
       }
     };
@@ -205,7 +206,7 @@ public class MigrationOrchestrator {
         var jobParameters = new JobParameters(parameterMap);
         jobLauncher.run(remappingRetrySaveJob, jobParameters);
       } catch (Exception ex) {
-        log.warn("Error running job for operation {}: {} - {}", operationId, ex.getCause(), ex.getMessage());
+        log.warn(ERROR_RUNNING_JOB_MESSAGE, operationId, ex.getCause(), ex.getMessage());
         throw new IllegalStateException(ex);
       }
     };

@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
 import org.assertj.core.api.SoftAssertions;
@@ -52,7 +53,7 @@ class SavingRecordsChunkProcessorTest {
   @Test
   void saveAuthority_positive() {
     int numOfRecords = 5;
-    var chunk = chunk(numOfRecords, AUTHORITY_OPERATION_ID);
+    var chunk = chunk(numOfRecords, AUTHORITY_OPERATION_ID, OperationStatusType.DATA_MAPPING);
     processor.setEntityType(AUTHORITY);
     processor.setPublishEventsFlag(Boolean.TRUE);
 
@@ -62,11 +63,51 @@ class SavingRecordsChunkProcessorTest {
   @Test
   void saveInstance_positive() {
     int numOfRecords = 5;
-    var chunk = chunk(numOfRecords, INSTANCE_OPERATION_ID);
+    var chunk = chunk(numOfRecords, INSTANCE_OPERATION_ID, OperationStatusType.DATA_MAPPING);
     processor.setEntityType(INSTANCE);
     processor.setPublishEventsFlag(Boolean.TRUE);
 
     save_positive(chunk, INSTANCE);
+  }
+
+  @Test
+  void process_retry_shouldUpdateExistingChunkStep() {
+    // Arrange
+    int numOfRecords = 5;
+    var chunk = chunk(numOfRecords, AUTHORITY_OPERATION_ID, OperationStatusType.DATA_SAVING_FAILED);
+    var existingChunkStep = createChunkStep(chunk);
+    when(chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_SAVING))
+      .thenReturn(existingChunkStep);
+    processor.setEntityType(AUTHORITY);
+    processor.setPublishEventsFlag(Boolean.TRUE);
+
+    // Act
+    var result = processor.process(chunk);
+
+    // Assert
+    assertThat(result).isNotNull();
+    verify(chunkStepJdbcService).updateChunkStep(eq(existingChunkStep.getId()), eq(StepStatus.IN_PROGRESS),
+        any(Timestamp.class));
+    verify(bulkStorageService).saveEntities(chunk.getEntityChunkFileName(), AUTHORITY, Boolean.TRUE);
+  }
+
+  @Test
+  void process_retry_shouldCreateNewChunkStep_whenNoExistingChunkStep() {
+    // Arrange
+    int numOfRecords = 5;
+    var chunk = chunk(numOfRecords, AUTHORITY_OPERATION_ID, OperationStatusType.DATA_SAVING_FAILED);
+    when(chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_SAVING))
+        .thenReturn(null);
+    processor.setEntityType(AUTHORITY);
+    processor.setPublishEventsFlag(Boolean.TRUE);
+
+    // Act
+    var result = processor.process(chunk);
+
+    // Assert
+    assertThat(result).isNotNull();
+    verify(chunkStepJdbcService).createChunkStep(any());
+    verify(bulkStorageService).saveEntities(chunk.getEntityChunkFileName(), AUTHORITY, Boolean.TRUE);
   }
 
   void save_positive(OperationChunk chunk, EntityType entityType) {
@@ -110,7 +151,7 @@ class SavingRecordsChunkProcessorTest {
     softAssert.assertAll();
   }
 
-  private OperationChunk chunk(int numOfRecords, UUID operationId) {
+  private OperationChunk chunk(int numOfRecords, UUID operationId, OperationStatusType status) {
     return OperationChunk.builder()
         .id(UUID.randomUUID())
         .operationId(operationId)
@@ -120,7 +161,20 @@ class SavingRecordsChunkProcessorTest {
         .entityChunkFileName("entity" + numOfRecords)
         .marcChunkFileName("marc" + numOfRecords)
         .sourceChunkFileName("source" + numOfRecords)
-        .status(OperationStatusType.DATA_MAPPING)
+        .status(status)
         .build();
+  }
+
+  private ChunkStep createChunkStep(OperationChunk chunk) {
+    return ChunkStep.builder()
+      .id(UUID.randomUUID())
+      .operationId(chunk.getOperationId())
+      .operationChunkId(chunk.getId())
+      .operationStep(OperationStep.DATA_SAVING)
+      .status(StepStatus.FAILED)
+      .numOfErrors(0)
+      .entityErrorChunkFileName(chunk.getEntityChunkFileName())
+      .stepStartTime(Timestamp.from(Instant.now()))
+      .build();
   }
 }
