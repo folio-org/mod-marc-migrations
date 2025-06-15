@@ -176,4 +176,32 @@ class MappingRecordsFileUploadStepListenerTest {
       eq(OperationTimeType.MAPPING_END), notNull());
     assertThat(Files.exists(Path.of(jobFilesDirectory))).isFalse();
   }
+
+  @Test
+  @SneakyThrows
+  void afterStep_negative_jobFailed_withFileUpload() {
+    // Arrange
+    var operationId = UUID.randomUUID().toString();
+    var jobExecution = new JobExecution(new JobInstance(jobId, "testJob"), 1L,
+        new JobParameters(Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class))));
+    var stepExecution = new StepExecution("testStep", jobExecution);
+    stepExecution.setExitStatus(ExitStatus.FAILED);
+    var path1 = Path.of(jobFilesDirectory, "test1");
+    var path2 = Path.of(jobFilesDirectory, "test2");
+    Files.createFile(path1);
+    Files.createFile(path2);
+
+    // Act
+    var actual = listener.afterStep(stepExecution);
+
+    // Assert
+    assertThat(actual).isEqualTo(stepExecution.getExitStatus());
+    verify(s3Service).uploadFile(path1.toFile()
+      .getAbsolutePath(), "operation/" + operationId + "/test1");
+    verify(s3Service).uploadFile(path2.toFile()
+      .getAbsolutePath(), "operation/" + operationId + "/test2");
+    verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING_FAILED),
+        eq(OperationTimeType.MAPPING_END), notNull());
+    assertThat(Files.exists(Path.of(jobFilesDirectory))).isFalse();
+  }
 }

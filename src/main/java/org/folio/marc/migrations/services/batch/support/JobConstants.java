@@ -13,6 +13,8 @@ public class JobConstants {
   public static class JobParameterNames {
     public static final String OPERATION_ID = "operationId";
     public static final String ENTITY_TYPE = "entityType";
+    public static final String CHUNK_IDS = "chunkIds";
     public static final String PUBLISH_EVENTS_FLAG = "publishEventsFlag";
+    public static final String TIMESTAMP = "timestamp";
   }
 }

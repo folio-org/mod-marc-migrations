@@ -51,6 +51,12 @@ public class InstanceJdbcService extends JdbcService {
     WHERE marc_id >= '%s' and marc_id <= '%s';
     """;
 
+  private static final String GET_INSTANCES = """
+      SELECT *
+      FROM %s.marc_bib_view
+      WHERE marc_id IN (%s)";
+      """;
+
   private final BeanPropertyRowMapper<MarcRecord> recordsMapper;
 
   public InstanceJdbcService(JdbcTemplate jdbcTemplate, FolioExecutionContext context,
@@ -84,5 +90,14 @@ public class InstanceJdbcService extends JdbcService {
     log.debug("getInstancesChunk:: from id {}, to id {}", from, to);
     var sql = GET_INSTANCES_CHUNK.formatted(getSchemaName(), from, to);
     return jdbcTemplate.query(sql, recordsMapper);
+  }
+
+  public List<MarcRecord> getInstances(List<UUID> ids) {
+    log.debug("getInstances:: ids {}", ids);
+    var placeholders = String.join(",", ids.stream()
+      .map(id -> "?")
+      .toList());
+    var sql = GET_INSTANCES.formatted(getSchemaName(), placeholders);
+    return jdbcTemplate.query(sql, recordsMapper, ids.toArray());
   }
 }

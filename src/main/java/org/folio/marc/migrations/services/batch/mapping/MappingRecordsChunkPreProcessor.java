@@ -2,23 +2,31 @@ package org.folio.marc.migrations.services.batch.mapping;
 
 import static org.folio.marc.migrations.services.batch.support.JobConstants.OPERATION_FILES_PATH;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.collections4.CollectionUtils;
 import org.folio.marc.migrations.domain.entities.ChunkStep;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
+import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.entities.types.OperationStep;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
+import org.folio.marc.migrations.services.batch.support.FolioS3Service;
 import org.folio.marc.migrations.services.domain.MappingComposite;
 import org.folio.marc.migrations.services.domain.RecordsMappingData;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
 import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
+import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +43,9 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
   private final AuthorityJdbcService authorityJdbcService;
   private final ChunkStepJdbcService chunkStepJdbcService;
   private final InstanceJdbcService instanceJdbcService;
+  private final OperationJdbcService operationJdbcService;
+  private final FolioS3Service s3Service;
+  private final ObjectMapper objectMapper;
 
   @Setter
   @Value("#{jobParameters['entityType']}")
@@ -43,7 +54,31 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
   @Override
   public MappingComposite<MarcRecord> process(OperationChunk chunk) {
     log.trace("process:: for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
-    var chunkStep = createChunkStep(chunk);
+    ChunkStep chunkStep;
+    if (!OperationStatusType.NEW.equals(chunk.getStatus())) {
+      chunkStep = chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_MAPPING);
+      if (chunkStep != null) {
+        log.debug("process:: Updating existing chunk step for operation {} chunk {}", chunk.getOperationId(),
+            chunk.getId());
+        chunkStepJdbcService.updateChunkStep(chunkStep.getId(), StepStatus.IN_PROGRESS, Timestamp.from(Instant.now()));
+        var mappingData = new RecordsMappingData(chunk.getOperationId(), chunk.getId(), chunkStep.getId(),
+            chunk.getEntityChunkFileName(), chunkStep.getNumOfErrors(), chunkStep.getEntityErrorChunkFileName(),
+            chunkStep.getErrorChunkFileName());
+        var ids = getRecordIds(chunkStep);
+        if (CollectionUtils.isNotEmpty(ids)) {
+          var records = (entityType == EntityType.AUTHORITY)
+              ? authorityJdbcService.getAuthorities(ids)
+              : instanceJdbcService.getInstances(ids);
+          return new MappingComposite<>(mappingData, records);
+        }
+      } else {
+        log.debug("process:: Creating new chunk step for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
+        chunkStep = createChunkStep(chunk);
+      }
+    } else {
+      log.debug("process:: Creating new chunk step for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
+      chunkStep = createChunkStep(chunk);
+    }
 
     var records = (entityType == EntityType.AUTHORITY)
         ? authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()) :
@@ -80,5 +115,25 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
 
     chunkStepJdbcService.createChunkStep(chunkStep);
     return chunkStep;
+  }
+
+  private List<UUID> getRecordIds(ChunkStep chunkStep) {
+    log.debug("getRecordIds:: for chunk step {}", chunkStep.getId());
+    var errorLines = s3Service.readFile(chunkStep.getEntityErrorChunkFileName());
+    if (CollectionUtils.isEmpty(errorLines)) {
+      log.warn("getRecordIds::No entity error file lines found for chunk step: {}", chunkStep.getId());
+      return List.of();
+    }
+    var ids = new ArrayList<UUID>();
+    for (var errorLine : errorLines) {
+      try {
+        JsonNode jsonNode = objectMapper.readTree(errorLine);
+        var marcId = jsonNode.get("marcId").asText();
+        ids.add(UUID.fromString(marcId));
+      } catch (Exception e) {
+        log.error("getRecordIds::Failed to parse line : {}", errorLine, e);
+      }
+    }
+    return ids;
   }
 }

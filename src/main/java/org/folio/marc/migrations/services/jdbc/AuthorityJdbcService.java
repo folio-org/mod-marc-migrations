@@ -62,6 +62,12 @@ public class AuthorityJdbcService extends JdbcService {
     WHERE marc_id >= '%s' and marc_id <= '%s';
     """;
 
+  private static final String GET_AUTHORITIES = """
+      SELECT *
+      FROM %s.marc_authority_view
+      WHERE marc_id IN (%s);
+      """;
+
   private final BeanPropertyRowMapper<MarcRecord> recordsMapper;
 
   @Autowired
@@ -98,5 +104,14 @@ public class AuthorityJdbcService extends JdbcService {
     log.debug("getAuthoritiesChunk:: from id {}, to id {}", from, to);
     var sql = GET_AUTHORITIES_CHUNK.formatted(getSchemaName(), from, to);
     return jdbcTemplate.query(sql, recordsMapper);
+  }
+
+  public List<MarcRecord> getAuthorities(List<UUID> ids) {
+    log.debug("getAuthorities:: ids {}", ids);
+    var placeholders = String.join(",", ids.stream()
+      .map(id -> "?")
+      .toList());
+    var sql = GET_AUTHORITIES.formatted(getSchemaName(), placeholders);
+    return jdbcTemplate.query(sql, recordsMapper, ids.toArray());
   }
 }
