@@ -192,4 +192,34 @@ public class SpringBatchConfig {
         .stepOperations(customThrottler)
         .build();
   }
+
+  @Bean("remappingRetrySaveJob")
+  public Job remappingRetrySaveJob(JobRepository jobRepository,
+                              @Qualifier("remapRetrySaveAuthRecordsStep") Step remapAuthRecordsStep) {
+    return new JobBuilder("remappingRetrySave", jobRepository)
+        .incrementer(new RunIdIncrementer())
+        .start(remapAuthRecordsStep)
+        .build();
+  }
+
+  @Bean(name = "remapRetrySaveAuthRecordsStep")
+  public Step remapRetrySaveAuthRecordsStep(JobRepository jobRepository,
+                                       PlatformTransactionManager transactionManager,
+                                       @Qualifier("retryingSyncReader")
+                                       ItemReader<OperationChunk> reader,
+                                       SavingRecordsChunkProcessor processor,
+                                       SavingRecordsWriter writer,
+                                       SavingRecordsStepListener listener,
+                                       @Qualifier("chunksProcessingExecutor") TaskExecutor executor,
+                                       RepeatOperations customThrottler) {
+    return new StepBuilder("remapRetrySaveAuthRecords", jobRepository)
+        .<OperationChunk, DataSavingResult>chunk(1, transactionManager)
+        .reader(reader)
+        .processor(processor)
+        .writer(writer)
+        .listener(listener)
+        .taskExecutor(executor)
+        .stepOperations(customThrottler)
+        .build();
+  }
 }
