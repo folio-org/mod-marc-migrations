@@ -54,7 +54,7 @@ public class InstanceJdbcService extends JdbcService {
   private static final String GET_INSTANCES = """
       SELECT *
       FROM %s.marc_bib_view
-      WHERE marc_id IN (%s)";
+      WHERE marc_id IN (%s);
       """;
 
   private final BeanPropertyRowMapper<MarcRecord> recordsMapper;
