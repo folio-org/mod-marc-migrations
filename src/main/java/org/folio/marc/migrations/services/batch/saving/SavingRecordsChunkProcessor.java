@@ -13,6 +13,7 @@ import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.entities.types.OperationStep;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
 import org.folio.marc.migrations.services.BulkStorageService;
+import org.folio.marc.migrations.services.batch.support.FolioS3Service;
 import org.folio.marc.migrations.services.domain.DataSavingResult;
 import org.folio.marc.migrations.services.domain.RecordsSavingData;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
@@ -37,6 +38,7 @@ public class SavingRecordsChunkProcessor implements ItemProcessor<OperationChunk
 
   private final BulkStorageService bulkStorageService;
   private final ChunkStepJdbcService chunkStepJdbcService;
+  private final FolioS3Service s3Service;
 
   @Override
   public DataSavingResult process(OperationChunk chunk) {
@@ -50,8 +52,13 @@ public class SavingRecordsChunkProcessor implements ItemProcessor<OperationChunk
         chunkStepJdbcService.updateChunkStep(chunkStep.getId(), StepStatus.IN_PROGRESS, Timestamp.from(Instant.now()));
         var recordsSavingData = new RecordsSavingData(chunk.getOperationId(), chunk.getId(), chunkStep.getId(),
             chunkStep.getNumOfErrors());
+        var lines = s3Service.readFile(chunkStep.getEntityErrorChunkFileName());
+        log.info("process:: Found {} error records in chunk step file: {}", lines,
+            chunkStep.getEntityErrorChunkFileName());
         var saveResponse = bulkStorageService.saveEntities(chunkStep.getEntityErrorChunkFileName(), entityType,
             publishEventsFlag);
+        log.info("process:: Save response {} for chunk step file: {}", saveResponse.toString(),
+            chunkStep.getEntityErrorChunkFileName());
         return new DataSavingResult(recordsSavingData, saveResponse);
       } else {
         log.debug("process:: Creating new chunk step for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
