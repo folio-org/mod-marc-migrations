@@ -57,7 +57,7 @@ public class SavingRecordsChunkProcessor implements ItemProcessor<OperationChunk
             chunkStep.getEntityErrorChunkFileName());
         var saveResponse = bulkStorageService.saveEntities(chunkStep.getEntityErrorChunkFileName(), entityType,
             publishEventsFlag);
-        log.info("process:: Save response {} for chunk step file: {}", saveResponse.toString(),
+        log.info("process:: Save response {} for chunk step file: {}", saveResponse,
             chunkStep.getEntityErrorChunkFileName());
         return new DataSavingResult(recordsSavingData, saveResponse);
       } else {
@@ -69,8 +69,11 @@ public class SavingRecordsChunkProcessor implements ItemProcessor<OperationChunk
     }
     var recordsSavingData = new RecordsSavingData(chunk.getOperationId(), chunk.getId(), chunkStep.getId(),
         chunk.getNumOfRecords());
-
+    var lines = s3Service.readFile(chunk.getEntityChunkFileName());
+    log.info("process:: Found {} entity records in chunk step file: {}", lines,
+        chunk.getEntityChunkFileName());
     var saveResponse = bulkStorageService.saveEntities(chunk.getEntityChunkFileName(), entityType, publishEventsFlag);
+    log.info("process:: Save response {} for chunk step file: {}", saveResponse, chunk.getEntityChunkFileName());
     return new DataSavingResult(recordsSavingData, saveResponse);
   }
 
