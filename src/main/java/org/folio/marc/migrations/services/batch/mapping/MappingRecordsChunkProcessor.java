@@ -99,10 +99,6 @@ public class MappingRecordsChunkProcessor
         authority.setSource(Authority.Source.MARC);
         recordString = objectMapper.writeValueAsString(authority);
       } else {
-        if (sourceData.marcId().toString().equals("3f06fc5d-3167-45be-9fce-15f8c8351ab3")
-            || sourceData.marcId().toString().equals("c6b54fbe-c406-4621-91f8-9be39788c5b2")) {
-          throw new IllegalArgumentException("Invalid marcId for authority record");
-        }
         marcRecord = new MarcToInstanceMapper()
             .mapRecord(marcSource, mappingData.mappingParameters(), mappingData.mappingRules());
         Instance instance = (Instance) marcRecord;
