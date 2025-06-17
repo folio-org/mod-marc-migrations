@@ -27,6 +27,16 @@ public class FolioS3Service {
     s3Client.upload(localPath, remotePath);
   }
 
+  @Retryable(
+    retryFor = Exception.class,
+    maxAttemptsExpression = "${folio.remote-storage.retryCount}",
+    backoff = @Backoff(delayExpression = "${folio.remote-storage.retryDelayMs}"))
+  public void writeFile(String path, List<String> lines) {
+    var content = String.join("\n", lines);
+    var inputStream = new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
+    s3Client.write(path, inputStream);
+  }
+
   public List<String> readFile(String remotePath) {
     try (var inputStream = s3Client.read(remotePath);
          var reader = new BufferedReader(new InputStreamReader(inputStream))) {
@@ -35,15 +45,5 @@ public class FolioS3Service {
       log.error("readFile::Error reading file [filename: {}]", remotePath, e);
       throw new IllegalStateException("Error reading file: " + remotePath, e);
     }
-  }
-
-  @Retryable(
-      retryFor = Exception.class,
-      maxAttemptsExpression = "${folio.remote-storage.retryCount}",
-      backoff = @Backoff(delayExpression = "${folio.remote-storage.retryDelayMs}"))
-  public void writeFile(String path, List<String> lines) {
-    var content = String.join("\n", lines);
-    var inputStream = new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
-    s3Client.write(path, inputStream);
   }
 }
