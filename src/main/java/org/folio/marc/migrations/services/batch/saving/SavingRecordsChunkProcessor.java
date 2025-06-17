@@ -2,10 +2,13 @@ package org.folio.marc.migrations.services.batch.saving;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.marc.migrations.domain.entities.ChunkStep;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
@@ -50,31 +53,50 @@ public class SavingRecordsChunkProcessor implements ItemProcessor<OperationChunk
         log.debug("process:: Updating existing chunk step for operation {} chunk {}", chunk.getOperationId(),
             chunk.getId());
         chunkStepJdbcService.updateChunkStep(chunkStep.getId(), StepStatus.IN_PROGRESS, Timestamp.from(Instant.now()));
+
+        var entityLines = s3Service.readFile(chunk.getEntityChunkFileName());
+        log.info("process:: Read {} entity lines for chunk file: {}", entityLines.size(),
+            chunk.getEntityChunkFileName());
+        var errorLines = s3Service.readFile(chunkStep.getErrorChunkFileName());
+        log.info("process:: Read {} error lines for chunk step file: {}", errorLines.size(),
+            chunkStep.getErrorChunkFileName());
+
+        var errorRecordIds = getErrorRecordIds(errorLines);
+        var entityLinesForRetry = entityLines.stream()
+            .filter(str -> errorRecordIds.stream().anyMatch(str::contains))
+            .toList();
+        log.info("process:: Finding {} entity lines for retry for chunk id: {}", entityLinesForRetry.size(),
+            chunk.getId());
+        s3Service.writeFile(chunk.getEntityChunkFileName(), entityLinesForRetry);
+
+        var entities = s3Service.readFile(chunk.getEntityChunkFileName());
+        log.info("process:: Read {} entities for chunk file: {}", entities.size(), chunk.getEntityChunkFileName());
+
         var recordsSavingData = new RecordsSavingData(chunk.getOperationId(), chunk.getId(), chunkStep.getId(),
             chunkStep.getNumOfErrors());
-        var lines = s3Service.readFile(chunkStep.getEntityErrorChunkFileName());
-        log.info("process:: Found {} error records in chunk step file: {}", lines,
-            chunkStep.getEntityErrorChunkFileName());
-        var saveResponse = bulkStorageService.saveEntities(chunkStep.getEntityErrorChunkFileName(), entityType,
+        var saveResponse = bulkStorageService.saveEntities(chunk.getEntityChunkFileName(), entityType,
             publishEventsFlag);
         log.info("process:: Save response {} for chunk step file: {}", saveResponse,
             chunkStep.getEntityErrorChunkFileName());
         return new DataSavingResult(recordsSavingData, saveResponse);
-      } else {
-        log.debug("process:: Creating new chunk step for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
-        chunkStep = createChunkStep(chunk);
       }
-    } else {
-      chunkStep = createChunkStep(chunk);
     }
+    log.debug("process:: Creating new chunk step for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
+    chunkStep = createChunkStep(chunk);
+
     var recordsSavingData = new RecordsSavingData(chunk.getOperationId(), chunk.getId(), chunkStep.getId(),
         chunk.getNumOfRecords());
-    var lines = s3Service.readFile(chunk.getEntityChunkFileName());
-    log.info("process:: Found {} entity records in chunk step file: {}", lines,
-        chunk.getEntityChunkFileName());
     var saveResponse = bulkStorageService.saveEntities(chunk.getEntityChunkFileName(), entityType, publishEventsFlag);
-    log.info("process:: Save response {} for chunk step file: {}", saveResponse, chunk.getEntityChunkFileName());
     return new DataSavingResult(recordsSavingData, saveResponse);
+  }
+
+  private List<String> getErrorRecordIds(List<String> errorLines) {
+    List<String> errorRecordIds = new ArrayList<>();
+    for (var errorLine : errorLines) {
+      var recordId = StringUtils.substringBefore(errorLine, ',');
+      errorRecordIds.add(recordId);
+    }
+    return errorRecordIds;
   }
 
   private ChunkStep createChunkStep(OperationChunk chunk) {

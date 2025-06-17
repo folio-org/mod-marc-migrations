@@ -879,7 +879,9 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
 
     var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
     assertThat(chunks).hasSize(expectedChunkSize);
-    var errorFile = writeToFile("test.txt", List.of("id1,error1", "id2,error2"));
+    var errorFile = writeToFile("test.txt", List.of(
+        "a77732ff-2edc-4283-913a-fb04f32c1b86,error1",
+        "216901fe-eb53-4679-8a63-a68044618ede,error2"));
     var wireMock = okapi.wireMockServer();
     var stub = wireMock.stubFor(post(urlPathEqualTo(bulkUrl)).willReturn(ResponseDefinitionBuilder.responseDefinition()
       .withHeader("Content-Type", "application/json;charset=UTF-8")
