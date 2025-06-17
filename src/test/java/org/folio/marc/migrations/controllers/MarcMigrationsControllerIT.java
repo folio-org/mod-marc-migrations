@@ -1,11 +1,13 @@
 package org.folio.marc.migrations.controllers;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.notFound;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.marc.migrations.domain.dto.EntityType.AUTHORITY;
 import static org.folio.marc.migrations.domain.dto.EntityType.INSTANCE;
@@ -38,8 +40,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import jakarta.validation.ConstraintViolationException;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -879,14 +883,19 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
 
     var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
     assertThat(chunks).hasSize(expectedChunkSize);
-    var errorFile = writeToFile("test.txt", List.of(
-        "a77732ff-2edc-4283-913a-fb04f32c1b86,error1",
-        "216901fe-eb53-4679-8a63-a68044618ede,error2"));
+
+    var errorChunk = chunks.getFirst();
+    var fileNames = s3Client.list("operation/" + operationId + "/" + errorChunk.getId() + "_entity");
+    var entityList = readFile(fileNames.getFirst());
+    var errorFile = writeToFile("test.txt", List.of(entityList.getFirst()));
+
     var wireMock = okapi.wireMockServer();
-    var stub = wireMock.stubFor(post(urlPathEqualTo(bulkUrl)).willReturn(ResponseDefinitionBuilder.responseDefinition()
-      .withHeader("Content-Type", "application/json;charset=UTF-8")
-      .withBody("{ \"errorsNumber\": \"1\", \"errorRecordsFileName\": \"errorRecordsFileName\", "
-          + "\"errorsFileName\": \"" + errorFile + "\" }")));
+    var stub = wireMock.stubFor(post(urlPathMatching(bulkUrl)).withRequestBody(containing(errorChunk.getId()
+      .toString()))
+      .willReturn(ResponseDefinitionBuilder.responseDefinition()
+        .withHeader("Content-Type", "application/json;charset=UTF-8")
+        .withBody("{ \"errorsNumber\": \"1\", \"errorRecordsFileName\": \"errorRecordsFileName\", "
+            + "\"errorsFileName\": \"" + errorFile + "\" }")));
 
     // save migration operation
     var saveMigrationOperation = new SaveMigrationOperation().status(DATA_SAVING);
@@ -896,13 +905,10 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
       .andExpect(mappedRecords(totalRecords))
       .andExpect(savedRecords(savedRecords)));
 
-    var chunksRetrying = chunks.stream()
-      .map(OperationChunk::getId)
-      .toList();
     wireMock.removeStubMapping(stub);
 
     // retry saving migration operation
-    tryPost(retrySaveMarcMigrationEndpoint(operationId), chunksRetrying).andExpect(status().isNoContent());
+    tryPost(retrySaveMarcMigrationEndpoint(operationId), List.of(errorChunk.getId())).andExpect(status().isNoContent());
     awaitUntilAsserted(() -> doGet(marcMigrationEndpoint(operationId)).andExpect(operationStatus(DATA_SAVING_COMPLETED))
       .andExpect(totalRecords(totalRecords))
       .andExpect(mappedRecords(totalRecords))
@@ -953,7 +959,16 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
 
   private static Stream<Arguments> provideEntityTypesData() {
     return Stream.of(
-        Arguments.of(EntityType.AUTHORITY, 87, 9, 78, "/authority-storage/authorities/bulk"),
-        Arguments.of(EntityType.INSTANCE, 11, 2, 9, "/instance-storage/instances/bulk"));
+        Arguments.of(EntityType.AUTHORITY, 87, 9, 86, "/authority-storage/authorities/bulk"),
+        Arguments.of(EntityType.INSTANCE, 11, 2, 10, "/instance-storage/instances/bulk"));
+  }
+
+  @SneakyThrows
+  private List<String> readFile(String remotePath) {
+    try (var inputStream = s3Client.read(remotePath);
+         var reader = new BufferedReader(new InputStreamReader(inputStream))) {
+      return reader.lines()
+        .toList();
+    }
   }
 }

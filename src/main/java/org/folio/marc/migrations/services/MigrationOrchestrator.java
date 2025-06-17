@@ -202,6 +202,8 @@ public class MigrationOrchestrator {
         parameterMap.put(TIMESTAMP, new JobParameter<>(Timestamp.from(Instant.now()).toString(), String.class));
         if (StringUtils.isNotEmpty(publishEvents)) {
           parameterMap.put(PUBLISH_EVENTS_FLAG, new JobParameter<>(Boolean.parseBoolean(publishEvents), Boolean.class));
+        } else {
+          parameterMap.put(PUBLISH_EVENTS_FLAG, new JobParameter<>(true, Boolean.class));
         }
         var jobParameters = new JobParameters(parameterMap);
         jobLauncher.run(remappingRetrySaveJob, jobParameters);

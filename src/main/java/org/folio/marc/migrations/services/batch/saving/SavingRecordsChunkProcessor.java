@@ -48,7 +48,9 @@ public class SavingRecordsChunkProcessor implements ItemProcessor<OperationChunk
     log.trace("process:: for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
     var chunkStep = getOrCreateChunkStep(chunk);
     int numOfRecords = chunk.getNumOfRecords();
-    if (OperationStatusType.DATA_SAVING_FAILED.equals(chunk.getStatus()) && chunkStep.getNumOfErrors() > 0
+    if (OperationStatusType.DATA_SAVING_FAILED.equals(chunk.getStatus())
+        && chunkStep.getNumOfErrors() != null
+        && chunkStep.getNumOfErrors() > 0
         && isChunkFileUpdated(chunk, chunkStep.getErrorChunkFileName())) {
       numOfRecords = chunkStep.getNumOfErrors();
     }
@@ -78,16 +80,16 @@ public class SavingRecordsChunkProcessor implements ItemProcessor<OperationChunk
     var entityChunkFileName = chunk.getEntityChunkFileName();
 
     var entityLines = s3Service.readFile(entityChunkFileName);
-    log.info("isChunkFileUpdated:: Read {} entity lines from chunk file: {}", entityLines.size(), entityChunkFileName);
+    log.debug("isChunkFileUpdated:: Read {} entity lines from chunk file: {}", entityLines.size(), entityChunkFileName);
 
     var errorLines = s3Service.readFile(errorChunkFileName);
-    log.info("isChunkFileUpdated:: Read {} error lines from chunk step file: {}", errorLines.size(),
+    log.debug("isChunkFileUpdated:: Read {} error lines from chunk step file: {}", errorLines.size(),
         errorChunkFileName);
 
     if (CollectionUtils.isNotEmpty(entityLines) && CollectionUtils.isNotEmpty(errorLines)) {
       var entityLinesForRetry = getEntityLinesForRetry(errorLines, entityLines);
       if (CollectionUtils.isNotEmpty(entityLinesForRetry)) {
-        log.info("isChunkFileUpdated:: Writing {} entity lines for retry to entity chunk file: {}",
+        log.debug("isChunkFileUpdated:: Writing {} entity lines for retry to entity chunk file: {}",
             entityLinesForRetry.size(), entityChunkFileName);
         s3Service.writeFile(entityChunkFileName, entityLinesForRetry);
         return true;
