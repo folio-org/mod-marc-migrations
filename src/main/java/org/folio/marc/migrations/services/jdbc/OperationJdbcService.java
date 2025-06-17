@@ -82,9 +82,9 @@ public class OperationJdbcService extends JdbcService {
     jdbcTemplate.update(sql);
   }
 
-  public void updateOperationMappedNumber(UUID id, int recordsMapped) {
-    log.info("updateOperationMappedNumber::For operation {}: recordsMapped {}", id, recordsMapped);
-    var sql = UPDATE_OPERATION_MAPPED_NUM.formatted(getSchemaName(), recordsMapped, id);
+  public void updateOperationMappedNumber(UUID id, int recordsReduced) {
+    log.info("updateOperationMappedNumber::Reduced mapped records by {} for operation {}", recordsReduced, id);
+    var sql = UPDATE_OPERATION_MAPPED_NUM.formatted(getSchemaName(), recordsReduced, id);
     jdbcTemplate.update(sql);
   }
 
