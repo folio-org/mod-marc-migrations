@@ -26,6 +26,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @SpringBootTest(classes = FolioS3Service.class, webEnvironment = NONE)
 class FolioS3ServiceTest {
 
+  private static final String PATH = "test-path";
+  private static final List<String> LINES = List.of("line1", "line2", "line3");
+
   private @MockitoBean FolioS3Client s3Client;
   private @Autowired FolioS3Service service;
 
@@ -45,7 +48,7 @@ class FolioS3ServiceTest {
     String content = "line1\nline2\nline3";
     when(s3Client.read(any())).thenReturn(new ByteArrayInputStream(content.getBytes()));
 
-    List<String> result = service.readFile("test-path");
+    List<String> result = service.readFile(PATH);
 
     assertThat(result)
       .hasSize(3)
@@ -56,8 +59,40 @@ class FolioS3ServiceTest {
   void readFile_shouldThrowException_whenIoExceptionOccurs() {
     when(s3Client.read(any())).thenThrow(new RuntimeException("S3 error"));
 
-    assertThatThrownBy(() -> service.readFile("test-path"))
+    assertThatThrownBy(() -> service.readFile(PATH))
       .isInstanceOf(IllegalStateException.class)
       .hasMessageContaining("Error reading file: test-path");
+  }
+
+  @Test
+  void writeFile_shouldWriteContentSuccessfully() {
+    // Act
+    service.writeFile(PATH, LINES);
+
+    // Assert
+    verify(s3Client, times(1)).write(any(), any());
+  }
+
+  @Test
+  void writeFile_shouldRetryOnException() {
+    when(s3Client.write(any(), any())).thenThrow(new RuntimeException("S3 error"))
+      .thenReturn(null);
+
+    // Act
+    service.writeFile(PATH, LINES);
+
+    // Assert
+    verify(s3Client, times(2)).write(any(), any());
+  }
+
+  @Test
+  void writeFile_shouldThrowExceptionAfterRetries() {
+    when(s3Client.write(any(), any())).thenThrow(new RuntimeException("S3 error"));
+
+    // Act & Assert
+    assertThatThrownBy(() -> service.writeFile(PATH, LINES)).isInstanceOf(RuntimeException.class)
+      .hasMessageContaining("S3 error");
+
+    verify(s3Client, times(3)).write(any(), any()); // Assuming maxAttempts is 3
   }
 }
