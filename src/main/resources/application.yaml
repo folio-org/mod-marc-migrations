@@ -70,6 +70,7 @@ folio:
     chunk-fetch-ids-count: ${CHUNK_FETCH_IDS_COUNT:500}
     chunk-persist-count: ${CHUNK_PERSIST_COUNT:1000}
     chunk-processing-max-parallelism: ${CHUNK_PROCESSING_MAX_PARALLELISM:4}
+    chunk-retrying-max-ids-count: ${CHUNK_RETRYING_MAX_IDS_COUNT:1000}
     local-file-storage-path: ${LOCAL_FILE_STORAGE_PATH:job}
   remote-storage:
     endpoint: ${S3_URL:http://localhost:9000/}

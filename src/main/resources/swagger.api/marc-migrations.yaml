@@ -85,6 +85,60 @@ paths:
                   value:
                     message: 'Unexpected error'
                     type: 'NullPointerException'
+  /marc-migrations/{operationId}/retry:
+    post:
+      summary: Retry MARC migration operations
+      description: Retries MARC migration operations for the specified chunk IDs.
+      operationId: retryMarcMigrations
+      tags:
+        - marc-migrations
+      parameters:
+        - in: path
+          name: operationId
+          description: The UUID of a MARC migration operation.
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 774d0af6-028f-4d15-8354-d2fc10c71a77
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+                format: uuid
+              example:
+                - 574d0af6-028f-4d15-8354-d2fc10c71a07
+                - 074d0af6-028f-4d15-8354-d2fc10c71a08
+      responses:
+        '201':
+          description: MARC migration operations retried successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MigrationOperation'
+        '400':
+          description: Bad request - Invalid input parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: MARC migration operation was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /marc-migrations/{operationId}:
     get:
       summary: Get MARC migration operation by ID

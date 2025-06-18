@@ -78,7 +78,6 @@ public class MappingRecordsChunkProcessor
           .map(sourceRecord -> asFailedMappingResult(sourceRecord, "Failed to fetch mapping metadata"))
           .toList();
     }
-
     return records.stream()
         .map(sourceData -> asRecordMappingResult(sourceData, mappingData))
         .toList();

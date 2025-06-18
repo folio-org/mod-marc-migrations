@@ -21,6 +21,7 @@ import static org.folio.support.DatabaseHelper.OPERATION_TABLE;
 import static org.folio.support.TestConstants.TENANT_ID;
 import static org.folio.support.TestConstants.USER_ID;
 import static org.folio.support.TestConstants.marcMigrationEndpoint;
+import static org.folio.support.TestConstants.retryMarcMigrationEndpoint;
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
@@ -42,6 +43,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
 import org.folio.marc.migrations.domain.dto.EntityType;
@@ -51,10 +53,12 @@ import org.folio.marc.migrations.domain.dto.MigrationOperationStatus;
 import org.folio.marc.migrations.domain.dto.NewMigrationOperation;
 import org.folio.marc.migrations.domain.dto.OperationType;
 import org.folio.marc.migrations.domain.dto.SaveMigrationOperation;
+import org.folio.marc.migrations.domain.entities.OperationChunk;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.entities.types.OperationStep;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
 import org.folio.marc.migrations.exceptions.ApiValidationException;
+import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
 import org.folio.s3.client.FolioS3Client;
 import org.folio.spring.testing.extension.DatabaseCleanup;
 import org.folio.spring.testing.type.IntegrationTest;
@@ -62,6 +66,10 @@ import org.folio.support.IntegrationTestBase;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mockito;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -70,6 +78,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 @DatabaseCleanup(tables = {CHUNK_STEPS_TABLE, CHUNKS_TABLE, OPERATION_TABLE})
 class MarcMigrationsControllerIT extends IntegrationTestBase {
   private @MockitoSpyBean FolioS3Client s3Client;
+  private @MockitoSpyBean ChunkStepJdbcService chunkStepJdbcService;
 
   @BeforeAll
   static void beforeAll() {
@@ -648,6 +657,85 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   }
 
   @SneakyThrows
+  @ParameterizedTest
+  @MethodSource("provideEntityTypesAndChunkSizes")
+  void retryMarcMigrations_positive(EntityType entityType, int totalRecords, int expectedChunkSize) {
+    // Arrange
+    doThrow(IllegalStateException.class).when(chunkStepJdbcService)
+      .createChunkStep(any());
+    var migrationOperation = new NewMigrationOperation().operationType(REMAPPING)
+      .entityType(entityType);
+
+    // Act & Assert
+    // create migration operation
+    var result = tryPost(marcMigrationEndpoint(), migrationOperation).andExpect(status().isCreated())
+      .andExpect(jsonPath("id", notNullValue(UUID.class)))
+      .andExpect(jsonPath("userId", is(USER_ID)))
+      .andExpect(jsonPath("operationType", is(REMAPPING.getValue())))
+      .andExpect(jsonPath("entityType", is(entityType.getValue())))
+      .andExpect(operationStatus(NEW))
+      .andExpect(totalRecords(totalRecords))
+      .andExpect(mappedRecords(0))
+      .andExpect(savedRecords(0))
+      .andReturn();
+    var operation = contentAsObj(result, MigrationOperation.class);
+    var operationId = operation.getId();
+
+    doGetUntilMatches(marcMigrationEndpoint(operationId), operationStatus(DATA_MAPPING_FAILED));
+    Mockito.reset(chunkStepJdbcService);
+    doGet(marcMigrationEndpoint(operationId)).andExpect(status().isOk())
+      .andExpect(mappedRecords(0));
+
+    var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
+    assertThat(chunks).hasSize(expectedChunkSize);
+    var chunksRetrying = chunks.stream()
+      .map(OperationChunk::getId)
+      .toList();
+
+    // retry migration operation
+    var retryResult = tryPost(retryMarcMigrationEndpoint(operationId), chunksRetrying).andExpect(status().isCreated())
+      .andExpect(jsonPath("id", notNullValue(UUID.class)))
+      .andExpect(jsonPath("userId", is(USER_ID)))
+      .andExpect(jsonPath("operationType", is(REMAPPING.getValue())))
+      .andExpect(jsonPath("entityType", is(entityType.getValue())))
+      .andExpect(operationStatus(DATA_MAPPING))
+      .andExpect(totalRecords(totalRecords))
+      .andExpect(mappedRecords(0))
+      .andExpect(savedRecords(0))
+      .andReturn();
+    var retryOperation = contentAsObj(retryResult, MigrationOperation.class);
+    var retryOperationId = retryOperation.getId();
+
+    doGetUntilMatches(marcMigrationEndpoint(retryOperationId), operationStatus(DATA_MAPPING_COMPLETED));
+    doGet(marcMigrationEndpoint(retryOperationId)).andExpect(status().isOk())
+      .andExpect(totalRecords(totalRecords))
+      .andExpect(mappedRecords(totalRecords))
+      .andExpect(savedRecords(0));
+
+    // save migration operation
+    var saveMigrationOperation = new SaveMigrationOperation().status(DATA_SAVING);
+    tryPut(marcMigrationEndpoint(operationId), saveMigrationOperation).andExpect(status().isNoContent());
+    awaitUntilAsserted(() -> doGet(marcMigrationEndpoint(operationId)).andExpect(operationStatus(DATA_SAVING_COMPLETED))
+      .andExpect(totalRecords(totalRecords))
+      .andExpect(mappedRecords(totalRecords))
+      .andExpect(savedRecords(totalRecords)));
+  }
+
+  @Test
+  void retryMarcMigrations_negative_emptyChunkIds() throws Exception {
+    // Arrange
+    var migrationOperation = new NewMigrationOperation().operationType(REMAPPING)
+      .entityType(AUTHORITY);
+    var postResult = doPost(marcMigrationEndpoint(), migrationOperation).andReturn();
+    var operationId = contentAsObj(postResult, MigrationOperation.class).getId();
+
+    // Act & Assert
+    tryPost(retryMarcMigrationEndpoint(operationId), List.of()).andExpect(status().isUnprocessableEntity())
+      .andExpect(jsonPath("$.total_records", is(1)))
+      .andExpect(errorMessageMatches(containsString("no chunk IDs provided")));
+  }
+
+  @SneakyThrows
   private String writeToFile(String fileName, List<String> lines) {
     var path = Paths.get("test/" + fileName);
     Files.createDirectories(path.getParent());
@@ -683,5 +771,9 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   private ResultMatcher operationStatusOr(MigrationOperationStatus expectedStatus,
                                           MigrationOperationStatus otherStatus) {
     return jsonPath("status", anyOf(is(expectedStatus.getValue()), is(otherStatus.getValue())));
+  }
+
+  private static Stream<Arguments> provideEntityTypesAndChunkSizes() {
+    return Stream.of(Arguments.of(EntityType.AUTHORITY, 87, 9), Arguments.of(EntityType.INSTANCE, 11, 2));
   }
 }

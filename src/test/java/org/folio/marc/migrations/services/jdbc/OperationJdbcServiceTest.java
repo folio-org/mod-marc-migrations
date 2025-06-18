@@ -50,4 +50,19 @@ class OperationJdbcServiceTest extends JdbcServiceTestBase {
     assertThat(sqlCaptor.getValue())
       .contains(id.toString(), String.valueOf(recordsMapped), String.valueOf(recordsSaved), TENANT_ID);
   }
+
+  @Test
+  void updateOperationMappedNumber_positive() {
+    // Arrange
+    var id = UUID.randomUUID();
+    var recordsMapped = 5;
+
+    // Act
+    service.updateOperationMappedNumber(id, recordsMapped);
+
+    // Assert
+    var sqlCaptor = ArgumentCaptor.forClass(String.class);
+    verify(jdbcTemplate).update(sqlCaptor.capture());
+    assertThat(sqlCaptor.getValue()).contains(id.toString(), String.valueOf(recordsMapped));
+  }
 }
