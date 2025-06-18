@@ -1,9 +1,11 @@
 package org.folio.marc.migrations.controllers.delegates;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.folio.marc.migrations.config.MigrationProperties;
 import org.folio.marc.migrations.controllers.mappers.MarcMigrationMapper;
 import org.folio.marc.migrations.domain.dto.EntityType;
 import org.folio.marc.migrations.domain.dto.ErrorReport;
@@ -33,6 +35,7 @@ public class MarcMigrationsService {
   static final String NOT_FOUND_MSG = "MARC migration operation was not found [id: %s]";
 
   private final MarcMigrationMapper mapper;
+  private final MigrationProperties props;
   private final OperationsService operationsService;
   private final MigrationOrchestrator migrationOrchestrator;
   private final OperationErrorReportService errorReportsService;
@@ -44,6 +47,14 @@ public class MarcMigrationsService {
     var newOperation = operationsService.createOperation(operation);
     migrationOrchestrator.submitMappingTask(newOperation);
     return mapper.toDto(newOperation);
+  }
+
+  public MigrationOperation retryMarcMigration(UUID operationId, List<UUID> chunkIds) {
+    log.debug("retryMarcMigration::Trying to retry the migration for the chunkIds: {}", chunkIds);
+    validateMigrationRetry(chunkIds);
+    var operation = operationsService.retryOperation(operationId);
+    migrationOrchestrator.submitRetryMappingTask(operation, chunkIds);
+    return mapper.toDto(operation);
   }
 
   public MigrationOperation getMarcMigrationById(UUID operationId) {
@@ -126,6 +137,15 @@ public class MarcMigrationsService {
 
     if (operation.getStatus() != OperationStatusType.DATA_MAPPING_COMPLETED) {
       throw ApiValidationException.notAllowedSaveForOperationStatus(operation.getStatus().name());
+    }
+  }
+
+  private void validateMigrationRetry(List<UUID> chunkIds) {
+    if (chunkIds == null || chunkIds.isEmpty()) {
+      throw new ApiValidationException("validateMigrationRetry:: no chunk IDs provided");
+    }
+    if (chunkIds.size() > props.getChunkRetryingMaxIdsCount()) {
+      throw ApiValidationException.maxSizeExceeded(props.getChunkRetryingMaxIdsCount(), chunkIds.size());
     }
   }
 }

@@ -13,6 +13,7 @@ folio:
     chunk-fetch-ids-count: ${CHUNK_FETCH_IDS_COUNT:30}
     chunk-persist-count: ${CHUNK_PERSIST_COUNT:50}
     chunk-processing-max-parallelism: ${CHUNK_PROCESSING_MAX_PARALLELISM:4}
+    chunk-retrying-max-ids-count: ${CHUNK_RETRYING_MAX_IDS_COUNT:1000}
 spring:
   application:
     name: mod-marc-migrations

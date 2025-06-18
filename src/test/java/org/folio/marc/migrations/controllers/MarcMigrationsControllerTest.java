@@ -1,6 +1,7 @@
 package org.folio.marc.migrations.controllers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -144,5 +145,37 @@ class MarcMigrationsControllerTest {
     // Assert
     assertEquals(HttpStatus.OK, response.getStatusCode());
     assertEquals(errorReportCollection, response.getBody());
+  }
+
+  @Test
+  void retryMarcMigrations_ReturnsCreatedResponse() {
+    // Arrange
+    UUID operationId = UUID.randomUUID();
+    List<UUID> chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+    MigrationOperation result = new MigrationOperation();
+    when(migrationsService.retryMarcMigration(operationId, chunkIds)).thenReturn(result);
+
+    // Act
+    var response = migrationsController.retryMarcMigrations(operationId, TENANT_ID, chunkIds);
+
+    // Assert
+    assertEquals(HttpStatus.CREATED, response.getStatusCode());
+    assertEquals(result, response.getBody());
+    verify(migrationsService).retryMarcMigration(operationId, chunkIds);
+  }
+
+  @Test
+  void retryMarcMigrations_ThrowsException() {
+    // Arrange
+    UUID operationId = UUID.randomUUID();
+    List<UUID> chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+    when(migrationsService.retryMarcMigration(operationId, chunkIds))
+        .thenThrow(new IllegalArgumentException("Invalid chunk IDs"));
+
+    // Act & Assert
+    IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        () -> migrationsController.retryMarcMigrations(operationId, TENANT_ID, chunkIds));
+    assertEquals("Invalid chunk IDs", exception.getMessage());
+    verify(migrationsService).retryMarcMigration(operationId, chunkIds);
   }
 }
