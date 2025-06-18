@@ -107,4 +107,70 @@ class ChunkStepJdbcServiceTest extends JdbcServiceTestBase {
     assertThat(result)
       .isEqualTo(expectedResult);
   }
+
+  @Test
+  void updateChunkStep_correctly() {
+    // Arrange
+    var id = UUID.randomUUID();
+    var status = StepStatus.IN_PROGRESS;
+    var stepEndTime = Timestamp.from(Instant.now());
+
+    // Act
+    service.updateChunkStep(id, status, stepEndTime);
+
+    // Assert
+    var sqlCaptor = ArgumentCaptor.forClass(String.class);
+    verify(jdbcTemplate).update(sqlCaptor.capture());
+    assertThat(sqlCaptor.getValue())
+        .contains(id.toString())
+        .contains(status.name())
+        .contains(stepEndTime.toString());
+  }
+
+  @Test
+  void getChunkStepByChunkIdAndOperationStep_positive() {
+    // Arrange
+    var chunkId = UUID.randomUUID();
+    var operationStep = OperationStep.DATA_MAPPING;
+    var expectedChunkStep = ChunkStep.builder()
+        .id(UUID.randomUUID())
+        .operationChunkId(chunkId)
+        .operationStep(operationStep)
+        .build();
+
+    when(jdbcTemplate.query(anyString(), eq(mapper), eq(chunkId), eq(operationStep.name())))
+        .thenReturn(List.of(expectedChunkStep));
+
+    // Act
+    var result = service.getChunkStepByChunkIdAndOperationStep(chunkId, operationStep);
+
+    // Assert
+    var sqlCaptor = ArgumentCaptor.forClass(String.class);
+    verify(jdbcTemplate).query(sqlCaptor.capture(), eq(mapper), eq(chunkId), eq(operationStep.name()));
+    assertThat(sqlCaptor.getValue())
+        .contains("operation_chunk_step")
+        .contains("operation_chunk_id")
+        .contains("operation_step");
+    assertThat(result).isEqualTo(expectedChunkStep);
+  }
+
+  @Test
+  void getChunkStepByChunkIdAndOperationStep_returnsNullWhenNoResult() {
+    // Arrange
+    var chunkId = UUID.randomUUID();
+    var operationStep = OperationStep.DATA_MAPPING;
+
+    when(jdbcTemplate.query(anyString(), eq(mapper), eq(chunkId), eq(operationStep.name()))).thenReturn(List.of());
+
+    // Act
+    var result = service.getChunkStepByChunkIdAndOperationStep(chunkId, operationStep);
+
+    // Assert
+    var sqlCaptor = ArgumentCaptor.forClass(String.class);
+    verify(jdbcTemplate).query(sqlCaptor.capture(), eq(mapper), eq(chunkId), eq(operationStep.name()));
+    assertThat(sqlCaptor.getValue()).contains("operation_chunk_step")
+      .contains("operation_chunk_id")
+      .contains("operation_step");
+    assertThat(result).isNull();
+  }
 }

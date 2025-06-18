@@ -54,6 +54,18 @@
         },
         {
           "methods": [
+            "POST"
+          ],
+          "pathPattern": "/marc-migrations/{id}/retry",
+          "permissionsRequired": [
+            "marc-migrations.operations.retry.item.post"
+          ],
+          "modulePermissions": [
+            "mapping-metadata.type.item.get"
+          ]
+        },
+        {
+          "methods": [
             "GET"
           ],
           "pathPattern": "/marc-migrations/{id}",
@@ -143,6 +155,11 @@
       "description": "Create MARC Migrations Operation"
     },
     {
+      "permissionName": "marc-migrations.operations.retry.item.post",
+      "displayName": "MARC Migrations - Retry operation",
+      "description": "Retry MARC Migrations Operation"
+    },
+    {
       "permissionName": "marc-migrations.operations.item.get",
       "displayName": "MARC Migrations - Get operation",
       "description": "Get MARC Migrations Operation by ID"
@@ -175,6 +192,7 @@
         "marc-migrations.operations.item.post",
         "marc-migrations.operations.item.get",
         "marc-migrations.operations.item.put",
+        "marc-migrations.operations.retry.item.post",
         "marc-migrations.operations.error-report.post",
         "marc-migrations.operations.error-report.status.item.get",
         "marc-migrations.operations.error-report.errors.collection.get"
@@ -295,6 +313,11 @@
         "name": "CHUNK_FETCH_IDS_COUNT",
         "value": "500",
         "description": " Number of record ids to fetch per query on chunks preparation phase. RECORDS_CHUNK_SIZE should be a divisor for this in order to maintain proper chunk size                                          "
+      },
+      {
+        "name": "CHUNK_RETRYING_MAX_IDS_COUNT",
+        "value": "1000",
+        "description": "Maximum number of chunk IDs for retrying"
       },
       {
         "name": "CHUNK_PERSIST_COUNT",

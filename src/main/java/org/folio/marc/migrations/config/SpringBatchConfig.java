@@ -1,10 +1,13 @@
 package org.folio.marc.migrations.config;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
 import org.folio.marc.migrations.services.batch.mapping.MappingChunkEntityReader;
+import org.folio.marc.migrations.services.batch.mapping.MappingChunksRetryEntityReader;
 import org.folio.marc.migrations.services.batch.mapping.MappingRecordsFileUploadStepListener;
 import org.folio.marc.migrations.services.batch.mapping.MappingRecordsWriter;
 import org.folio.marc.migrations.services.batch.saving.SavingRecordsChunkProcessor;
@@ -70,6 +73,7 @@ public class SpringBatchConfig {
   @Bean("remapAuthRecordsStep")
   public Step remapAuthRecordsStep(JobRepository jobRepository,
                                    PlatformTransactionManager transactionManager,
+                                   @Qualifier("syncReader")
                                    ItemReader<OperationChunk> reader,
                                    @Qualifier("remappingStepProcessor")
                                      ItemProcessor<OperationChunk, MappingComposite<MappingResult>> processor,
@@ -100,6 +104,7 @@ public class SpringBatchConfig {
   @Bean(name = "remapSaveAuthRecordsStep")
   public Step remapSaveAuthRecordsStep(JobRepository jobRepository,
                                        PlatformTransactionManager transactionManager,
+                                       @Qualifier("syncReader")
                                        ItemReader<OperationChunk> reader,
                                        SavingRecordsChunkProcessor processor,
                                        SavingRecordsWriter writer,
@@ -142,10 +147,48 @@ public class SpringBatchConfig {
   /**
    * Synchronized reader to provide safety for multithreaded reads.
    * */
-  @Bean
+  @Bean("syncReader")
   @StepScope
   public ItemReader<OperationChunk> syncReader(@Value("#{jobParameters['operationId']}") String operationId,
                                                MigrationProperties properties, ChunkJdbcService jdbcService) {
     return new SynchronizedItemReader<>(new MappingChunkEntityReader(operationId, properties, jdbcService));
+  }
+
+  @Bean("retryingSyncReader")
+  @StepScope
+  public ItemReader<OperationChunk> retryingSyncReader(ChunkJdbcService jdbcService,
+      @Value("#{jobParameters['chunkIds']}") List<UUID> chunkIds) {
+    return new SynchronizedItemReader<>(new MappingChunksRetryEntityReader(jdbcService, chunkIds));
+  }
+
+  @Bean("remappingRetryJob")
+  public Job remappingRetryJob(JobRepository jobRepository,
+                               @Qualifier("remapAuthRetryRecordsStep") Step remapAuthRetryRecordsStep) {
+    return new JobBuilder("remappingRetry", jobRepository)
+        .incrementer(new RunIdIncrementer())
+        .start(remapAuthRetryRecordsStep)
+        .build();
+  }
+
+  @Bean("remapAuthRetryRecordsStep")
+  public Step remapAuthRetryRecordsStep(JobRepository jobRepository,
+                                        PlatformTransactionManager transactionManager,
+                                        @Qualifier("retryingSyncReader")
+                                        ItemReader<OperationChunk> reader,
+                                        @Qualifier("remappingStepProcessor")
+                                        ItemProcessor<OperationChunk, MappingComposite<MappingResult>> processor,
+                                        MappingRecordsWriter writer,
+                                        MappingRecordsFileUploadStepListener listener,
+                                        @Qualifier("chunksProcessingExecutor") TaskExecutor executor,
+                                        RepeatOperations customThrottler) {
+    return new StepBuilder("remapAuthRetryRecords", jobRepository)
+        .<OperationChunk, MappingComposite<MappingResult>>chunk(1, transactionManager)
+        .reader(reader)
+        .processor(processor)
+        .writer(writer)
+        .listener(listener)
+        .taskExecutor(executor)
+        .stepOperations(customThrottler)
+        .build();
   }
 }

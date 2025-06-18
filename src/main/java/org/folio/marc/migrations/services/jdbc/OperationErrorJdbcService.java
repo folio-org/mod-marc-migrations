@@ -65,4 +65,13 @@ public class OperationErrorJdbcService extends JdbcService {
       return operationError;
     }, operationId, offset, limit);
   }
+
+  public void deleteOperationErrorsByReportId(UUID reportId) {
+    log.debug("deleteOperationErrorsByReportId:: Deleting operation errors for reportId {}", reportId);
+    var sql = """
+        DELETE FROM %s.operation_error
+        WHERE report_id = ?;
+        """.formatted(getSchemaName());
+    jdbcTemplate.update(sql, reportId);
+  }
 }

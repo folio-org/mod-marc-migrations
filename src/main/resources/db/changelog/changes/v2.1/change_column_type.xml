@@ -1,0 +1,17 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+  <changeSet id="MODMARCMIG-47@@alter-parameter-value-to-text" author="svitlana_kovalova">
+    <preConditions onFail="MARK_RAN">
+      <columnExists tableName="BATCH_JOB_EXECUTION_PARAMS" columnName="PARAMETER_VALUE"/>
+    </preConditions>
+    <comment>Change PARAMETER_VALUE column type to TEXT</comment>
+    <sql>
+      ALTER TABLE BATCH_JOB_EXECUTION_PARAMS
+      ALTER COLUMN PARAMETER_VALUE TYPE TEXT;
+    </sql>
+  </changeSet>
+</databaseChangeLog>
