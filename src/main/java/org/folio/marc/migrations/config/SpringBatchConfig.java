@@ -195,10 +195,10 @@ public class SpringBatchConfig {
 
   @Bean("remappingRetrySaveJob")
   public Job remappingRetrySaveJob(JobRepository jobRepository,
-                              @Qualifier("remapRetrySaveRecordsStep") Step remapAuthRecordsStep) {
+                              @Qualifier("remapRetrySaveRecordsStep") Step remapRetrySaveRecordsStep) {
     return new JobBuilder("remappingRetrySave", jobRepository)
         .incrementer(new RunIdIncrementer())
-        .start(remapAuthRecordsStep)
+        .start(remapRetrySaveRecordsStep)
         .build();
   }
 
