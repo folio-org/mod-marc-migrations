@@ -195,15 +195,15 @@ public class SpringBatchConfig {
 
   @Bean("remappingRetrySaveJob")
   public Job remappingRetrySaveJob(JobRepository jobRepository,
-                              @Qualifier("remapRetrySaveAuthRecordsStep") Step remapAuthRecordsStep) {
+                              @Qualifier("remapRetrySaveRecordsStep") Step remapAuthRecordsStep) {
     return new JobBuilder("remappingRetrySave", jobRepository)
         .incrementer(new RunIdIncrementer())
         .start(remapAuthRecordsStep)
         .build();
   }
 
-  @Bean(name = "remapRetrySaveAuthRecordsStep")
-  public Step remapRetrySaveAuthRecordsStep(JobRepository jobRepository,
+  @Bean(name = "remapRetrySaveRecordsStep")
+  public Step remapRetrySaveRecordsStep(JobRepository jobRepository,
                                        PlatformTransactionManager transactionManager,
                                        @Qualifier("retryingSyncReader")
                                        ItemReader<OperationChunk> reader,
@@ -212,7 +212,7 @@ public class SpringBatchConfig {
                                        SavingRecordsStepListener listener,
                                        @Qualifier("chunksProcessingExecutor") TaskExecutor executor,
                                        RepeatOperations customThrottler) {
-    return new StepBuilder("remapRetrySaveAuthRecords", jobRepository)
+    return new StepBuilder("remapRetrySaveRecords", jobRepository)
         .<OperationChunk, DataSavingResult>chunk(1, transactionManager)
         .reader(reader)
         .processor(processor)

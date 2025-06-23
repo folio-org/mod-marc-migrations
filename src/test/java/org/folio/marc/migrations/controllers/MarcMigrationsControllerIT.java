@@ -35,6 +35,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.oneOf;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -66,6 +67,7 @@ import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.entities.types.OperationStep;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
 import org.folio.marc.migrations.exceptions.ApiValidationException;
+import org.folio.marc.migrations.services.BulkStorageService;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
 import org.folio.s3.client.FolioS3Client;
 import org.folio.spring.exception.NotFoundException;
@@ -89,6 +91,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 class MarcMigrationsControllerIT extends IntegrationTestBase {
   private @MockitoSpyBean FolioS3Client s3Client;
   private @MockitoSpyBean ChunkStepJdbcService chunkStepJdbcService;
+  private @MockitoSpyBean BulkStorageService bulkStorageService;
 
   @BeforeAll
   static void beforeAll() {
@@ -916,6 +919,60 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   }
 
   @SneakyThrows
+  @ParameterizedTest
+  @MethodSource("provideEntityTypesDataForNegativeCase")
+  void retrySaveMarcMigrations_negative_bulkClientReturnNullResponse(EntityType entityType, int totalRecords,
+                                                                     int expectedChunkSize, int savedRecords) {
+    // Arrange
+    var migrationOperation = new NewMigrationOperation().operationType(REMAPPING)
+      .entityType(entityType);
+
+    // Act & Assert
+    // create migration operation
+    var result = tryPost(marcMigrationEndpoint(), migrationOperation).andExpect(status().isCreated())
+      .andExpect(jsonPath("id", notNullValue(UUID.class)))
+      .andExpect(jsonPath("userId", is(USER_ID)))
+      .andExpect(jsonPath("operationType", is(REMAPPING.getValue())))
+      .andExpect(jsonPath("entityType", is(entityType.getValue())))
+      .andExpect(operationStatus(NEW))
+      .andExpect(totalRecords(totalRecords))
+      .andExpect(mappedRecords(0))
+      .andExpect(savedRecords(savedRecords))
+      .andReturn();
+    var operation = contentAsObj(result, MigrationOperation.class);
+    var operationId = operation.getId();
+
+    doGetUntilMatches(marcMigrationEndpoint(operationId), operationStatus(DATA_MAPPING_COMPLETED));
+    Mockito.reset(chunkStepJdbcService);
+    doGet(marcMigrationEndpoint(operationId)).andExpect(status().isOk())
+      .andExpect(mappedRecords(totalRecords));
+
+    var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
+    assertThat(chunks).hasSize(expectedChunkSize);
+
+    when(bulkStorageService.saveEntities(any(), any(), any())).thenReturn(null);
+
+    // save migration operation
+    var saveMigrationOperation = new SaveMigrationOperation().status(DATA_SAVING);
+    tryPut(marcMigrationEndpoint(operationId), saveMigrationOperation).andExpect(status().isNoContent());
+    awaitUntilAsserted(() -> doGet(marcMigrationEndpoint(operationId)).andExpect(operationStatus(DATA_SAVING_FAILED))
+      .andExpect(totalRecords(totalRecords))
+      .andExpect(mappedRecords(totalRecords))
+      .andExpect(savedRecords(savedRecords)));
+
+    var chunksRetrying = chunks.stream()
+      .map(OperationChunk::getId)
+      .toList();
+
+    // retry saving migration operation
+    tryPost(retrySaveMarcMigrationEndpoint(operationId), chunksRetrying).andExpect(status().isNoContent());
+    awaitUntilAsserted(() -> doGet(marcMigrationEndpoint(operationId)).andExpect(operationStatus(DATA_SAVING_FAILED))
+      .andExpect(totalRecords(totalRecords))
+      .andExpect(mappedRecords(totalRecords))
+      .andExpect(savedRecords(savedRecords)));
+  }
+
+  @SneakyThrows
   private String writeToFile(String fileName, List<String> lines) {
     var path = Paths.get("test/" + fileName);
     Files.createDirectories(path.getParent());
@@ -961,6 +1018,12 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     return Stream.of(
         Arguments.of(EntityType.AUTHORITY, 87, 9, 86, "/authority-storage/authorities/bulk"),
         Arguments.of(EntityType.INSTANCE, 11, 2, 10, "/instance-storage/instances/bulk"));
+  }
+
+  private static Stream<Arguments> provideEntityTypesDataForNegativeCase() {
+    return Stream.of(
+        Arguments.of(EntityType.AUTHORITY, 87, 9, 0),
+        Arguments.of(EntityType.INSTANCE, 11, 2, 0));
   }
 
   @SneakyThrows

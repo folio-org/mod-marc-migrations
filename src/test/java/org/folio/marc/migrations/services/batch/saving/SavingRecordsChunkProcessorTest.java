@@ -131,6 +131,45 @@ class SavingRecordsChunkProcessorTest {
     verify(bulkStorageService).saveEntities(chunk.getEntityChunkFileName(), entityType, Boolean.TRUE);
   }
 
+  @ParameterizedTest
+  @MethodSource("chunkArguments")
+  void process_shouldHandleNullResponseFromBulkStorageService(UUID operationId, EntityType entityType) {
+    // Arrange
+    int numOfRecords = 5;
+    var chunk = chunk(numOfRecords, operationId, OperationStatusType.DATA_SAVING_FAILED);
+    var existingChunkStep = createChunkStep(chunk);
+    when(chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_SAVING))
+      .thenReturn(existingChunkStep);
+
+    var errorChunkFileName = existingChunkStep.getErrorChunkFileName();
+    var entityChunkFileName = chunk.getEntityChunkFileName();
+
+    // Mock S3 service behavior
+    when(s3Service.readFile(entityChunkFileName)).thenReturn(List.of("record1", "record2", "record3"));
+    when(s3Service.readFile(errorChunkFileName)).thenReturn(List.of("record1,error"));
+    when(bulkStorageService.saveEntities(entityChunkFileName, entityType, Boolean.TRUE)).thenReturn(null);
+
+    processor.setEntityType(entityType);
+    processor.setPublishEventsFlag(Boolean.TRUE);
+
+    // Act
+    var result = processor.process(chunk);
+
+    // Assert
+    assertThat(result).isNotNull();
+    assertThat(result.saveResponse()).isNull();
+    var recordsSavingData = result.recordsSavingData();
+    assertThat(recordsSavingData).isNotNull();
+    assertThat(recordsSavingData.chunkId()).isEqualTo(chunk.getId());
+    assertThat(recordsSavingData.operationId()).isEqualTo(operationId);
+    assertThat(recordsSavingData.numberOfRecords()).isEqualTo(existingChunkStep.getNumOfErrors());
+
+    verify(chunkStepJdbcService).updateChunkStep(eq(existingChunkStep.getId()), eq(StepStatus.IN_PROGRESS),
+        any(Timestamp.class));
+    verify(s3Service).writeFile(entityChunkFileName, List.of("record1"));
+    verify(bulkStorageService).saveEntities(chunk.getEntityChunkFileName(), entityType, Boolean.TRUE);
+  }
+
   void save_positive(OperationChunk chunk, EntityType entityType) {
     var actual = processor.process(chunk);
     assertThat(actual).isNotNull();
