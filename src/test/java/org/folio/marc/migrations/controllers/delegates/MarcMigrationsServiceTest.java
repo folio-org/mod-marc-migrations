@@ -33,6 +33,7 @@ import org.folio.marc.migrations.domain.entities.types.OperationStep;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
 import org.folio.marc.migrations.exceptions.ApiValidationException;
 import org.folio.marc.migrations.services.MigrationOrchestrator;
+import org.folio.marc.migrations.services.jdbc.OperationErrorJdbcService;
 import org.folio.marc.migrations.services.operations.OperationErrorReportService;
 import org.folio.marc.migrations.services.operations.OperationsService;
 import org.folio.spring.data.OffsetRequest;
@@ -55,6 +56,7 @@ class MarcMigrationsServiceTest {
   private @Mock MigrationOrchestrator migrationOrchestrator;
   private @Mock OperationErrorReportService errorReportsService;
   private @Mock MigrationProperties props;
+  private @Mock OperationErrorJdbcService operationErrorJdbcService;
   private @InjectMocks MarcMigrationsService migrationsService;
 
   @Test
@@ -346,6 +348,101 @@ class MarcMigrationsServiceTest {
     assertNotNull(exception);
     assertThat(exception).hasMessage("The maximum allowed number of chunk IDs is '2', but received '3'.");
     verifyNoInteractions(operationsService);
+    verifyNoInteractions(migrationOrchestrator);
+  }
+
+  @Test
+  void retryMigrationSaveOperation_ValidInput_SubmitsRetryTask() {
+    // Arrange
+    var operationId = UUID.randomUUID();
+    var operation = new Operation();
+    operation.setStatus(OperationStatusType.DATA_SAVING_FAILED);
+    when(operationsService.getOperation(operationId)).thenReturn(Optional.of(operation));
+    when(props.getChunkRetryingMaxIdsCount()).thenReturn(1000);
+    var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+
+    // Act
+    migrationsService.retryMigrationSaveOperation(operationId, chunkIds);
+
+    // Assert
+    verify(operationsService).getOperation(operationId);
+    verify(errorReportsService).updateErrorReportStatus(operationId, ErrorReportStatus.NOT_STARTED);
+    verify(operationErrorJdbcService).deleteOperationErrorsByReportId(operationId);
+    verify(migrationOrchestrator).submitMappingSaveRetryTask(operation, chunkIds);
+  }
+
+  @Test
+  void retryMigrationSaveOperation_OperationNotFound_ThrowsNotFoundException() {
+    // Arrange
+    var operationId = UUID.randomUUID();
+    var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+    when(operationsService.getOperation(operationId)).thenReturn(Optional.empty());
+
+    // Act & Assert
+    var exception = assertThrows(NotFoundException.class,
+        () -> migrationsService.retryMigrationSaveOperation(operationId, chunkIds));
+    assertThat(exception).hasMessage(MarcMigrationsService.NOT_FOUND_MSG, operationId);
+    verifyNoInteractions(errorReportsService);
+    verifyNoInteractions(operationErrorJdbcService);
+    verifyNoInteractions(migrationOrchestrator);
+  }
+
+  @Test
+  void retryMigrationSaveOperation_InvalidOperationStatus_ThrowsApiValidationException() {
+    // Arrange
+    var operationId = UUID.randomUUID();
+    var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+    var operation = new Operation();
+    operation.setStatus(OperationStatusType.DATA_MAPPING_COMPLETED);
+    when(operationsService.getOperation(operationId)).thenReturn(Optional.of(operation));
+
+    // Act & Assert
+    var exception = assertThrows(ApiValidationException.class,
+        () -> migrationsService.retryMigrationSaveOperation(operationId, chunkIds));
+    assertThat(exception)
+      .hasMessage("Not allowed retry action for operation with value 'DATA_MAPPING_COMPLETED' in field 'status'");
+    verifyNoInteractions(errorReportsService);
+    verifyNoInteractions(operationErrorJdbcService);
+    verifyNoInteractions(migrationOrchestrator);
+  }
+
+  @Test
+  void retryMigrationSaveOperation_EmptyChunkIds_ThrowsApiValidationException() {
+    // Arrange
+    var operationId = UUID.randomUUID();
+    var operation = new Operation();
+    operation.setId(operationId);
+    operation.setStatus(OperationStatusType.DATA_SAVING_FAILED);
+    when(operationsService.getOperation(operationId)).thenReturn(Optional.of(operation));
+
+    // Act & Assert
+    Executable executable = () -> migrationsService.retryMigrationSaveOperation(operationId, List.of());
+    var exception = assertThrows(ApiValidationException.class, executable);
+
+    // Assert
+    assertThat(exception).hasMessage("validateMigrationRetry:: no chunk IDs provided");
+    verifyNoInteractions(errorReportsService);
+    verifyNoInteractions(operationErrorJdbcService);
+    verifyNoInteractions(migrationOrchestrator);
+  }
+
+  @Test
+  void retryMigrationSaveOperation_ChunkIdsExceedMaxSize_ThrowsApiValidationException() {
+    // Arrange
+    var operationId = UUID.randomUUID();
+    var operation = new Operation();
+    operation.setId(operationId);
+    operation.setStatus(OperationStatusType.DATA_SAVING_FAILED);
+    when(operationsService.getOperation(operationId)).thenReturn(Optional.of(operation));
+    var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+    when(props.getChunkRetryingMaxIdsCount()).thenReturn(2);
+
+    // Act & Assert
+    var exception = assertThrows(ApiValidationException.class,
+        () -> migrationsService.retryMigrationSaveOperation(operationId, chunkIds));
+    assertThat(exception).hasMessage("The maximum allowed number of chunk IDs is '2', but received '3'.");
+    verifyNoInteractions(errorReportsService);
+    verifyNoInteractions(operationErrorJdbcService);
     verifyNoInteractions(migrationOrchestrator);
   }
 }
