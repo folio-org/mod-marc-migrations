@@ -8,6 +8,7 @@ public class ApiValidationException extends RuntimeException {
   private static final String MSG_TEMPLATE = "Unexpected value '%s' in field '%s'";
   private static final String NOT_ALLOWED_ACTION = "Not allowed %s action for operation with value '%s' in field '%s'";
   private static final String MAX_SIZE_EXCEEDED = "The maximum allowed number of chunk IDs is '%s', but received '%s'.";
+  private static final String STATUS = "status";
 
   private final String fieldName;
   private final String fieldValue;
@@ -45,11 +46,15 @@ public class ApiValidationException extends RuntimeException {
   }
 
   public static ApiValidationException forOperationStatus(String value) {
-    return new ApiValidationException("status", value);
+    return new ApiValidationException(STATUS, value);
   }
 
   public static ApiValidationException notAllowedSaveForOperationStatus(String value) {
-    return new ApiValidationException("data save", "status", value);
+    return new ApiValidationException("data save", STATUS, value);
+  }
+
+  public static ApiValidationException notAllowedRetryForOperationStatus(String value) {
+    return new ApiValidationException("retry", STATUS, value);
   }
 
   public static ApiValidationException maxSizeExceeded(int maxSize, int actualSize) {

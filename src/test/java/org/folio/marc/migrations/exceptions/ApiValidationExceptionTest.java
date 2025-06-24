@@ -62,4 +62,19 @@ class ApiValidationExceptionTest {
     assertNull(exception.getFieldName());
     assertNull(exception.getFieldValue());
   }
+
+  @Test
+  void notAllowedRetryForOperationStatus_CreatesExceptionWithCorrectMessage() {
+    // Arrange
+    var statusValue = "INVALID_STATUS";
+
+    // Act
+    var exception = ApiValidationException.notAllowedRetryForOperationStatus(statusValue);
+
+    // Assert
+    assertEquals("status", exception.getFieldName());
+    assertEquals(statusValue, exception.getFieldValue());
+    assertEquals("Not allowed retry action for operation with value '%s' in field 'status'".formatted(statusValue),
+        exception.getMessage());
+  }
 }
