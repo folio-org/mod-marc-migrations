@@ -66,6 +66,18 @@
         },
         {
           "methods": [
+            "POST"
+          ],
+          "pathPattern": "/marc-migrations/{id}/save/retry",
+          "permissionsRequired": [
+            "marc-migrations.operations.save.retry.item.post"
+          ],
+          "modulePermissions": [
+            "mapping-metadata.type.item.get"
+          ]
+        },
+        {
+          "methods": [
             "GET"
           ],
           "pathPattern": "/marc-migrations/{id}",
@@ -160,6 +172,11 @@
       "description": "Retry MARC Migrations Operation"
     },
     {
+      "permissionName": "marc-migrations.operations.save.retry.item.post",
+      "displayName": "MARC Migrations - Retry saving operation",
+      "description": "Retry saving the MARC Migrations Operation"
+    },
+    {
       "permissionName": "marc-migrations.operations.item.get",
       "displayName": "MARC Migrations - Get operation",
       "description": "Get MARC Migrations Operation by ID"
@@ -193,6 +210,7 @@
         "marc-migrations.operations.item.get",
         "marc-migrations.operations.item.put",
         "marc-migrations.operations.retry.item.post",
+        "marc-migrations.operations.save.retry.item.post",
         "marc-migrations.operations.error-report.post",
         "marc-migrations.operations.error-report.status.item.get",
         "marc-migrations.operations.error-report.errors.collection.get"

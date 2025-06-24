@@ -46,6 +46,13 @@ public class MarcMigrationsController implements MarcMigrationsApi {
   }
 
   @Override
+  public ResponseEntity<Void> retrySaveMarcMigrations(UUID operationId, String tenantId,
+                                                                List<UUID> chunkIds) {
+    migrationsService.retryMigrationSaveOperation(operationId, chunkIds);
+    return ResponseEntity.noContent().build();
+  }
+
+  @Override
   public ResponseEntity<ErrorReportStatus> getErrorReportStatus(UUID operationId, String tenantId) {
     return ResponseEntity.ok(migrationsService.getErrorReportStatus(operationId));
   }

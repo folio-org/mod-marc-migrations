@@ -1,11 +1,13 @@
 package org.folio.marc.migrations.controllers;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.notFound;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.marc.migrations.domain.dto.MigrationOperationStatus.DATA_MAPPING;
 import static org.folio.marc.migrations.domain.dto.MigrationOperationStatus.DATA_MAPPING_COMPLETED;
@@ -22,6 +24,7 @@ import static org.folio.support.TestConstants.TENANT_ID;
 import static org.folio.support.TestConstants.USER_ID;
 import static org.folio.support.TestConstants.marcMigrationEndpoint;
 import static org.folio.support.TestConstants.retryMarcMigrationEndpoint;
+import static org.folio.support.TestConstants.retrySaveMarcMigrationEndpoint;
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
@@ -31,13 +34,16 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.oneOf;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.github.tomakehurst.wiremock.admin.NotFoundException;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -58,6 +64,7 @@ import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.entities.types.OperationStep;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
 import org.folio.marc.migrations.exceptions.ApiValidationException;
+import org.folio.marc.migrations.services.BulkStorageService;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
 import org.folio.s3.client.FolioS3Client;
 import org.folio.spring.testing.extension.DatabaseCleanup;
@@ -79,6 +86,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 class MarcMigrationsControllerIT extends IntegrationTestBase {
   private @SpyBean FolioS3Client s3Client;
   private @SpyBean ChunkStepJdbcService chunkStepJdbcService;
+  private @SpyBean BulkStorageService bulkStorageService;
 
   @BeforeAll
   static void beforeAll() {
@@ -735,6 +743,123 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   }
 
   @SneakyThrows
+  @ParameterizedTest
+  @MethodSource("provideEntityTypesData")
+  void retrySaveMarcMigrations_positive(EntityType entityType, int totalRecords, int expectedChunkSize,
+                                        int savedRecords, String bulkUrl) {
+    // Arrange
+    var migrationOperation = new NewMigrationOperation().operationType(OperationType.REMAPPING)
+      .entityType(entityType);
+
+    // Act & Assert
+    // create migration operation
+    var result = tryPost(marcMigrationEndpoint(), migrationOperation).andExpect(status().isCreated())
+      .andExpect(jsonPath("id", notNullValue(UUID.class)))
+      .andExpect(jsonPath("userId", is(USER_ID)))
+      .andExpect(jsonPath("operationType", is(OperationType.REMAPPING.getValue())))
+      .andExpect(jsonPath("entityType", is(entityType.getValue())))
+      .andExpect(operationStatus(NEW))
+      .andExpect(totalRecords(totalRecords))
+      .andExpect(mappedRecords(0))
+      .andExpect(savedRecords(0))
+      .andReturn();
+    var operation = contentAsObj(result, MigrationOperation.class);
+    var operationId = operation.getId();
+
+    doGetUntilMatches(marcMigrationEndpoint(operationId), operationStatus(DATA_MAPPING_COMPLETED));
+    Mockito.reset(chunkStepJdbcService);
+    doGet(marcMigrationEndpoint(operationId)).andExpect(status().isOk())
+      .andExpect(mappedRecords(totalRecords));
+
+    var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
+    assertThat(chunks).hasSize(expectedChunkSize);
+
+    var errorChunk = chunks.getFirst();
+    var fileNames = s3Client.list("operation/" + operationId + "/" + errorChunk.getId() + "_entity");
+    var entityList = readFile(fileNames.getFirst());
+    var errorFile = writeToFile("test.txt", List.of(entityList.getFirst()));
+
+    var wireMock = okapi.wireMockServer();
+    var stub = wireMock.stubFor(post(urlPathMatching(bulkUrl)).withRequestBody(containing(errorChunk.getId()
+      .toString()))
+      .willReturn(ResponseDefinitionBuilder.responseDefinition()
+        .withHeader("Content-Type", "application/json;charset=UTF-8")
+        .withBody("{ \"errorsNumber\": \"1\", \"errorRecordsFileName\": \"errorRecordsFileName\", "
+            + "\"errorsFileName\": \"" + errorFile + "\" }")));
+
+    // save migration operation
+    var saveMigrationOperation = new SaveMigrationOperation().status(DATA_SAVING);
+    tryPut(marcMigrationEndpoint(operationId), saveMigrationOperation).andExpect(status().isNoContent());
+    awaitUntilAsserted(() -> doGet(marcMigrationEndpoint(operationId)).andExpect(operationStatus(DATA_SAVING_FAILED))
+      .andExpect(totalRecords(totalRecords))
+      .andExpect(mappedRecords(totalRecords))
+      .andExpect(savedRecords(savedRecords)));
+
+    wireMock.removeStubMapping(stub);
+
+    // retry saving migration operation
+    tryPost(retrySaveMarcMigrationEndpoint(operationId), List.of(errorChunk.getId())).andExpect(status().isNoContent());
+    awaitUntilAsserted(() -> doGet(marcMigrationEndpoint(operationId)).andExpect(operationStatus(DATA_SAVING_COMPLETED))
+      .andExpect(totalRecords(totalRecords))
+      .andExpect(mappedRecords(totalRecords))
+      .andExpect(savedRecords(totalRecords)));
+  }
+
+  @SneakyThrows
+  @ParameterizedTest
+  @MethodSource("provideEntityTypesDataForNegativeCase")
+  void retrySaveMarcMigrations_negative_bulkClientReturnNullResponse(EntityType entityType, int totalRecords,
+                                                                     int expectedChunkSize, int savedRecords) {
+    // Arrange
+    var migrationOperation = new NewMigrationOperation().operationType(OperationType.REMAPPING)
+      .entityType(entityType);
+
+    // Act & Assert
+    // create migration operation
+    var result = tryPost(marcMigrationEndpoint(), migrationOperation).andExpect(status().isCreated())
+      .andExpect(jsonPath("id", notNullValue(UUID.class)))
+      .andExpect(jsonPath("userId", is(USER_ID)))
+      .andExpect(jsonPath("operationType", is(OperationType.REMAPPING.getValue())))
+      .andExpect(jsonPath("entityType", is(entityType.getValue())))
+      .andExpect(operationStatus(NEW))
+      .andExpect(totalRecords(totalRecords))
+      .andExpect(mappedRecords(0))
+      .andExpect(savedRecords(savedRecords))
+      .andReturn();
+    var operation = contentAsObj(result, MigrationOperation.class);
+    var operationId = operation.getId();
+
+    doGetUntilMatches(marcMigrationEndpoint(operationId), operationStatus(DATA_MAPPING_COMPLETED));
+    Mockito.reset(chunkStepJdbcService);
+    doGet(marcMigrationEndpoint(operationId)).andExpect(status().isOk())
+      .andExpect(mappedRecords(totalRecords));
+
+    var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
+    assertThat(chunks).hasSize(expectedChunkSize);
+
+    when(bulkStorageService.saveEntities(any(), any(), any())).thenReturn(null);
+
+    // save migration operation
+    var saveMigrationOperation = new SaveMigrationOperation().status(DATA_SAVING);
+    tryPut(marcMigrationEndpoint(operationId), saveMigrationOperation).andExpect(status().isNoContent());
+    awaitUntilAsserted(() -> doGet(marcMigrationEndpoint(operationId)).andExpect(operationStatus(DATA_SAVING_FAILED))
+      .andExpect(totalRecords(totalRecords))
+      .andExpect(mappedRecords(totalRecords))
+      .andExpect(savedRecords(savedRecords)));
+
+    var chunksRetrying = chunks.stream()
+      .map(OperationChunk::getId)
+      .toList();
+
+    // retry saving migration operation
+    tryPost(retrySaveMarcMigrationEndpoint(operationId), chunksRetrying).andExpect(status().isNoContent());
+    awaitUntilAsserted(() -> doGet(marcMigrationEndpoint(operationId)).andExpect(operationStatus(DATA_SAVING_FAILED))
+      .andExpect(totalRecords(totalRecords))
+      .andExpect(mappedRecords(totalRecords))
+      .andExpect(savedRecords(savedRecords)));
+  }
+
+  @SneakyThrows
   private String writeToFile(String fileName, List<String> lines) {
     var path = Paths.get("test/" + fileName);
     Files.createDirectories(path.getParent());
@@ -774,5 +899,26 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
 
   private static Stream<Arguments> provideEntityTypesAndChunkSizes() {
     return Stream.of(Arguments.of(EntityType.AUTHORITY, 87, 9), Arguments.of(EntityType.INSTANCE, 11, 2));
+  }
+
+  private static Stream<Arguments> provideEntityTypesData() {
+    return Stream.of(
+        Arguments.of(EntityType.AUTHORITY, 87, 9, 86, "/authority-storage/authorities/bulk"),
+        Arguments.of(EntityType.INSTANCE, 11, 2, 10, "/instance-storage/instances/bulk"));
+  }
+
+  private static Stream<Arguments> provideEntityTypesDataForNegativeCase() {
+    return Stream.of(
+        Arguments.of(EntityType.AUTHORITY, 87, 9, 0),
+        Arguments.of(EntityType.INSTANCE, 11, 2, 0));
+  }
+
+  @SneakyThrows
+  private List<String> readFile(String remotePath) {
+    try (var inputStream = s3Client.read(remotePath);
+         var reader = new BufferedReader(new InputStreamReader(inputStream))) {
+      return reader.lines()
+        .toList();
+    }
   }
 }
