@@ -82,11 +82,10 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
   }
 
   private void reduceMappedNumOfRecords(OperationChunk chunk, Integer numOfErrors) {
-    if (numOfErrors > 0) {
-      var reducedMappedNumOfRecords = chunk.getNumOfRecords() - numOfErrors;
-      if (reducedMappedNumOfRecords > 0) {
-        operationJdbcService.updateOperationMappedNumber(chunk.getOperationId(), reducedMappedNumOfRecords);
-      }
+    var errorCount = numOfErrors != null ? numOfErrors : 0;
+    var reducedMappedNumOfRecords = chunk.getNumOfRecords() - errorCount;
+    if (reducedMappedNumOfRecords > 0) {
+      operationJdbcService.updateOperationMappedNumber(chunk.getOperationId(), reducedMappedNumOfRecords);
     }
   }
 

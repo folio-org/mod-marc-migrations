@@ -29,6 +29,12 @@ public class SpringBatchExecutionParamsJdbcService extends JdbcService {
     log.info("getBatchExecutionParam::Fetching '{}' parameter for operationId '{}'", parameterName, operationId);
     var schemaName = getSchemaName();
     String sql = GET_BATCH_EXECUTION_PARAM.formatted(schemaName, parameterName, schemaName, operationId);
-    return jdbcTemplate.queryForObject(sql, String.class);
+    var results = jdbcTemplate.query(sql, (rs, rowNum) -> rs.getString("parameter_value"));
+    if (results.isEmpty()) {
+      log.warn("getBatchExecutionParam::No result found for parameter '{}' and operationId '{}'", parameterName,
+          operationId);
+      return null;
+    }
+    return results.getFirst();
   }
 }
