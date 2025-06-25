@@ -120,7 +120,6 @@ class SavingRetryRecordsChunkProcessorTest {
     when(chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(),
         OperationStep.DATA_SAVING)).thenReturn(null);
 
-    doNothing().when(operationJdbcService).updateOperationSavedNumber(chunk.getOperationId(), numOfRecords);
     doNothing().when(chunkStepJdbcService).createChunkStep(any());
     processor.setEntityType(entityType);
     processor.setPublishEventsFlag(Boolean.TRUE);

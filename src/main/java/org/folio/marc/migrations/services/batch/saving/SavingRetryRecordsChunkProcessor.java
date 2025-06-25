@@ -48,37 +48,33 @@ public class SavingRetryRecordsChunkProcessor implements ItemProcessor<Operation
   @Override
   public DataSavingResult process(OperationChunk chunk) {
     log.trace("process:: for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
-    var chunkStep = getOrCreateChunkStep(chunk);
+    var chunkStep = chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(),
+        OperationStep.DATA_SAVING);
+
     int numOfRecords = chunk.getNumOfRecords();
-    if (OperationStatusType.DATA_SAVING_FAILED.equals(chunk.getStatus())
-        && chunkStep.getNumOfErrors() != null
-        && chunkStep.getNumOfErrors() > 0
-        && isChunkFileUpdated(chunk, chunkStep.getErrorChunkFileName())) {
-      numOfRecords = chunkStep.getNumOfErrors();
+    if (chunkStep != null) {
+      log.debug("process:: Updating existing chunk step for operation {} chunk {}", chunk.getOperationId(),
+          chunk.getId());
+      chunkStepJdbcService.updateChunkStep(chunkStep.getId(), StepStatus.IN_PROGRESS, Timestamp.from(Instant.now()));
+      if (OperationStatusType.DATA_SAVING_FAILED.equals(chunk.getStatus())
+          && chunkStep.getNumOfErrors() != null
+          && chunkStep.getNumOfErrors() > 0
+          && isChunkFileUpdated(chunk, chunkStep.getErrorChunkFileName())) {
+        numOfRecords = chunkStep.getNumOfErrors();
+      } else {
+        // reduce the saved_num_of_records if saving is retry for all records in a chunk.
+        var numOfErrors = chunkStep.getNumOfErrors() != null ? chunkStep.getNumOfErrors() : 0;
+        var reducedSavedNumOfRecords = numOfRecords - numOfErrors;
+        operationJdbcService.updateOperationSavedNumber(chunk.getOperationId(), reducedSavedNumOfRecords);
+      }
     } else {
-      // reduce the saved_num_of_records if saving is retry for all records in a chunk.
-      var numOfErrors = chunkStep.getNumOfErrors() != null ? chunkStep.getNumOfErrors() : 0;
-      var reducedSavedNumOfRecords = numOfRecords - numOfErrors;
-      operationJdbcService.updateOperationSavedNumber(chunk.getOperationId(), reducedSavedNumOfRecords);
+      log.debug("process:: Creating new chunk step for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
+      chunkStep = createChunkStep(chunk);
     }
     var recordsSavingData = new RecordsSavingData(chunk.getOperationId(), chunk.getId(), chunkStep.getId(),
         numOfRecords);
     var saveResponse = bulkStorageService.saveEntities(chunk.getEntityChunkFileName(), entityType, publishEventsFlag);
     return new DataSavingResult(recordsSavingData, saveResponse);
-  }
-
-  private ChunkStep getOrCreateChunkStep(OperationChunk chunk) {
-    var chunkStep = chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(),
-        OperationStep.DATA_SAVING);
-    if (chunkStep != null) {
-      log.debug("getOrCreateChunkStep:: Updating existing chunk step for operation {} chunk {}", chunk.getOperationId(),
-          chunk.getId());
-      chunkStepJdbcService.updateChunkStep(chunkStep.getId(), StepStatus.IN_PROGRESS, Timestamp.from(Instant.now()));
-      return chunkStep;
-    }
-    log.debug("getOrCreateChunkStep:: Creating new chunk step for operation {} chunk {}", chunk.getOperationId(),
-        chunk.getId());
-    return createChunkStep(chunk);
   }
 
   private boolean isChunkFileUpdated(OperationChunk chunk, String errorChunkFileName) {

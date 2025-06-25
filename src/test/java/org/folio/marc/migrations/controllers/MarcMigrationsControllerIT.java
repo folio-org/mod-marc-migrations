@@ -1118,6 +1118,49 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   }
 
   @SneakyThrows
+  @ParameterizedTest
+  @MethodSource("provideEntityTypesAndChunkSizes")
+  void retrySaveMarcMigrations_positive_whenChunkStepNotExist(EntityType entityType, int totalRecords,
+                                                              int expectedChunkSize) {
+    // Arrange
+    var migrationOperation = new NewMigrationOperation().operationType(REMAPPING)
+        .entityType(entityType);
+
+    // Act & Assert
+    // create migration operation
+    var result = tryPost(marcMigrationEndpoint(), migrationOperation).andExpect(status().isCreated())
+        .andExpect(jsonPath("id", notNullValue(UUID.class)))
+        .andExpect(jsonPath("userId", is(USER_ID)))
+        .andExpect(jsonPath("operationType", is(REMAPPING.getValue())))
+        .andExpect(jsonPath("entityType", is(entityType.getValue())))
+        .andExpect(operationStatus(NEW))
+        .andExpect(totalRecords(totalRecords))
+        .andExpect(mappedRecords(0))
+        .andExpect(savedRecords(0))
+        .andReturn();
+    var operation = contentAsObj(result, MigrationOperation.class);
+    var operationId = operation.getId();
+
+    doGetUntilMatches(marcMigrationEndpoint(operationId), operationStatus(DATA_MAPPING_COMPLETED));
+
+    doGet(marcMigrationEndpoint(operationId)).andExpect(status().isOk())
+        .andExpect(mappedRecords(totalRecords));
+
+    var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
+    assertThat(chunks).hasSize(expectedChunkSize);
+    var chunksRetrying = chunks.stream()
+        .map(OperationChunk::getId)
+        .toList();
+
+    // retry saving migration operation
+    tryPost(retrySaveMarcMigrationEndpoint(operationId), chunksRetrying).andExpect(status().isNoContent());
+    awaitUntilAsserted(() -> doGet(marcMigrationEndpoint(operationId)).andExpect(operationStatus(DATA_SAVING_COMPLETED))
+        .andExpect(totalRecords(totalRecords))
+        .andExpect(mappedRecords(totalRecords))
+        .andExpect(savedRecords(totalRecords)));
+  }
+
+  @SneakyThrows
   private String writeToFile(String fileName, List<String> lines) {
     var path = Paths.get("test/" + fileName);
     Files.createDirectories(path.getParent());
