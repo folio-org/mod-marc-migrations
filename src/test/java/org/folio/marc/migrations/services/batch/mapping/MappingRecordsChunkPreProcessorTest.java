@@ -3,8 +3,11 @@ package org.folio.marc.migrations.services.batch.mapping;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.marc.migrations.domain.entities.types.EntityType.AUTHORITY;
 import static org.folio.marc.migrations.domain.entities.types.EntityType.INSTANCE;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -114,6 +117,93 @@ class MappingRecordsChunkPreProcessorTest {
     assert result != null;
     assertThat(result.records()).hasSize(marcRecords.size())
       .containsAll(marcRecords);
+  }
+
+  @Test
+  void process_UpdatesExistingChunkStepWithReduceMappedNumOfRecords() {
+    // Arrange
+    var chunk = OperationChunk.builder()
+      .id(UUID.randomUUID())
+      .operationId(UUID.randomUUID())
+      .startRecordId(UUID.randomUUID())
+      .endRecordId(UUID.randomUUID())
+      .numOfRecords(5)
+      .status(OperationStatusType.DATA_MAPPING)
+      .build();
+
+    var existingChunkStep = ChunkStep.builder()
+      .id(UUID.randomUUID())
+      .operationId(chunk.getOperationId())
+      .operationChunkId(chunk.getId())
+      .operationStep(OperationStep.DATA_MAPPING)
+      .status(StepStatus.IN_PROGRESS)
+      .build();
+
+    var marcRecords = List.of(new MarcRecord(null, null, null, null, null));
+
+    when(chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_MAPPING))
+      .thenReturn(existingChunkStep);
+    when(authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
+        .thenReturn(marcRecords);
+
+    processor.setEntityType(EntityType.AUTHORITY);
+
+    // Act
+    var result = processor.process(chunk);
+
+    // Assert
+
+    assert result != null;
+    assertThat(result.records()).hasSize(marcRecords.size()).containsAll(marcRecords);
+    var timestampCaptor = ArgumentCaptor.forClass(Timestamp.class);
+    verify(chunkStepJdbcService).updateChunkStep(eq(existingChunkStep.getId()), eq(StepStatus.IN_PROGRESS),
+        timestampCaptor.capture());
+    assertThat(timestampCaptor.getValue()).isNotNull();
+    verify(operationJdbcService).updateOperationMappedNumber(chunk.getOperationId(), 5);
+  }
+
+  @Test
+  void process_UpdatesExistingChunkStepWithoutReduceMappedNumOfRecords() {
+    // Arrange
+    var chunk = OperationChunk.builder()
+      .id(UUID.randomUUID())
+      .operationId(UUID.randomUUID())
+      .startRecordId(UUID.randomUUID())
+      .endRecordId(UUID.randomUUID())
+      .numOfRecords(5)
+      .status(OperationStatusType.DATA_MAPPING)
+      .build();
+
+    var existingChunkStep = ChunkStep.builder()
+      .id(UUID.randomUUID())
+      .operationId(chunk.getOperationId())
+      .operationChunkId(chunk.getId())
+      .operationStep(OperationStep.DATA_MAPPING)
+      .status(StepStatus.IN_PROGRESS)
+      .numOfErrors(5)
+      .build();
+
+    var marcRecords = List.of(new MarcRecord(null, null, null, null, null));
+
+    when(chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_MAPPING))
+      .thenReturn(existingChunkStep);
+    when(authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
+        .thenReturn(marcRecords);
+
+    processor.setEntityType(EntityType.AUTHORITY);
+
+    // Act
+    var result = processor.process(chunk);
+
+    // Assert
+
+    assert result != null;
+    assertThat(result.records()).hasSize(marcRecords.size()).containsAll(marcRecords);
+    var timestampCaptor = ArgumentCaptor.forClass(Timestamp.class);
+    verify(chunkStepJdbcService).updateChunkStep(eq(existingChunkStep.getId()), eq(StepStatus.IN_PROGRESS),
+        timestampCaptor.capture());
+    assertThat(timestampCaptor.getValue()).isNotNull();
+    verify(operationJdbcService, never()).updateOperationMappedNumber(any(), anyInt());
   }
 
   @Test
