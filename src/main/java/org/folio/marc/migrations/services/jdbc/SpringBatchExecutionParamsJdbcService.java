@@ -13,12 +13,14 @@ public class SpringBatchExecutionParamsJdbcService extends JdbcService {
       SELECT parameter_value
       FROM %s.batch_job_execution_params
       WHERE parameter_name = '%s'
-        AND job_execution_id = (
-          SELECT MAX(job_execution_id)
+        AND parameter_value IS NOT NULL
+        AND job_execution_id IN (
+          SELECT job_execution_id
           FROM %s.batch_job_execution_params
           WHERE parameter_name = 'operationId'
             AND parameter_value = '%s'
-        );
+        )
+      LIMIT 1;
       """;
 
   public SpringBatchExecutionParamsJdbcService(JdbcTemplate jdbcTemplate, FolioExecutionContext context) {

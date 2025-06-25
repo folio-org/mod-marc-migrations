@@ -401,7 +401,7 @@ class MarcMigrationsServiceTest {
         () -> migrationsService.retryMigrationSaveOperation(operationId, chunkIds));
     assertThat(exception)
       .hasMessage(
-          "Not allowed retry action for operation with value 'DATA_MAPPING_FAILEDgit status' in field 'status'");
+          "Not allowed retry action for operation with value 'DATA_MAPPING_FAILED' in field 'status'");
     verifyNoInteractions(errorReportsService);
     verifyNoInteractions(operationErrorJdbcService);
     verifyNoInteractions(migrationOrchestrator);
