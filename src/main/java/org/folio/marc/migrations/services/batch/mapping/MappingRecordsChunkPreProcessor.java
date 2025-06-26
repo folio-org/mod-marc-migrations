@@ -9,6 +9,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.collections4.CollectionUtils;
 import org.folio.marc.migrations.domain.entities.ChunkStep;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
@@ -83,13 +84,13 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
     return new MappingComposite<>(mappingData, records);
   }
 
-  private void reduceMappedNumOfRecords(OperationChunk chunk, Integer numOfErrors,  List<MarcRecord> records) {
-    var errorCount = numOfErrors != null ? numOfErrors : 0;
-    var reducedMappedNumOfRecords = records.size() != chunk.getNumOfRecords()
-        ? records.size() - errorCount
-        : chunk.getNumOfRecords() - errorCount;
-    if (reducedMappedNumOfRecords > 0) {
-      operationJdbcService.updateOperationMappedNumber(chunk.getOperationId(), reducedMappedNumOfRecords);
+  private void reduceMappedNumOfRecords(OperationChunk chunk, Integer numOfErrors, List<MarcRecord> records) {
+    if (CollectionUtils.isNotEmpty(records)) {
+      var errorCount = numOfErrors != null ? numOfErrors : 0;
+      var reducedMappedNumOfRecords = records.size() - errorCount;
+      if (reducedMappedNumOfRecords > 0) {
+        operationJdbcService.updateOperationMappedNumber(chunk.getOperationId(), reducedMappedNumOfRecords);
+      }
     }
   }
 
