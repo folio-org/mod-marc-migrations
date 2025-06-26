@@ -6,7 +6,6 @@ import static org.folio.marc.migrations.domain.entities.types.EntityType.INSTANC
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -159,7 +158,7 @@ class MappingRecordsChunkPreProcessorTest {
     verify(chunkStepJdbcService).updateChunkStep(eq(existingChunkStep.getId()), eq(StepStatus.IN_PROGRESS),
         timestampCaptor.capture());
     assertThat(timestampCaptor.getValue()).isNotNull();
-    verify(operationJdbcService).updateOperationMappedNumber(chunk.getOperationId(), 5);
+    verify(operationJdbcService).updateOperationMappedNumber(chunk.getOperationId(), marcRecords.size());
   }
 
   @Test
@@ -233,7 +232,6 @@ class MappingRecordsChunkPreProcessorTest {
         .thenReturn(existingChunkStep);
     when(authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
         .thenReturn(marcRecords);
-    doNothing().when(operationJdbcService).updateOperationMappedNumber(chunk.getOperationId(), 2);
 
     processor.setEntityType(EntityType.AUTHORITY);
 
