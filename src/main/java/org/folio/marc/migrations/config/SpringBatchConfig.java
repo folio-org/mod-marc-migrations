@@ -13,6 +13,7 @@ import org.folio.marc.migrations.services.batch.mapping.MappingRecordsWriter;
 import org.folio.marc.migrations.services.batch.saving.SavingRecordsChunkProcessor;
 import org.folio.marc.migrations.services.batch.saving.SavingRecordsStepListener;
 import org.folio.marc.migrations.services.batch.saving.SavingRecordsWriter;
+import org.folio.marc.migrations.services.batch.saving.SavingRetryRecordsChunkProcessor;
 import org.folio.marc.migrations.services.domain.DataSavingResult;
 import org.folio.marc.migrations.services.domain.MappingComposite;
 import org.folio.marc.migrations.services.domain.MappingResult;
@@ -207,7 +208,7 @@ public class SpringBatchConfig {
                                        PlatformTransactionManager transactionManager,
                                        @Qualifier("retryingSyncReader")
                                        ItemReader<OperationChunk> reader,
-                                       SavingRecordsChunkProcessor processor,
+                                       SavingRetryRecordsChunkProcessor processor,
                                        SavingRecordsWriter writer,
                                        SavingRecordsStepListener listener,
                                        @Qualifier("chunksProcessingExecutor") TaskExecutor executor,
