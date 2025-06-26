@@ -371,14 +371,15 @@ class MarcMigrationsServiceTest {
     var operationId = UUID.randomUUID();
     var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
     var operation = new Operation();
-    operation.setStatus(OperationStatusType.DATA_MAPPING_COMPLETED);
+    operation.setStatus(OperationStatusType.DATA_MAPPING_FAILED);
     when(operationsService.getOperation(operationId)).thenReturn(Optional.of(operation));
 
     // Act & Assert
     var exception = assertThrows(ApiValidationException.class,
         () -> migrationsService.retryMigrationSaveOperation(operationId, chunkIds));
     assertThat(exception)
-      .hasMessage("Not allowed retry action for operation with value 'DATA_MAPPING_COMPLETED' in field 'status'");
+      .hasMessage(
+          "Not allowed retry action for operation with value 'DATA_MAPPING_FAILED' in field 'status'");
     verifyNoInteractions(errorReportsService);
     verifyNoInteractions(operationErrorJdbcService);
     verifyNoInteractions(migrationOrchestrator);

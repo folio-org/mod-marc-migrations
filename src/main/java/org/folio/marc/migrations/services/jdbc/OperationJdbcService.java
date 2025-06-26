@@ -35,6 +35,12 @@ public class OperationJdbcService extends JdbcService {
     WHERE id = '%s';
     """;
 
+  private static final String UPDATE_OPERATION_SAVED_NUM = """
+    UPDATE %s.operation
+    SET saved_num_of_records = saved_num_of_records - %s
+    WHERE id = '%s';
+    """;
+
   private static final String GET_OPERATION = """
     SELECT *
     FROM %s.operation
@@ -80,6 +86,12 @@ public class OperationJdbcService extends JdbcService {
   public void updateOperationMappedNumber(UUID id, int recordsReduced) {
     log.info("updateOperationMappedNumber::Reduced mapped records by {} for operation {}", recordsReduced, id);
     var sql = UPDATE_OPERATION_MAPPED_NUM.formatted(getSchemaName(), recordsReduced, id);
+    jdbcTemplate.update(sql);
+  }
+
+  public void updateOperationSavedNumber(UUID id, int recordsReduced) {
+    log.info("updateOperationSavedNumber::Reduced saved records by {} for operation {}", recordsReduced, id);
+    var sql = UPDATE_OPERATION_SAVED_NUM.formatted(getSchemaName(), recordsReduced, id);
     jdbcTemplate.update(sql);
   }
 }
