@@ -841,6 +841,67 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
       .andExpect(savedRecords(totalRecords)));
   }
 
+  @SneakyThrows
+  @ParameterizedTest
+  @MethodSource("provideEntityTypesAndChunkSizes")
+  void retryMarcMigrations_positive_retryMappingForCompletedChunk(EntityType entityType, int totalRecords,
+                                                                  int expectedChunkSize) {
+    // Arrange
+    var migrationOperation = new NewMigrationOperation().operationType(REMAPPING)
+        .entityType(entityType);
+
+    // Act & Assert
+    // create migration operation
+    var result = tryPost(marcMigrationEndpoint(), migrationOperation).andExpect(status().isCreated())
+        .andExpect(jsonPath("id", notNullValue(UUID.class)))
+        .andExpect(jsonPath("userId", is(USER_ID)))
+        .andExpect(jsonPath("operationType", is(REMAPPING.getValue())))
+        .andExpect(jsonPath("entityType", is(entityType.getValue())))
+        .andExpect(operationStatus(NEW))
+        .andExpect(totalRecords(totalRecords))
+        .andExpect(mappedRecords(0))
+        .andExpect(savedRecords(0))
+        .andReturn();
+    var operation = contentAsObj(result, MigrationOperation.class);
+    var operationId = operation.getId();
+
+    doGetUntilMatches(marcMigrationEndpoint(operationId), operationStatus(DATA_MAPPING_COMPLETED));
+    doGet(marcMigrationEndpoint(operationId)).andExpect(status().isOk())
+        .andExpect(mappedRecords(totalRecords));
+
+    var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
+    assertThat(chunks).hasSize(expectedChunkSize);
+
+    // retry migration operation for DATA_MAPPING_COMPLETED chunk
+    var retryResult = tryPost(retryMarcMigrationEndpoint(operationId), List.of(chunks.getFirst().getId()))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("id", notNullValue(UUID.class)))
+        .andExpect(jsonPath("userId", is(USER_ID)))
+        .andExpect(jsonPath("operationType", is(REMAPPING.getValue())))
+        .andExpect(jsonPath("entityType", is(entityType.getValue())))
+        .andExpect(operationStatus(DATA_MAPPING))
+        .andExpect(totalRecords(totalRecords))
+        .andExpect(mappedRecords(totalRecords))
+        .andExpect(savedRecords(0))
+        .andReturn();
+    var retryOperation = contentAsObj(retryResult, MigrationOperation.class);
+    var retryOperationId = retryOperation.getId();
+
+    doGetUntilMatches(marcMigrationEndpoint(retryOperationId), operationStatus(DATA_MAPPING_COMPLETED));
+    doGet(marcMigrationEndpoint(retryOperationId)).andExpect(status().isOk())
+        .andExpect(totalRecords(totalRecords))
+        .andExpect(mappedRecords(totalRecords))
+        .andExpect(savedRecords(0));
+
+    // save migration operation
+    var saveMigrationOperation = new SaveMigrationOperation().status(DATA_SAVING);
+    tryPut(marcMigrationEndpoint(operationId), saveMigrationOperation).andExpect(status().isNoContent());
+    awaitUntilAsserted(() -> doGet(marcMigrationEndpoint(operationId)).andExpect(operationStatus(DATA_SAVING_COMPLETED))
+        .andExpect(totalRecords(totalRecords))
+        .andExpect(mappedRecords(totalRecords))
+        .andExpect(savedRecords(totalRecords)));
+  }
+
   @Test
   void retryMarcMigrations_negative_emptyChunkIds() throws Exception {
     // Arrange
@@ -920,6 +981,90 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
 
   @SneakyThrows
   @ParameterizedTest
+  @MethodSource("provideEntityTypesData")
+  void retrySaveMarcMigrations_positive_retrySavingForAllRecordsInChunk(EntityType entityType, int totalRecords,
+                                        int expectedChunkSize, int savedRecords, String bulkUrl) {
+    // Arrange
+    var migrationOperation = new NewMigrationOperation().operationType(REMAPPING)
+        .entityType(entityType);
+
+    // Act & Assert
+    // create migration operation
+    var result = tryPost(marcMigrationEndpoint(), migrationOperation).andExpect(status().isCreated())
+        .andExpect(jsonPath("id", notNullValue(UUID.class)))
+        .andExpect(jsonPath("userId", is(USER_ID)))
+        .andExpect(jsonPath("operationType", is(REMAPPING.getValue())))
+        .andExpect(jsonPath("entityType", is(entityType.getValue())))
+        .andExpect(operationStatus(NEW))
+        .andExpect(totalRecords(totalRecords))
+        .andExpect(mappedRecords(0))
+        .andExpect(savedRecords(0))
+        .andReturn();
+    var operation = contentAsObj(result, MigrationOperation.class);
+    var operationId = operation.getId();
+
+    doGetUntilMatches(marcMigrationEndpoint(operationId), operationStatus(DATA_MAPPING_COMPLETED));
+    Mockito.reset(chunkStepJdbcService);
+    doGet(marcMigrationEndpoint(operationId)).andExpect(status().isOk())
+        .andExpect(mappedRecords(totalRecords));
+
+    var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
+    assertThat(chunks).hasSize(expectedChunkSize);
+
+    var errorChunk = chunks.getFirst();
+    var fileNames = s3Client.list("operation/" + operationId + "/" + errorChunk.getId() + "_entity");
+    var entityList = readFile(fileNames.getFirst());
+    var errorFile = writeToFile("test.txt", List.of(entityList.getFirst()));
+
+    var wireMock = okapi.wireMockServer();
+    var stub = wireMock.stubFor(post(urlPathMatching(bulkUrl)).withRequestBody(containing(errorChunk.getId()
+            .toString()))
+        .willReturn(ResponseDefinitionBuilder.responseDefinition()
+            .withHeader("Content-Type", "application/json;charset=UTF-8")
+            .withBody("{ \"errorsNumber\": \"1\", \"errorRecordsFileName\": \"errorRecordsFileName\", "
+                + "\"errorsFileName\": \"" + errorFile + "\" }")));
+
+    // save migration operation
+    var saveMigrationOperation = new SaveMigrationOperation().status(DATA_SAVING);
+    tryPut(marcMigrationEndpoint(operationId), saveMigrationOperation).andExpect(status().isNoContent());
+    awaitUntilAsserted(() -> doGet(marcMigrationEndpoint(operationId)).andExpect(operationStatus(DATA_SAVING_FAILED))
+        .andExpect(totalRecords(totalRecords))
+        .andExpect(mappedRecords(totalRecords))
+        .andExpect(savedRecords(savedRecords)));
+
+    wireMock.removeStubMapping(stub);
+
+    // retry remapping for DATA_SAVING_FAILED chunk
+    var retryResult = tryPost(retryMarcMigrationEndpoint(operationId), List.of(errorChunk.getId()))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("id", notNullValue(UUID.class)))
+        .andExpect(jsonPath("userId", is(USER_ID)))
+        .andExpect(jsonPath("operationType", is(REMAPPING.getValue())))
+        .andExpect(jsonPath("entityType", is(entityType.getValue())))
+        .andExpect(operationStatus(DATA_MAPPING))
+        .andExpect(totalRecords(totalRecords))
+        .andExpect(mappedRecords(totalRecords))
+        .andExpect(savedRecords(savedRecords))
+        .andReturn();
+    var retryOperation = contentAsObj(retryResult, MigrationOperation.class);
+    var retryOperationId = retryOperation.getId();
+
+    doGetUntilMatches(marcMigrationEndpoint(retryOperationId), operationStatus(DATA_MAPPING_COMPLETED));
+    doGet(marcMigrationEndpoint(retryOperationId)).andExpect(status().isOk())
+        .andExpect(totalRecords(totalRecords))
+        .andExpect(mappedRecords(totalRecords))
+        .andExpect(savedRecords(savedRecords));
+
+    // retry saving migration operation
+    tryPost(retrySaveMarcMigrationEndpoint(operationId), List.of(errorChunk.getId())).andExpect(status().isNoContent());
+    awaitUntilAsserted(() -> doGet(marcMigrationEndpoint(operationId)).andExpect(operationStatus(DATA_SAVING_COMPLETED))
+        .andExpect(totalRecords(totalRecords))
+        .andExpect(mappedRecords(totalRecords))
+        .andExpect(savedRecords(totalRecords)));
+  }
+
+  @SneakyThrows
+  @ParameterizedTest
   @MethodSource("provideEntityTypesDataForNegativeCase")
   void retrySaveMarcMigrations_negative_bulkClientReturnNullResponse(EntityType entityType, int totalRecords,
                                                                      int expectedChunkSize, int savedRecords) {
@@ -970,6 +1115,49 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
       .andExpect(totalRecords(totalRecords))
       .andExpect(mappedRecords(totalRecords))
       .andExpect(savedRecords(savedRecords)));
+  }
+
+  @SneakyThrows
+  @ParameterizedTest
+  @MethodSource("provideEntityTypesAndChunkSizes")
+  void retrySaveMarcMigrations_positive_whenChunkStepNotExist(EntityType entityType, int totalRecords,
+                                                              int expectedChunkSize) {
+    // Arrange
+    var migrationOperation = new NewMigrationOperation().operationType(REMAPPING)
+        .entityType(entityType);
+
+    // Act & Assert
+    // create migration operation
+    var result = tryPost(marcMigrationEndpoint(), migrationOperation).andExpect(status().isCreated())
+        .andExpect(jsonPath("id", notNullValue(UUID.class)))
+        .andExpect(jsonPath("userId", is(USER_ID)))
+        .andExpect(jsonPath("operationType", is(REMAPPING.getValue())))
+        .andExpect(jsonPath("entityType", is(entityType.getValue())))
+        .andExpect(operationStatus(NEW))
+        .andExpect(totalRecords(totalRecords))
+        .andExpect(mappedRecords(0))
+        .andExpect(savedRecords(0))
+        .andReturn();
+    var operation = contentAsObj(result, MigrationOperation.class);
+    var operationId = operation.getId();
+
+    doGetUntilMatches(marcMigrationEndpoint(operationId), operationStatus(DATA_MAPPING_COMPLETED));
+
+    doGet(marcMigrationEndpoint(operationId)).andExpect(status().isOk())
+        .andExpect(mappedRecords(totalRecords));
+
+    var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
+    assertThat(chunks).hasSize(expectedChunkSize);
+    var chunksRetrying = chunks.stream()
+        .map(OperationChunk::getId)
+        .toList();
+
+    // retry saving migration operation
+    tryPost(retrySaveMarcMigrationEndpoint(operationId), chunksRetrying).andExpect(status().isNoContent());
+    awaitUntilAsserted(() -> doGet(marcMigrationEndpoint(operationId)).andExpect(operationStatus(DATA_SAVING_COMPLETED))
+        .andExpect(totalRecords(totalRecords))
+        .andExpect(mappedRecords(totalRecords))
+        .andExpect(savedRecords(totalRecords)));
   }
 
   @SneakyThrows

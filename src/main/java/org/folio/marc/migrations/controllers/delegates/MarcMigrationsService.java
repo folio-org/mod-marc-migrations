@@ -90,7 +90,8 @@ public class MarcMigrationsService {
     log.debug("retryMigrationSaveOperation::Retry saving migration operation by ID '{}'", operationId);
     var operation = operationsService.getOperation(operationId)
       .orElseThrow(() -> new NotFoundException(NOT_FOUND_MSG.formatted(operationId)));
-    if (operation.getStatus() != OperationStatusType.DATA_SAVING_FAILED) {
+    if (operation.getStatus() != OperationStatusType.DATA_SAVING_FAILED
+        && operation.getStatus() != OperationStatusType.DATA_MAPPING_COMPLETED) {
       throw ApiValidationException.notAllowedRetryForOperationStatus(operation.getStatus().name());
     }
     validateMigrationRetry(chunkIds);
