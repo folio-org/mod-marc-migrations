@@ -391,7 +391,7 @@
       },
       {
         "name": "S3_URL",
-        "value": "https://s3.amazonaws.com/",
+        "value": "https://s3.amazonaws.com",
         "description": "S3 compatible service url"
       },
       {
