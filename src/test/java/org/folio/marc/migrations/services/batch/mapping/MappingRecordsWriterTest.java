@@ -35,8 +35,8 @@ import org.springframework.batch.item.Chunk;
 class MappingRecordsWriterTest {
 
   private final Long jobId = 5L;
-  private final String jobFilesDirectory = "job/" + jobId;
-  private final String defaultFilePath = "job";
+  private final String jobFilesDirectory = "mod-marc-migrations/" + jobId;
+  private final String defaultFilePath = "mod-marc-migrations";
   private final String customFilePath = "custom";
   private final JobExecution jobExecution = new JobExecution(new JobInstance(jobId, "testJob"), null);
   private final StepExecution stepExecution = new StepExecution("testStep", jobExecution);
@@ -46,14 +46,14 @@ class MappingRecordsWriterTest {
   @AfterEach
   @SneakyThrows
   void deleteDirectory() {
-    FileUtils.deleteDirectory(new File("job"));
+    FileUtils.deleteDirectory(new File("mod-marc-migrations"));
     FileUtils.deleteDirectory(new File(customFilePath));
   }
 
   @Test
   @SneakyThrows
   void prepareFilesPath_positive() {
-    when(props.getLocalFileStoragePath()).thenReturn(defaultFilePath);
+    when(props.getS3LocalSubPath()).thenReturn(defaultFilePath);
     writer.prepareFilesPath(stepExecution);
     assertThat(Files.exists(Path.of(jobFilesDirectory))).isTrue();
   }
@@ -61,7 +61,7 @@ class MappingRecordsWriterTest {
   @Test
   @SneakyThrows
   void write_positive() {
-    when(props.getLocalFileStoragePath()).thenReturn(defaultFilePath);
+    when(props.getS3LocalSubPath()).thenReturn(defaultFilePath);
     writer.prepareFilesPath(stepExecution);
     var records = records(2, 2);
     var composite = composite(records);
@@ -83,7 +83,7 @@ class MappingRecordsWriterTest {
   @SneakyThrows
   void write_positiveConfigurableFilePath() {
     String customDirectory = customFilePath + "/" + jobId;
-    when(props.getLocalFileStoragePath()).thenReturn(customFilePath);
+    when(props.getS3LocalSubPath()).thenReturn(customFilePath);
     writer.prepareFilesPath(stepExecution);
     assertThat(Files.exists(Path.of(customDirectory))).isTrue();
 
@@ -106,7 +106,7 @@ class MappingRecordsWriterTest {
   @Test
   @SneakyThrows
   void write_positive_onlyMapped() {
-    when(props.getLocalFileStoragePath()).thenReturn(defaultFilePath);
+    when(props.getS3LocalSubPath()).thenReturn(defaultFilePath);
     writer.prepareFilesPath(stepExecution);
     var records = records(2, 0);
     var composite = composite(records);
@@ -124,7 +124,7 @@ class MappingRecordsWriterTest {
   @Test
   @SneakyThrows
   void write_positive_onlyErrors() {
-    when(props.getLocalFileStoragePath()).thenReturn(defaultFilePath);
+    when(props.getS3LocalSubPath()).thenReturn(defaultFilePath);
     writer.prepareFilesPath(stepExecution);
     var records = records(0, 2);
     var composite = composite(records);
@@ -154,16 +154,16 @@ class MappingRecordsWriterTest {
   @Test
   @SneakyThrows
   void write_negative_pathDoesNotExist() {
-    when(props.getLocalFileStoragePath()).thenReturn(defaultFilePath);
+    when(props.getS3LocalSubPath()).thenReturn(defaultFilePath);
     writer.prepareFilesPath(stepExecution);
-    FileUtils.deleteDirectory(new File("job"));
+    FileUtils.deleteDirectory(new File("mod-marc-migrations"));
 
     var records = records(2, 2);
     var composite = composite(records);
     var chunk = new Chunk<>(composite);
 
     var ex = assertThrows(IllegalStateException.class, () -> writer.write(chunk));
-    assertThat(ex).hasMessage("java.nio.file.NoSuchFileException: job/5/entity");
+    assertThat(ex).hasMessage("java.nio.file.NoSuchFileException: mod-marc-migrations/5/entity");
   }
 
   private MappingComposite<MappingResult> composite(List<MappingResult> records) {
