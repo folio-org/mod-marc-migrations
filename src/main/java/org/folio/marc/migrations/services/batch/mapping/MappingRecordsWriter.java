@@ -32,7 +32,7 @@ public class MappingRecordsWriter implements ItemWriter<MappingComposite<Mapping
   @BeforeStep
   public void prepareFilesPath(StepExecution stepExecution) throws IOException {
     var jobExecution = stepExecution.getJobExecution();
-    this.filePath = JOB_FILES_PATH.formatted(props.getLocalFileStoragePath(), jobExecution.getJobId());
+    this.filePath = JOB_FILES_PATH.formatted(props.getS3LocalSubPath(), jobExecution.getJobId());
     Files.createDirectories(Paths.get(filePath));
   }
 

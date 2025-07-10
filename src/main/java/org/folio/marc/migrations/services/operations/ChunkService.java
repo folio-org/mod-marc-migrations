@@ -71,15 +71,16 @@ public class ChunkService {
 
     Lists.partition(recordIds, props.getChunkSize()).forEach(chunkRecordIds -> {
       var operationId = operation.getId();
+      var s3SubPath = props.getS3SubPath();
       var chunkId = UUID.randomUUID();
       var chunk = OperationChunk.builder()
         .id(chunkId)
         .operationId(operationId)
         .startRecordId(chunkRecordIds.getFirst())
         .endRecordId(chunkRecordIds.getLast())
-        .sourceChunkFileName(CHUNK_FILE_NAME.formatted(operationId, chunkId, "source"))
-        .marcChunkFileName(CHUNK_FILE_NAME.formatted(operationId, chunkId, "marc"))
-        .entityChunkFileName(CHUNK_FILE_NAME.formatted(operationId, chunkId, "entity"))
+        .sourceChunkFileName(CHUNK_FILE_NAME.formatted(s3SubPath, operationId, chunkId, "source"))
+        .marcChunkFileName(CHUNK_FILE_NAME.formatted(s3SubPath, operationId, chunkId, "marc"))
+        .entityChunkFileName(CHUNK_FILE_NAME.formatted(s3SubPath, operationId, chunkId, "entity"))
         .status(OperationStatusType.NEW)
         .numOfRecords(chunkRecordIds.size())
         .build();

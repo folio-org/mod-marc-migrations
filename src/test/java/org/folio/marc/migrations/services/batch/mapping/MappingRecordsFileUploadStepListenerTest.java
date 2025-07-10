@@ -42,8 +42,9 @@ import org.springframework.batch.core.StepExecution;
 class MappingRecordsFileUploadStepListenerTest {
 
   private final Long jobId = 5L;
-  private final String jobFilesDirectory = "job/" + jobId;
-  private final String defaultFilePath = "job";
+  private final String jobFilesDirectory = "mod-marc-migrations/" + jobId;
+  private final String defaultFilePath = "mod-marc-migrations";
+  private final String s3SubPath = "mock-s3-subpath";
 
   private @Mock FolioS3Service s3Service;
   private @Mock OperationJdbcService jdbcService;
@@ -53,7 +54,7 @@ class MappingRecordsFileUploadStepListenerTest {
   @BeforeEach
   @SneakyThrows
   void setUpFilesStorage() {
-    when(props.getLocalFileStoragePath()).thenReturn(defaultFilePath);
+    when(props.getS3LocalSubPath()).thenReturn(defaultFilePath);
     var directory = Path.of(jobFilesDirectory);
     Files.createDirectories(directory);
   }
@@ -72,6 +73,7 @@ class MappingRecordsFileUploadStepListenerTest {
     operation.setTotalNumOfRecords(10);
     operation.setMappedNumOfRecords(10);
     when(jdbcService.getOperation(operationId)).thenReturn(operation);
+    when(props.getS3SubPath()).thenReturn(s3SubPath);
     var jobExecution = new JobExecution(new JobInstance(jobId, "testJob"), 1L,
       new JobParameters(Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class))));
     var stepExecution = new StepExecution("testStep", jobExecution);
@@ -84,8 +86,9 @@ class MappingRecordsFileUploadStepListenerTest {
     var actual = listener.afterStep(stepExecution);
 
     assertThat(actual).isEqualTo(stepExecution.getExitStatus());
-    verify(s3Service).uploadFile(path1.toFile().getAbsolutePath(), "operation/" + operationId + "/test1");
-    verify(s3Service).uploadFile(path2.toFile().getAbsolutePath(), "operation/" + operationId + "/test2");
+    var formattedPath = String.format("%s/operation/%s", s3SubPath, operationId);
+    verify(s3Service).uploadFile(path1.toFile().getAbsolutePath(), formattedPath + "/test1");
+    verify(s3Service).uploadFile(path2.toFile().getAbsolutePath(), formattedPath + "/test2");
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING_COMPLETED),
       eq(OperationTimeType.MAPPING_END), notNull());
     verify(jdbcService).getOperation(operationId);
@@ -97,7 +100,8 @@ class MappingRecordsFileUploadStepListenerTest {
   void afterStepWithConfigurableStoragePath_positive() {
     String customFilePath = "custom";
     String customDirectory = customFilePath + "/" + jobId;
-    when(props.getLocalFileStoragePath()).thenReturn(customFilePath);
+    when(props.getS3LocalSubPath()).thenReturn(customFilePath);
+    when(props.getS3SubPath()).thenReturn(s3SubPath);
     var directory = Path.of(customDirectory);
     Files.createDirectories(directory);
 
@@ -118,8 +122,9 @@ class MappingRecordsFileUploadStepListenerTest {
     var actual = listener.afterStep(stepExecution);
 
     assertThat(actual).isEqualTo(stepExecution.getExitStatus());
-    verify(s3Service).uploadFile(path1.toFile().getAbsolutePath(), "operation/" + operationId + "/test1");
-    verify(s3Service).uploadFile(path2.toFile().getAbsolutePath(), "operation/" + operationId + "/test2");
+    var formattedPath = String.format("%s/operation/%s", s3SubPath, operationId);
+    verify(s3Service).uploadFile(path1.toFile().getAbsolutePath(), formattedPath + "/test1");
+    verify(s3Service).uploadFile(path2.toFile().getAbsolutePath(), formattedPath + "/test2");
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING_COMPLETED),
         eq(OperationTimeType.MAPPING_END), notNull());
     verify(jdbcService).getOperation(operationId);
@@ -186,6 +191,7 @@ class MappingRecordsFileUploadStepListenerTest {
         new JobParameters(Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class))));
     var stepExecution = new StepExecution("testStep", jobExecution);
     stepExecution.setExitStatus(ExitStatus.FAILED);
+    when(props.getS3SubPath()).thenReturn(s3SubPath);
     var path1 = Path.of(jobFilesDirectory, "test1");
     var path2 = Path.of(jobFilesDirectory, "test2");
     Files.createFile(path1);
@@ -196,10 +202,9 @@ class MappingRecordsFileUploadStepListenerTest {
 
     // Assert
     assertThat(actual).isEqualTo(stepExecution.getExitStatus());
-    verify(s3Service).uploadFile(path1.toFile()
-      .getAbsolutePath(), "operation/" + operationId + "/test1");
-    verify(s3Service).uploadFile(path2.toFile()
-      .getAbsolutePath(), "operation/" + operationId + "/test2");
+    var formattedPath = String.format("%s/operation/%s", s3SubPath, operationId);
+    verify(s3Service).uploadFile(path1.toFile().getAbsolutePath(), formattedPath + "/test1");
+    verify(s3Service).uploadFile(path2.toFile().getAbsolutePath(), formattedPath + "/test2");
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING_FAILED),
         eq(OperationTimeType.MAPPING_END), notNull());
     assertThat(Files.exists(Path.of(jobFilesDirectory))).isFalse();

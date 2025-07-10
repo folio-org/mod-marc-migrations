@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
+import org.folio.marc.migrations.config.MigrationProperties;
 import org.folio.marc.migrations.domain.entities.ChunkStep;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
@@ -40,6 +41,7 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
   private final ChunkStepJdbcService chunkStepJdbcService;
   private final InstanceJdbcService instanceJdbcService;
   private final OperationJdbcService operationJdbcService;
+  private final MigrationProperties props;
 
   @Setter
   @Value("#{jobParameters['entityType']}")
@@ -96,15 +98,16 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
 
   private ChunkStep createChunkStep(OperationChunk chunk) {
     var stepId = UUID.randomUUID();
+    var s3SubPath = props.getS3SubPath();
     var chunkStep = ChunkStep.builder()
       .id(stepId)
       .operationId(chunk.getOperationId())
       .operationChunkId(chunk.getId())
       .operationStep(OperationStep.DATA_MAPPING)
-      .entityErrorChunkFileName(STEP_FILE_NAME.formatted(
-        chunk.getOperationId(), chunk.getId(), stepId, "entity-error"))
-      .errorChunkFileName(STEP_FILE_NAME.formatted(
-        chunk.getOperationId(), chunk.getId(), stepId, "error"))
+      .entityErrorChunkFileName(
+          STEP_FILE_NAME.formatted(s3SubPath, chunk.getOperationId(), chunk.getId(), stepId, "entity-error"))
+      .errorChunkFileName(
+          STEP_FILE_NAME.formatted(s3SubPath, chunk.getOperationId(), chunk.getId(), stepId, "error"))
       .status(StepStatus.IN_PROGRESS)
       .stepStartTime(Timestamp.from(Instant.now()))
       .build();
