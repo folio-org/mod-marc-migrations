@@ -13,7 +13,7 @@ services:
       - "${APP_PORT}:8081"
       - "${DEBUG_PORT}:${DEBUG_PORT}"
     volumes:
-      - ./generated:/usr/verticles/job
+      - ./generated:/usr/verticles/${S3_LOCAL_SUB_PATH}
     depends_on:
       - api-mock
       - postgres
@@ -34,6 +34,7 @@ services:
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
       S3_URL: ${S3_URL}
+      S3_BUCKET: ${S3_BUCKET}
       RECORDS_CHUNK_SIZE: ${RECORDS_CHUNK_SIZE}
       CHUNK_FETCH_IDS_COUNT: ${CHUNK_FETCH_IDS_COUNT}
       CHUNK_PERSIST_COUNT: ${CHUNK_PERSIST_COUNT}
@@ -98,7 +99,7 @@ services:
       PGADMIN_CONFIG_SERVER_MODE: "False"
       PGADMIN_DEFAULT_EMAIL: "${PGADMIN_DEFAULT_EMAIL}"
       PGADMIN_DEFAULT_PASSWORD: "${PGADMIN_DEFAULT_PASSWORD}"
-      
+
   zookeeper:
     image: wurstmeister/zookeeper:3.4.6
     container_name: zookeeper-marc-migrations

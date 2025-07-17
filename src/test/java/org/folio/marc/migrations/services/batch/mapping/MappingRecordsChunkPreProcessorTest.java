@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.assertj.core.api.SoftAssertions;
+import org.folio.marc.migrations.config.MigrationProperties;
 import org.folio.marc.migrations.domain.entities.ChunkStep;
 import org.folio.marc.migrations.domain.entities.MarcRecord;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
@@ -42,11 +43,13 @@ class MappingRecordsChunkPreProcessorTest {
 
   private static final UUID AUTHORITY_OPERATION_ID = UUID.randomUUID();
   private static final UUID INSTANCE_OPERATION_ID = UUID.randomUUID();
+  private static final String S3_SUB_PATH = "mock-s3-subpath";
 
   private @Mock AuthorityJdbcService authorityJdbcService;
   private @Mock ChunkStepJdbcService chunkStepJdbcService;
   private @Mock InstanceJdbcService instanceJdbcService;
   private @Mock OperationJdbcService operationJdbcService;
+  private @Mock MigrationProperties props;
   private @InjectMocks MappingRecordsChunkPreProcessor processor;
 
   @Test
@@ -57,7 +60,9 @@ class MappingRecordsChunkPreProcessorTest {
 
     when(authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
       .thenReturn(marcRecords);
+    when(props.getS3SubPath()).thenReturn(S3_SUB_PATH);
     processor.setEntityType(AUTHORITY);
+
     process_positive(chunk, marcRecords);
   }
 
@@ -69,6 +74,7 @@ class MappingRecordsChunkPreProcessorTest {
 
     when(instanceJdbcService.getInstancesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
         .thenReturn(marcRecords);
+    when(props.getS3SubPath()).thenReturn(S3_SUB_PATH);
     processor.setEntityType(INSTANCE);
 
     process_positive(chunk, marcRecords);
@@ -266,6 +272,7 @@ class MappingRecordsChunkPreProcessorTest {
         .thenReturn(null);
     when(authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
         .thenReturn(marcRecords);
+    when(props.getS3SubPath()).thenReturn(S3_SUB_PATH);
 
     processor.setEntityType(EntityType.AUTHORITY);
     var stepCaptor = ArgumentCaptor.forClass(ChunkStep.class);
@@ -303,9 +310,11 @@ class MappingRecordsChunkPreProcessorTest {
     softAssert.assertThat(step.getOperationChunkId()).isEqualTo(chunk.getId());
     softAssert.assertThat(step.getOperationStep()).isEqualTo(OperationStep.DATA_MAPPING);
     softAssert.assertThat(step.getEntityErrorChunkFileName())
-      .contains(chunk.getOperationId().toString(), chunk.getId().toString(), step.getId().toString(), "entity-error");
+      .contains(S3_SUB_PATH, chunk.getOperationId().toString(), chunk.getId().toString(), step.getId().toString(),
+          "entity-error");
     softAssert.assertThat(step.getErrorChunkFileName())
-      .contains(chunk.getOperationId().toString(), chunk.getId().toString(), step.getId().toString(), "error");
+      .contains(S3_SUB_PATH, chunk.getOperationId().toString(), chunk.getId().toString(), step.getId().toString(),
+          "error");
     softAssert.assertThat(step.getStatus()).isEqualTo(StepStatus.IN_PROGRESS);
     softAssert.assertThat(step.getStepStartTime()).isNotNull().isBefore(Instant.now());
 

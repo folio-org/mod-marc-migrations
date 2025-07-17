@@ -71,14 +71,15 @@ folio:
     chunk-persist-count: ${CHUNK_PERSIST_COUNT:1000}
     chunk-processing-max-parallelism: ${CHUNK_PROCESSING_MAX_PARALLELISM:4}
     chunk-retrying-max-ids-count: ${CHUNK_RETRYING_MAX_IDS_COUNT:1000}
-    local-file-storage-path: ${LOCAL_FILE_STORAGE_PATH:job}
+    s3-local-sub-path: ${S3_LOCAL_SUB_PATH:mod-marc-migrations}
+    s3-sub-path: ${S3_SUB_PATH:mod-marc-migrations}
     job-retention-days: ${JOB_RETENTION_DAYS:7}
   remote-storage:
-    endpoint: ${S3_URL:http://localhost:9000/}
-    region: ${S3_REGION:eu-west-1}
-    bucket: ${S3_BUCKET:marc-migrations}
-    accessKey: ${S3_ACCESS_KEY_ID:access}
-    secretKey: ${S3_SECRET_ACCESS_KEY:secret12}
+    endpoint: ${S3_URL:https://s3.amazonaws.com}
+    region: ${S3_REGION:us-west-2}
+    bucket: ${S3_BUCKET}
+    accessKey: ${S3_ACCESS_KEY_ID}
+    secretKey: ${S3_SECRET_ACCESS_KEY}
     awsSdk: ${S3_IS_AWS:false}
     retryCount: ${S3_RETRY_COUNT:3}
     retryDelayMs: ${S3_RETRY_DELAY_MS:500}

@@ -16,8 +16,7 @@
 * Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
 
 ### Tech Dept
-* Improved API definition with better descriptions, examples, and consistent error responses
-* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
+* Re-work all s3 related envs var and standardization ([MODMARCMIG-58](https://folio-org.atlassian.net/browse/MODMARCMIG-58))
 
 ### Dependencies
 * Bump `LIB_NAME` from `OLD_VERSION` to `NEW_VERSION`

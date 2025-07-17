@@ -40,7 +40,7 @@ public class MappingRecordsFileUploadStepListener implements StepExecutionListen
     var exitStatus = stepExecution.getExitStatus();
     var jobId = stepExecution.getJobExecution().getJobId();
     var operationId = stepExecution.getJobParameters().getString(OPERATION_ID);
-    var filesPath = JOB_FILES_PATH.formatted(props.getLocalFileStoragePath(), jobId);
+    var filesPath = JOB_FILES_PATH.formatted(props.getS3LocalSubPath(), jobId);
 
     if (operationId == null) {
       log.warn("No operationId found in job parameters for jobId {}", jobId);
@@ -93,7 +93,7 @@ public class MappingRecordsFileUploadStepListener implements StepExecutionListen
       }
 
       var localPath = file.getAbsolutePath();
-      var remotePath = OPERATION_FILES_PATH.formatted(operationId) + file.getName();
+      var remotePath = OPERATION_FILES_PATH.formatted(props.getS3SubPath(), operationId) + file.getName();
       s3Service.uploadFile(localPath, remotePath);
     }
   }
