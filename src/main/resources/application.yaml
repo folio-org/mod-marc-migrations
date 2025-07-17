@@ -72,7 +72,7 @@ folio:
     chunk-processing-max-parallelism: ${CHUNK_PROCESSING_MAX_PARALLELISM:4}
     chunk-retrying-max-ids-count: ${CHUNK_RETRYING_MAX_IDS_COUNT:1000}
     s3-local-sub-path: ${S3_LOCAL_SUB_PATH:mod-marc-migrations}
-    s3-sub-path: ${S3_SUB_PATH:mod-marc-migrations}
+    s3-sub-path: mod-marc-migrations
     job-retention-days: ${JOB_RETENTION_DAYS:7}
   remote-storage:
     endpoint: ${S3_URL:https://s3.amazonaws.com}
