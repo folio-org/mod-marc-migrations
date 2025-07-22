@@ -380,18 +380,28 @@
         "description": "Max thread pool size for chunks processing"
       },
       {
+        "name": "S3_LOCAL_SUB_PATH",
+        "value": "mod-marc-migrations",
+        "description": "S3 subpath for local storage of Authority and Marc bib files during migration"
+      },
+      {
+        "name": "S3_SUB_PATH",
+        "value": "mod-marc-migrations",
+        "description": "S3 subpath for files storage"
+      },
+      {
         "name": "S3_URL",
-        "value": "http://localhost:9000/",
+        "value": "https://s3.amazonaws.com",
         "description": "S3 compatible service url"
       },
       {
         "name": "S3_REGION",
-        "value": "",
+        "value": "us-west-2",
         "description": "S3 compatible service region"
       },
       {
         "name": "S3_BUCKET",
-        "value": "marc-migrations",
+        "value": "",
         "description": "S3 compatible service bucket"
       },
       {

@@ -89,6 +89,9 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @IntegrationTest
 @DatabaseCleanup(tables = {OPERATION_TABLE})
 class MarcMigrationsControllerIT extends IntegrationTestBase {
+
+  private static final String OPERATION_PATH = "mod-marc-migrations/operation/%s/";
+
   private @MockitoSpyBean FolioS3Client s3Client;
   private @MockitoSpyBean ChunkStepJdbcService chunkStepJdbcService;
   private @MockitoSpyBean BulkStorageService bulkStorageService;
@@ -145,7 +148,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
                         && step.getStatus().equals(COMPLETED)
                         && step.getNumOfErrors().equals(0));
 
-    var fileNames = s3Client.list("operation/" + operationId + "/");
+    var fileNames = s3Client.list(OPERATION_PATH.formatted(operationId));
     assertThat(fileNames).hasSize(9);
   }
 
@@ -191,7 +194,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
                         && step.getStatus().equals(COMPLETED)
                         && step.getNumOfErrors().equals(0));
 
-    var fileNames = s3Client.list("operation/" + operationId + "/");
+    var fileNames = s3Client.list(OPERATION_PATH.formatted(operationId));
     assertThat(fileNames).hasSize(2);
   }
 
@@ -241,7 +244,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
                         && step.getStatus().equals(StepStatus.FAILED)
                         && step.getNumOfErrors() >= 7);
 
-    var fileNames = s3Client.list("operation/" + operationId + "/");
+    var fileNames = s3Client.list(OPERATION_PATH.formatted(operationId));
     assertThat(fileNames).hasSize(18);
     wireMock.removeStubMapping(stub);
   }
@@ -949,7 +952,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     assertThat(chunks).hasSize(expectedChunkSize);
 
     var errorChunk = chunks.getFirst();
-    var fileNames = s3Client.list("operation/" + operationId + "/" + errorChunk.getId() + "_entity");
+    var fileNames = s3Client.list(OPERATION_PATH.formatted(operationId) + errorChunk.getId() + "_entity");
     var entityList = readFile(fileNames.getFirst());
     var errorFile = writeToFile("test.txt", List.of(entityList.getFirst()));
 
@@ -1012,7 +1015,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     assertThat(chunks).hasSize(expectedChunkSize);
 
     var errorChunk = chunks.getFirst();
-    var fileNames = s3Client.list("operation/" + operationId + "/" + errorChunk.getId() + "_entity");
+    var fileNames = s3Client.list(OPERATION_PATH.formatted(operationId) + errorChunk.getId() + "_entity");
     var entityList = readFile(fileNames.getFirst());
     var errorFile = writeToFile("test.txt", List.of(entityList.getFirst()));
 
