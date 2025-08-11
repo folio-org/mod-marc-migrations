@@ -1,5 +1,7 @@
 package org.folio.marc.migrations.services.batch.mapping;
 
+import static java.lang.String.format;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.json.JsonObject;
@@ -93,6 +95,9 @@ public class MappingRecordsChunkProcessor
       if (entityType == EntityType.AUTHORITY) {
         marcRecord = new MarcToAuthorityMapper()
             .mapRecord(marcSource, mappingData.mappingParameters(), mappingData.mappingRules());
+        if (marcRecord == null) {
+          return createFailedMappingResult(sourceData);
+        }
         Authority authority = (Authority) marcRecord;
         authority.setId(sourceData.recordId().toString());
         authority.setVersion(sourceData.version());
@@ -101,6 +106,9 @@ public class MappingRecordsChunkProcessor
       } else {
         marcRecord = new MarcToInstanceMapper()
             .mapRecord(marcSource, mappingData.mappingParameters(), mappingData.mappingRules());
+        if (marcRecord == null) {
+          return createFailedMappingResult(sourceData);
+        }
         Instance instance = (Instance) marcRecord;
         instance.setId(sourceData.recordId().toString());
         instance.setVersion(sourceData.version());
@@ -110,9 +118,16 @@ public class MappingRecordsChunkProcessor
       return new MappingResult(recordString);
     } catch (Exception ex) {
       log.warn("Error while processing data for marcId {}, recordId {}: {}",
-          sourceData.marcId(), sourceData.recordId(), ex.getMessage());
-      return asFailedMappingResult(sourceData, ex.getMessage());
+          sourceData.marcId(), sourceData.recordId(), ex);
+      return asFailedMappingResult(sourceData, format("%s,%s", sourceData.recordId(), ex.getMessage()));
     }
+  }
+
+  private MappingResult createFailedMappingResult(MarcRecord sourceData) {
+    log.warn("Could not map record for marcId {}, recordId {}", sourceData.marcId(), sourceData.recordId());
+    return asFailedMappingResult(sourceData,
+        format("%s,Could not map record for marcId %s, recordId %s. Please check the logs for more details.",
+            sourceData.recordId(), sourceData.marcId(), sourceData.recordId()));
   }
 
   private MappingResult asFailedMappingResult(MarcRecord sourceData, String errorMessage) {

@@ -11,4 +11,5 @@
   <include file="/changes/v2.1/add_cascade_deletes.xml" relativeToChangelogFile="true"/>
   <include file="/changes/v2.1/create_operation_error.xml" relativeToChangelogFile="true"/>
   <include file="/changes/v2.1/change_column_type.xml" relativeToChangelogFile="true"/>
+  <include file="/changes/v2.1/add_operation_error_status.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>
