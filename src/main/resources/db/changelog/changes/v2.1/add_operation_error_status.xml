@@ -7,23 +7,11 @@
   <changeSet id="MODMARCMIG-65@@add:type:error_report_status" author="svitlana_kovalova">
     <preConditions onFail="MARK_RAN">
       <sqlCheck expectedResult="1">
-        WITH enum_type_exists AS (
-          SELECT 1
-          FROM pg_type t
-          JOIN pg_namespace n ON n.oid = t.typnamespace
-          WHERE t.typname = 'error_report_status'
-            AND n.nspname = '${database.defaultSchemaName}'
-        )
-        SELECT CASE
-          WHEN EXISTS (SELECT 1 FROM enum_type_exists)
-            AND NOT EXISTS (
-              SELECT 1
-              FROM unnest(enum_range(NULL::error_report_status)) AS e(value)
-              WHERE value = 'ERROR'
-            )
-          THEN 1
-          ELSE 0
-        END;
+        SELECT count(*)
+        FROM pg_type t
+        JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+        WHERE t.typname = 'error_report_status'
+        AND n.nspname = '${database.defaultSchemaName}';
       </sqlCheck>
     </preConditions>
 
