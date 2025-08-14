@@ -74,7 +74,7 @@ import org.folio.spring.exception.NotFoundException;
 import org.folio.spring.testing.extension.DatabaseCleanup;
 import org.folio.spring.testing.type.IntegrationTest;
 import org.folio.support.IntegrationTestBase;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -102,8 +102,8 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     setUpTenant();
   }
 
-  @AfterAll
-  static void afterAll() throws IOException {
+  @AfterEach
+  void afterEach() throws IOException {
     FileUtils.deleteDirectory(new File("test"));
   }
 
