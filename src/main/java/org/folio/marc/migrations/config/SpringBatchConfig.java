@@ -72,8 +72,8 @@ public class SpringBatchConfig {
     return operations;
   }
 
-  @Bean("remapAuthRecordsStep")
-  public Step remapAuthRecordsStep(JobRepository jobRepository,
+  @Bean("remapRecordsStep")
+  public Step remapRecordsStep(JobRepository jobRepository,
                                    PlatformTransactionManager transactionManager,
                                    @Qualifier("syncReader")
                                    ItemReader<OperationChunk> reader,
@@ -83,7 +83,7 @@ public class SpringBatchConfig {
                                    MappingRecordsFileUploadStepListener listener,
                                    @Qualifier("chunksProcessingExecutor") TaskExecutor executor,
                                    RepeatOperations customThrottler) {
-    return new StepBuilder("remapAuthRecords", jobRepository)
+    return new StepBuilder("remapRecords", jobRepository)
       .<OperationChunk, MappingComposite<MappingResult>>chunk(1, transactionManager)
       .reader(reader)
       .processor(processor)
@@ -96,15 +96,15 @@ public class SpringBatchConfig {
 
   @Bean("remappingJob")
   public Job remappingJob(JobRepository jobRepository,
-                          @Qualifier("remapAuthRecordsStep") Step remapAuthRecordsStep) {
+                          @Qualifier("remapRecordsStep") Step remapRecordsStep) {
     return new JobBuilder("remapping", jobRepository)
       .incrementer(new RunIdIncrementer())
-      .start(remapAuthRecordsStep)
+      .start(remapRecordsStep)
       .build();
   }
 
-  @Bean(name = "remapSaveAuthRecordsStep")
-  public Step remapSaveAuthRecordsStep(JobRepository jobRepository,
+  @Bean(name = "remapSaveRecordsStep")
+  public Step remapSaveRecordsStep(JobRepository jobRepository,
                                        PlatformTransactionManager transactionManager,
                                        @Qualifier("syncReader")
                                        ItemReader<OperationChunk> reader,
@@ -113,7 +113,7 @@ public class SpringBatchConfig {
                                        SavingRecordsStepListener listener,
                                        @Qualifier("chunksProcessingExecutor") TaskExecutor executor,
                                        RepeatOperations customThrottler) {
-    return new StepBuilder("remapSaveAuthRecords", jobRepository)
+    return new StepBuilder("remapSaveRecords", jobRepository)
         .<OperationChunk, DataSavingResult>chunk(1, transactionManager)
         .reader(reader)
         .processor(processor)
@@ -126,10 +126,10 @@ public class SpringBatchConfig {
 
   @Bean("remappingSaveJob")
   public Job remappingSaveJob(JobRepository jobRepository,
-                              @Qualifier("remapSaveAuthRecordsStep") Step remapAuthRecordsStep) {
+                              @Qualifier("remapSaveRecordsStep") Step remapRecordsStep) {
     return new JobBuilder("remappingSave", jobRepository)
         .incrementer(new RunIdIncrementer())
-        .start(remapAuthRecordsStep)
+        .start(remapRecordsStep)
         .build();
   }
 
@@ -165,25 +165,25 @@ public class SpringBatchConfig {
 
   @Bean("remappingRetryJob")
   public Job remappingRetryJob(JobRepository jobRepository,
-                               @Qualifier("remapAuthRetryRecordsStep") Step remapAuthRetryRecordsStep) {
+                               @Qualifier("remapRetryRecordsStep") Step remapRetryRecordsStep) {
     return new JobBuilder("remappingRetry", jobRepository)
         .incrementer(new RunIdIncrementer())
-        .start(remapAuthRetryRecordsStep)
+        .start(remapRetryRecordsStep)
         .build();
   }
 
-  @Bean("remapAuthRetryRecordsStep")
-  public Step remapAuthRetryRecordsStep(JobRepository jobRepository,
-                                        PlatformTransactionManager transactionManager,
-                                        @Qualifier("retryingSyncReader")
+  @Bean("remapRetryRecordsStep")
+  public Step remapRetryRecordsStep(JobRepository jobRepository,
+                                    PlatformTransactionManager transactionManager,
+                                    @Qualifier("retryingSyncReader")
                                         ItemReader<OperationChunk> reader,
-                                        @Qualifier("remappingStepProcessor")
+                                    @Qualifier("remappingStepProcessor")
                                         ItemProcessor<OperationChunk, MappingComposite<MappingResult>> processor,
-                                        MappingRecordsWriter writer,
-                                        MappingRecordsFileUploadStepListener listener,
-                                        @Qualifier("chunksProcessingExecutor") TaskExecutor executor,
-                                        RepeatOperations customThrottler) {
-    return new StepBuilder("remapAuthRetryRecords", jobRepository)
+                                    MappingRecordsWriter writer,
+                                    MappingRecordsFileUploadStepListener listener,
+                                    @Qualifier("chunksProcessingExecutor") TaskExecutor executor,
+                                    RepeatOperations customThrottler) {
+    return new StepBuilder("remapRetryRecords", jobRepository)
         .<OperationChunk, MappingComposite<MappingResult>>chunk(1, transactionManager)
         .reader(reader)
         .processor(processor)

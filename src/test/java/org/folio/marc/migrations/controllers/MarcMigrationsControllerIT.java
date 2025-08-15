@@ -74,7 +74,7 @@ import org.folio.spring.exception.NotFoundException;
 import org.folio.spring.testing.extension.DatabaseCleanup;
 import org.folio.spring.testing.type.IntegrationTest;
 import org.folio.support.IntegrationTestBase;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -91,6 +91,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 class MarcMigrationsControllerIT extends IntegrationTestBase {
 
   private static final String OPERATION_PATH = "mod-marc-migrations/operation/%s/";
+  private static final String UNKNOWN_RECORD_ID = "<unknown>";
 
   private @MockitoSpyBean FolioS3Client s3Client;
   private @MockitoSpyBean ChunkStepJdbcService chunkStepJdbcService;
@@ -101,8 +102,8 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     setUpTenant();
   }
 
-  @AfterAll
-  static void afterAll() throws IOException {
+  @AfterEach
+  void afterEach() throws IOException {
     FileUtils.deleteDirectory(new File("test"));
   }
 
@@ -705,56 +706,92 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   }
 
   @Test
-  void createErrorReport_positive_haveErrors() throws Exception {
+  void createErrorReport_positive_haveErrors_without_id() throws Exception {
     // Arrange
-    var errorFile = writeToFile("test.txt", List.of("id1,error1", "id2,error2"));
+    var errorFile = writeToFile("test.txt", List.of("error1", "error2"));
     var wireMock = okapi.wireMockServer();
-    final var stub = wireMock.stubFor(post(urlPathEqualTo("/instance-storage/instances/bulk"))
-      .willReturn(ResponseDefinitionBuilder.responseDefinition()
+    final var stub = wireMock
+      .stubFor(post(urlPathEqualTo("/instance-storage/instances/bulk"))
+        .willReturn(ResponseDefinitionBuilder.responseDefinition()
         .withHeader("Content-Type", "application/json;charset=UTF-8")
         .withBody("{ \"errorsNumber\": \"2\", \"errorRecordsFileName\": \"errorRecordsFileName\", "
-                  + "\"errorsFileName\": \"" + errorFile + "\" }")));
-    var migrationOperation = new NewMigrationOperation()
-      .operationType(REMAPPING)
+            + "\"errorsFileName\": \"" + errorFile + "\" }")));
+    var migrationOperation = new NewMigrationOperation().operationType(REMAPPING)
       .entityType(EntityType.INSTANCE);
 
     // Act & Assert
-    var result = doPost(marcMigrationEndpoint(), migrationOperation)
-      .andExpect(operationStatus(NEW))
+    var result = doPost(marcMigrationEndpoint(), migrationOperation).andExpect(operationStatus(NEW))
       .andExpect(totalRecords(11))
       .andReturn();
     var operation = contentAsObj(result, MigrationOperation.class);
     var operationId = operation.getId();
 
-    doGetUntilMatches(marcMigrationEndpoint(operationId),
-      operationStatus(DATA_MAPPING_COMPLETED));
+    doGetUntilMatches(marcMigrationEndpoint(operationId), operationStatus(DATA_MAPPING_COMPLETED));
     doGetUntilMatches(marcMigrationEndpoint(operationId), mappedRecords(11));
 
-    var saveMigrationOperation = new SaveMigrationOperation()
-      .status(DATA_SAVING);
-    tryPut(marcMigrationEndpoint(operationId), saveMigrationOperation)
-      .andExpect(status().isNoContent());
-    awaitUntilAsserted(() ->
-      doGet(marcMigrationEndpoint(operationId))
-        .andExpect(operationStatus(DATA_SAVING_FAILED))
-        .andExpect(totalRecords(11))
-        .andExpect(mappedRecords(11))
-        .andExpect(savedRecords(7))
-    );
+    var saveMigrationOperation = new SaveMigrationOperation().status(DATA_SAVING);
+    tryPut(marcMigrationEndpoint(operationId), saveMigrationOperation).andExpect(status().isNoContent());
+    awaitUntilAsserted(() -> doGet(marcMigrationEndpoint(operationId)).andExpect(operationStatus(DATA_SAVING_FAILED))
+      .andExpect(totalRecords(11))
+      .andExpect(mappedRecords(11))
+      .andExpect(savedRecords(7)));
 
-    doPost(marcMigrationEndpoint(operationId) + "/error-report", null)
-      .andExpect(status().isNoContent());
+    doPost(marcMigrationEndpoint(operationId) + "/error-report", null).andExpect(status().isNoContent());
 
-    awaitUntilAsserted(() ->
-      doGet(marcMigrationEndpoint(operationId) + "/error-report/status")
+    awaitUntilAsserted(() -> doGet(marcMigrationEndpoint(operationId) + "/error-report/status")
         .andExpect(status().isOk())
-        .andExpect(jsonPath("status", is(ErrorReportStatus.StatusEnum.COMPLETED.getValue())))
-    );
+        .andExpect(jsonPath("status", is(ErrorReportStatus.StatusEnum.COMPLETED.getValue()))));
 
-    doGet(marcMigrationEndpoint(operationId) + "/error-report/errors?limit=2&offset=2")
-      .andExpect(status().isOk())
+    doGet(marcMigrationEndpoint(operationId) + "/error-report/errors?limit=2&offset=2").andExpect(status().isOk())
       .andExpect(jsonPath("errorReports", hasSize(2)))
-      .andExpect(jsonPath("errorReports[1].recordId", anyOf(is("id1"), is("id2"))))
+      .andExpect(jsonPath("errorReports[1].recordId", anyOf(is(UNKNOWN_RECORD_ID), is(UNKNOWN_RECORD_ID))))
+      .andExpect(jsonPath("errorReports[1].errorMessage", anyOf(is("error1"), is("error2"))));
+
+    wireMock.removeStubMapping(stub);
+  }
+
+  @Test
+  void createErrorReport_positive_haveErrors() throws Exception {
+    // Arrange
+    var recordId1 = UUID.randomUUID().toString();
+    var recordId2 = UUID.randomUUID().toString();
+    var errorFile = writeToFile("test.txt", List.of(recordId1 + ",error1", recordId2 + ",error2"));
+    var wireMock = okapi.wireMockServer();
+    final var stub = wireMock
+      .stubFor(post(urlPathEqualTo("/instance-storage/instances/bulk"))
+          .willReturn(ResponseDefinitionBuilder.responseDefinition()
+          .withHeader("Content-Type", "application/json;charset=UTF-8")
+          .withBody("{ \"errorsNumber\": \"2\", \"errorRecordsFileName\": \"errorRecordsFileName\", "
+              + "\"errorsFileName\": \"" + errorFile + "\" }")));
+    var migrationOperation = new NewMigrationOperation().operationType(REMAPPING)
+      .entityType(EntityType.INSTANCE);
+
+    // Act & Assert
+    var result = doPost(marcMigrationEndpoint(), migrationOperation).andExpect(operationStatus(NEW))
+      .andExpect(totalRecords(11))
+      .andReturn();
+    var operation = contentAsObj(result, MigrationOperation.class);
+    var operationId = operation.getId();
+
+    doGetUntilMatches(marcMigrationEndpoint(operationId), operationStatus(DATA_MAPPING_COMPLETED));
+    doGetUntilMatches(marcMigrationEndpoint(operationId), mappedRecords(11));
+
+    var saveMigrationOperation = new SaveMigrationOperation().status(DATA_SAVING);
+    tryPut(marcMigrationEndpoint(operationId), saveMigrationOperation).andExpect(status().isNoContent());
+    awaitUntilAsserted(() -> doGet(marcMigrationEndpoint(operationId)).andExpect(operationStatus(DATA_SAVING_FAILED))
+      .andExpect(totalRecords(11))
+      .andExpect(mappedRecords(11))
+      .andExpect(savedRecords(7)));
+
+    doPost(marcMigrationEndpoint(operationId) + "/error-report", null).andExpect(status().isNoContent());
+
+    awaitUntilAsserted(() -> doGet(marcMigrationEndpoint(operationId) + "/error-report/status")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("status", is(ErrorReportStatus.StatusEnum.COMPLETED.getValue()))));
+
+    doGet(marcMigrationEndpoint(operationId) + "/error-report/errors?limit=2&offset=2").andExpect(status().isOk())
+      .andExpect(jsonPath("errorReports", hasSize(2)))
+      .andExpect(jsonPath("errorReports[1].recordId", anyOf(is(recordId1), is(recordId2))))
       .andExpect(jsonPath("errorReports[1].errorMessage", anyOf(is("error1"), is("error2"))));
 
     wireMock.removeStubMapping(stub);

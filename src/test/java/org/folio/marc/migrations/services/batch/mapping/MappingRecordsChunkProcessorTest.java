@@ -119,7 +119,7 @@ class MappingRecordsChunkProcessorTest {
     var actualRecords = new ArrayList<>(actual.records());
     assertThat(actualRecords.removeFirst()).matches(result ->
       result.mappedRecord() == null
-        && "test exc".equals(result.errorCause())
+        && result.errorCause().contains("test exc")
         && result.invalidMarcRecord() != null
         && result.invalidMarcRecord().contains("\"version\":1"));
     assertThat(actualRecords).allMatch(result ->
@@ -197,7 +197,7 @@ class MappingRecordsChunkProcessorTest {
       .hasSize(records.size())
       .allMatch(result -> result.mappedRecord() == null
         && result.errorCause() != null
-        && result.errorCause().equals(errorCause)
+        && result.errorCause().contains(errorCause)
         && result.invalidMarcRecord() != null
         && result.invalidMarcRecord().contains(marcRecordContains));
 
