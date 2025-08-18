@@ -59,6 +59,7 @@ public class SavingRetryRecordsChunkProcessor implements ItemProcessor<Operation
       if (OperationStatusType.DATA_SAVING_FAILED.equals(chunk.getStatus())
           && chunkStep.getNumOfErrors() != null
           && chunkStep.getNumOfErrors() > 0
+          && StringUtils.isNotEmpty(chunkStep.getErrorChunkFileName())
           && isChunkFileUpdated(chunk, chunkStep.getErrorChunkFileName())) {
         numOfRecords = chunkStep.getNumOfErrors();
       } else {

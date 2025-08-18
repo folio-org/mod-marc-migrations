@@ -6,8 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -140,6 +142,108 @@ class OperationErrorReportServiceTest {
     assertNotNull(result);
     verify(errorReportRepository).updateStatusById(ErrorReportStatus.IN_PROGRESS, operationId);
     await().untilAsserted(() -> verify(operationErrorJdbcService).saveOperationErrors(any(), anyString()));
+  }
+
+  @Test
+  void initiateErrorReport_CreatesErrorForMissingFile() {
+    var operationId = UUID.randomUUID();
+    var operation = new Operation();
+    operation.setId(operationId);
+    operation.setStatus(OperationStatusType.DATA_MAPPING_FAILED);
+
+    var failedChunk = ChunkStep.builder()
+      .id(UUID.randomUUID())
+      .operationId(operationId)
+      .operationChunkId(UUID.randomUUID())
+      .operationStep(OperationStep.DATA_MAPPING)
+      .status(StepStatus.FAILED)
+      .errorChunkFileName(null)
+      .build();
+
+    when(chunkStepJdbcService.getChunkStepsByOperationIdAndStatus(operationId, StepStatus.FAILED))
+        .thenReturn(List.of(failedChunk));
+
+    doAnswer(invocation -> {
+      Runnable runnable = invocation.getArgument(1);
+      runnable.run();
+      return null;
+    }).when(tenantContextRunner)
+      .runInContext(anyString(), any(Runnable.class));
+
+    var result = service.initiateErrorReport(operation, "testTenant");
+
+    assertNotNull(result);
+    verify(errorReportRepository).updateStatusById(ErrorReportStatus.IN_PROGRESS, operationId);
+    await().untilAsserted(() -> {
+      verify(operationErrorJdbcService).saveOperationErrors(argThat(errors -> {
+        OperationError error = ((List<OperationError>) errors).getFirst(); // Cast to List
+        return error.getErrorMessage()
+          .equals("Error file not found for chunk")
+            && error.getRecordId()
+              .equals("<unknown>")
+            && error.getChunkId()
+              .equals(failedChunk.getOperationChunkId());
+      }), anyString());
+    });
+  }
+
+  @Test
+  void initiateErrorReport_CompletesWhenNoFailedChunksExist() {
+    var operationId = UUID.randomUUID();
+    var operation = new Operation();
+    operation.setId(operationId);
+    operation.setStatus(OperationStatusType.DATA_MAPPING_FAILED);
+
+    when(chunkStepJdbcService.getChunkStepsByOperationIdAndStatus(operationId, StepStatus.FAILED))
+        .thenReturn(List.of());
+
+    var result = service.initiateErrorReport(operation, "testTenant");
+
+    assertNotNull(result);
+    verify(errorReportRepository).updateStatusById(ErrorReportStatus.COMPLETED, operationId);
+  }
+
+  @Test
+  void initiateErrorReport_CreatesErrorReportStatus() {
+    var operationId = UUID.randomUUID();
+    var operation = new Operation();
+    operation.setId(operationId);
+    operation.setStatus(OperationStatusType.DATA_MAPPING_FAILED);
+
+    when(chunkStepJdbcService.getChunkStepsByOperationIdAndStatus(operationId, StepStatus.FAILED))
+      .thenThrow(new RuntimeException("Chunk step retrieval error"));
+
+    var result = service.initiateErrorReport(operation, "testTenant");
+
+    assertNotNull(result);
+    verify(errorReportRepository).updateStatusById(ErrorReportStatus.IN_PROGRESS, operationId);
+    verify(errorReportRepository).updateStatusById(ErrorReportStatus.ERROR, operationId);
+  }
+
+  @Test
+  void initiateErrorReport_WithEmptyErrorFileLines() {
+    var operationId = UUID.randomUUID();
+    var operation = new Operation();
+    operation.setId(operationId);
+    operation.setStatus(OperationStatusType.DATA_MAPPING_FAILED);
+
+    var failedChunk = ChunkStep.builder()
+      .id(UUID.randomUUID())
+      .operationId(operationId)
+      .operationChunkId(UUID.randomUUID())
+      .operationStep(OperationStep.DATA_MAPPING)
+      .status(StepStatus.FAILED)
+      .errorChunkFileName("error.txt")
+      .build();
+
+    when(chunkStepJdbcService.getChunkStepsByOperationIdAndStatus(operationId, StepStatus.FAILED))
+        .thenReturn(List.of(failedChunk));
+
+    var result = service.initiateErrorReport(operation, "testTenant");
+
+    assertNotNull(result);
+    verify(errorReportRepository).updateStatusById(ErrorReportStatus.IN_PROGRESS, operationId);
+    verify(operationErrorJdbcService, never()).saveOperationErrors(any(), anyString());
   }
 
   @Test
