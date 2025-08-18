@@ -1,3 +1,10 @@
+## v2.0.2 2025-08-dd
+
+### Features
+* Skip SRS MARC-BIB records if linked entities do not exist ([MODMARCMIG-68](https://folio-org.atlassian.net/browse/MODMARCMIG-68))
+
+---
+
 ## v2.0.1 2025-04-18
 
 ### Bugfixes

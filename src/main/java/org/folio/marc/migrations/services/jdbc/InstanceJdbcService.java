@@ -27,7 +27,7 @@ public class InstanceJdbcService extends JdbcService {
          SELECT r.id as marc_id, r.external_id as instance_id, mr.content as marc, r.state, (i.jsonb ->> '_version')::int as version
          FROM %1$s.records_lb_view r
          LEFT JOIN %1$s.marc_records_lb_view mr ON mr.id = r.id
-         LEFT JOIN %1$s.instance_view i ON i.id = r.external_id
+         JOIN %1$s.instance_view i ON i.id = r.external_id
          WHERE r.state = 'ACTUAL' AND r.record_type = 'MARC_BIB'
          ORDER BY r.id;
     """;

@@ -28,7 +28,8 @@ public class BulkStorageService {
     try {
       return bulkClient.saveBulk(EntityBulkType.mapUri(entityType), bulkRequest);
     } catch (Exception ex) {
-      log.warn("Failed to save entities with type {} specified with file path: {}", entityType, remoteRecordsFileName);
+      log.warn("Failed to save entities with type {} specified with file path: {}",
+          entityType, remoteRecordsFileName, ex);
       return null;
     }
   }
