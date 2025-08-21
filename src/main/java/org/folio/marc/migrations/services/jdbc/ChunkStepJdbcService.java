@@ -114,6 +114,6 @@ public class ChunkStepJdbcService extends JdbcService {
           chunkId, step);
       return null;
     }
-    return results.getFirst();
+    return results.get(0);
   }
 }

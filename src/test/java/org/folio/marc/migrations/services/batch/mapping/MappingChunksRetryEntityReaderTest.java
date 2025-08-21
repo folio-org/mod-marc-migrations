@@ -43,7 +43,7 @@ class MappingChunksRetryEntityReaderTest {
     // Act & Assert
     var firstChunk = reader.read();
     assertThat(firstChunk).isNotNull();
-    assertThat(firstChunk.getId()).isEqualTo(chunkIds.getFirst());
+    assertThat(firstChunk.getId()).isEqualTo(chunkIds.get(0));
 
     var secondChunk = reader.read();
     assertThat(secondChunk).isNotNull();
@@ -59,7 +59,7 @@ class MappingChunksRetryEntityReaderTest {
   void read_ReturnsNullWhenAllChunksAreProcessed() {
     // Arrange
     var operationChunks = List.of(OperationChunk.builder()
-      .id(chunkIds.getFirst())
+      .id(chunkIds.get(0))
       .build());
     when(jdbcService.getChunks(chunkIds)).thenReturn(operationChunks);
 

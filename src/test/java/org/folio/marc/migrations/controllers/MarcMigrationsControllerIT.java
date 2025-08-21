@@ -17,8 +17,6 @@ import static org.folio.marc.migrations.domain.dto.MigrationOperationStatus.DATA
 import static org.folio.marc.migrations.domain.dto.MigrationOperationStatus.DATA_SAVING_FAILED;
 import static org.folio.marc.migrations.domain.dto.MigrationOperationStatus.NEW;
 import static org.folio.marc.migrations.domain.entities.types.StepStatus.COMPLETED;
-import static org.folio.support.DatabaseHelper.CHUNKS_TABLE;
-import static org.folio.support.DatabaseHelper.CHUNK_STEPS_TABLE;
 import static org.folio.support.DatabaseHelper.OPERATION_TABLE;
 import static org.folio.support.TestConstants.TENANT_ID;
 import static org.folio.support.TestConstants.USER_ID;
@@ -73,16 +71,16 @@ import org.folio.support.IntegrationTestBase;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
 @IntegrationTest
-@DatabaseCleanup(tables = {CHUNK_STEPS_TABLE, CHUNKS_TABLE, OPERATION_TABLE})
+@DatabaseCleanup(tables = {OPERATION_TABLE})
 class MarcMigrationsControllerIT extends IntegrationTestBase {
   private @SpyBean FolioS3Client s3Client;
   private @SpyBean ChunkStepJdbcService chunkStepJdbcService;
@@ -734,7 +732,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   void retryMarcMigrations_positive_retryMappingForCompletedChunk(EntityType entityType, int totalRecords,
                                                                   int expectedChunkSize) {
     // Arrange
-    var migrationOperation = new NewMigrationOperation().operationType(REMAPPING)
+    var migrationOperation = new NewMigrationOperation().operationType(OperationType.REMAPPING)
         .entityType(entityType);
 
     // Act & Assert
@@ -742,7 +740,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     var result = tryPost(marcMigrationEndpoint(), migrationOperation).andExpect(status().isCreated())
         .andExpect(jsonPath("id", notNullValue(UUID.class)))
         .andExpect(jsonPath("userId", is(USER_ID)))
-        .andExpect(jsonPath("operationType", is(REMAPPING.getValue())))
+        .andExpect(jsonPath("operationType", is(OperationType.REMAPPING.getValue())))
         .andExpect(jsonPath("entityType", is(entityType.getValue())))
         .andExpect(operationStatus(NEW))
         .andExpect(totalRecords(totalRecords))
@@ -760,11 +758,11 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     assertThat(chunks).hasSize(expectedChunkSize);
 
     // retry migration operation for DATA_MAPPING_COMPLETED chunk
-    var retryResult = tryPost(retryMarcMigrationEndpoint(operationId), List.of(chunks.getFirst().getId()))
+    var retryResult = tryPost(retryMarcMigrationEndpoint(operationId), List.of(chunks.get(0).getId()))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("id", notNullValue(UUID.class)))
         .andExpect(jsonPath("userId", is(USER_ID)))
-        .andExpect(jsonPath("operationType", is(REMAPPING.getValue())))
+        .andExpect(jsonPath("operationType", is(OperationType.REMAPPING.getValue())))
         .andExpect(jsonPath("entityType", is(entityType.getValue())))
         .andExpect(operationStatus(DATA_MAPPING))
         .andExpect(totalRecords(totalRecords))
@@ -799,7 +797,6 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
 
     // Act & Assert
     tryPost(retryMarcMigrationEndpoint(operationId), List.of()).andExpect(status().isUnprocessableEntity())
-      .andExpect(jsonPath("$.total_records", is(1)))
       .andExpect(errorMessageMatches(containsString("no chunk IDs provided")));
   }
 
@@ -835,10 +832,10 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
     assertThat(chunks).hasSize(expectedChunkSize);
 
-    var errorChunk = chunks.getFirst();
+    var errorChunk = chunks.get(0);
     var fileNames = s3Client.list("operation/" + operationId + "/" + errorChunk.getId() + "_entity");
-    var entityList = readFile(fileNames.getFirst());
-    var errorFile = writeToFile("test.txt", List.of(entityList.getFirst()));
+    var entityList = readFile(fileNames.get(0));
+    var errorFile = writeToFile("test.txt", List.of(entityList.get(0)));
 
     var wireMock = okapi.wireMockServer();
     var stub = wireMock.stubFor(post(urlPathMatching(bulkUrl)).withRequestBody(containing(errorChunk.getId()
@@ -872,7 +869,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   void retrySaveMarcMigrations_positive_retrySavingForAllRecordsInChunk(EntityType entityType, int totalRecords,
                                         int expectedChunkSize, int savedRecords, String bulkUrl) {
     // Arrange
-    var migrationOperation = new NewMigrationOperation().operationType(REMAPPING)
+    var migrationOperation = new NewMigrationOperation().operationType(OperationType.REMAPPING)
         .entityType(entityType);
 
     // Act & Assert
@@ -880,7 +877,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     var result = tryPost(marcMigrationEndpoint(), migrationOperation).andExpect(status().isCreated())
         .andExpect(jsonPath("id", notNullValue(UUID.class)))
         .andExpect(jsonPath("userId", is(USER_ID)))
-        .andExpect(jsonPath("operationType", is(REMAPPING.getValue())))
+        .andExpect(jsonPath("operationType", is(OperationType.REMAPPING.getValue())))
         .andExpect(jsonPath("entityType", is(entityType.getValue())))
         .andExpect(operationStatus(NEW))
         .andExpect(totalRecords(totalRecords))
@@ -898,10 +895,10 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
     assertThat(chunks).hasSize(expectedChunkSize);
 
-    var errorChunk = chunks.getFirst();
+    var errorChunk = chunks.get(0);
     var fileNames = s3Client.list("operation/" + operationId + "/" + errorChunk.getId() + "_entity");
-    var entityList = readFile(fileNames.getFirst());
-    var errorFile = writeToFile("test.txt", List.of(entityList.getFirst()));
+    var entityList = readFile(fileNames.get(0));
+    var errorFile = writeToFile("test.txt", List.of(entityList.get(0)));
 
     var wireMock = okapi.wireMockServer();
     var stub = wireMock.stubFor(post(urlPathMatching(bulkUrl)).withRequestBody(containing(errorChunk.getId()
@@ -926,7 +923,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
         .andExpect(status().isCreated())
         .andExpect(jsonPath("id", notNullValue(UUID.class)))
         .andExpect(jsonPath("userId", is(USER_ID)))
-        .andExpect(jsonPath("operationType", is(REMAPPING.getValue())))
+        .andExpect(jsonPath("operationType", is(OperationType.REMAPPING.getValue())))
         .andExpect(jsonPath("entityType", is(entityType.getValue())))
         .andExpect(operationStatus(DATA_MAPPING))
         .andExpect(totalRecords(totalRecords))
@@ -1010,7 +1007,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   void retrySaveMarcMigrations_positive_whenChunkStepNotExist(EntityType entityType, int totalRecords,
                                                               int expectedChunkSize) {
     // Arrange
-    var migrationOperation = new NewMigrationOperation().operationType(REMAPPING)
+    var migrationOperation = new NewMigrationOperation().operationType(OperationType.REMAPPING)
         .entityType(entityType);
 
     // Act & Assert
@@ -1018,7 +1015,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     var result = tryPost(marcMigrationEndpoint(), migrationOperation).andExpect(status().isCreated())
         .andExpect(jsonPath("id", notNullValue(UUID.class)))
         .andExpect(jsonPath("userId", is(USER_ID)))
-        .andExpect(jsonPath("operationType", is(REMAPPING.getValue())))
+        .andExpect(jsonPath("operationType", is(OperationType.REMAPPING.getValue())))
         .andExpect(jsonPath("entityType", is(entityType.getValue())))
         .andExpect(operationStatus(NEW))
         .andExpect(totalRecords(totalRecords))

@@ -37,6 +37,6 @@ public class SpringBatchExecutionParamsJdbcService extends JdbcService {
           operationId);
       return null;
     }
-    return results.getFirst();
+    return results.get(0);
   }
 }
