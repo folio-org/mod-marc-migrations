@@ -1,0 +1,23 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="MODMARCMIG-53@@add-cascade-deletes-for-operation" author="Viacheslav_Kolesnyk">
+        <preConditions onFail="MARK_RAN">
+            <foreignKeyConstraintExists foreignKeyName="fk_step_operation"/>
+            <foreignKeyConstraintExists foreignKeyName="fk_chunk_operation"/>
+        </preConditions>
+        <dropForeignKeyConstraint baseTableName="operation_chunk_step" constraintName="fk_step_operation"/>
+        <addForeignKeyConstraint baseTableName="operation_chunk_step" baseColumnNames="operation_id"
+                                 constraintName="fk_step_operation"
+                                 referencedTableName="operation" referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+        <dropForeignKeyConstraint baseTableName="operation_chunk" constraintName="fk_chunk_operation"/>
+        <addForeignKeyConstraint baseTableName="operation_chunk" baseColumnNames="operation_id"
+                                 constraintName="fk_chunk_operation"
+                                 referencedTableName="operation" referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+    </changeSet>
+</databaseChangeLog>

@@ -33,4 +33,12 @@ public class TestConstants {
   public static String marcMigrationEndpoint(UUID id) {
     return MARC_MIGRATION_ENDPOINT_PATH + "/" + id;
   }
+
+  public static String retryMarcMigrationEndpoint(UUID id) {
+    return MARC_MIGRATION_ENDPOINT_PATH + "/" + id + "/retry";
+  }
+
+  public static String retrySaveMarcMigrationEndpoint(UUID id) {
+    return MARC_MIGRATION_ENDPOINT_PATH + "/" + id + "/save/retry";
+  }
 }

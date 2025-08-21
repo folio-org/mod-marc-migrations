@@ -1,6 +1,11 @@
 spring:
   application:
     name: mod-marc-migrations
+  profiles:
+    default: "prod"
+  threads:
+    virtual:
+      enabled: true
   datasource:
     hikari:
       connectionTimeout: ${DB_CONNECTION_TIMEOUT:30000}
@@ -47,7 +52,7 @@ folio:
   environment: ${ENV:folio}
   okapi-url: ${OKAPI_URL:http://localhost:9130}
   system-user:
-    enabled: ${SYSTEM_USER_ENABLED:true}
+    enabled: ${SYSTEM_USER_ENABLED:false}
     username: ${SYSTEM_USER_USERNAME:mod-marc-migrations}
     password: ${SYSTEM_USER_PASSWORD}
     lastname: MARC Migrations
@@ -65,13 +70,14 @@ folio:
     chunk-fetch-ids-count: ${CHUNK_FETCH_IDS_COUNT:500}
     chunk-persist-count: ${CHUNK_PERSIST_COUNT:1000}
     chunk-processing-max-parallelism: ${CHUNK_PROCESSING_MAX_PARALLELISM:4}
+    chunk-retrying-max-ids-count: ${CHUNK_RETRYING_MAX_IDS_COUNT:1000}
     local-file-storage-path: ${LOCAL_FILE_STORAGE_PATH:job}
   remote-storage:
     endpoint: ${S3_URL:http://localhost:9000/}
-    region: ${S3_REGION:}
+    region: ${S3_REGION:eu-west-1}
     bucket: ${S3_BUCKET:marc-migrations}
-    accessKey: ${S3_ACCESS_KEY_ID:}
-    secretKey: ${S3_SECRET_ACCESS_KEY:}
+    accessKey: ${S3_ACCESS_KEY_ID:access}
+    secretKey: ${S3_SECRET_ACCESS_KEY:secret12}
     awsSdk: ${S3_IS_AWS:false}
     retryCount: ${S3_RETRY_COUNT:3}
     retryDelayMs: ${S3_RETRY_DELAY_MS:500}
@@ -86,3 +92,16 @@ management:
     loggers:
       enabled: true
 server.port: 8081
+
+
+---
+
+spring:
+  config:
+    activate:
+      on-profile: dev
+logging:
+  level:
+    org.folio.spring.filter.LoggingRequestFilter: debug
+    org.folio.marc.migrations.client.MappingMetadataClient: debug
+    tracer: trace

@@ -4,6 +4,9 @@ import static org.folio.marc.migrations.domain.entities.types.EntityType.AUTHORI
 import static org.folio.marc.migrations.domain.entities.types.EntityType.INSTANCE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -11,11 +14,14 @@ import java.util.Optional;
 import java.util.UUID;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.types.EntityType;
+import org.folio.marc.migrations.domain.entities.types.ErrorReportStatus;
 import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.repositories.OperationRepository;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
+import org.folio.marc.migrations.services.jdbc.OperationErrorJdbcService;
 import org.folio.spring.FolioExecutionContext;
+import org.folio.spring.exception.NotFoundException;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +38,8 @@ class OperationsServiceTest {
   private @Mock OperationRepository repository;
   private @Mock AuthorityJdbcService authorityJdbcService;
   private @Mock InstanceJdbcService instanceJdbcService;
+  private @Mock OperationErrorReportService errorReportService;
+  private @Mock OperationErrorJdbcService operationErrorJdbcService;
   private @InjectMocks OperationsService service;
 
   @Test
@@ -61,12 +69,14 @@ class OperationsServiceTest {
 
     // Assert
     verify(repository).save(captor.capture());
+    var createdOperation = captor.getValue();
+    verify(errorReportService).createErrorReport(createdOperation);
     assertNotNull(result);
-    assertEquals(userId, captor.getValue().getUserId());
-    assertEquals(OperationStatusType.NEW, captor.getValue().getStatus());
-    assertEquals(10, captor.getValue().getTotalNumOfRecords());
-    assertEquals(0, captor.getValue().getMappedNumOfRecords());
-    assertEquals(0, captor.getValue().getSavedNumOfRecords());
+    assertEquals(userId, createdOperation.getUserId());
+    assertEquals(OperationStatusType.NEW, createdOperation.getStatus());
+    assertEquals(10, createdOperation.getTotalNumOfRecords());
+    assertEquals(0, createdOperation.getMappedNumOfRecords());
+    assertEquals(0, createdOperation.getSavedNumOfRecords());
   }
 
   @Test
@@ -81,5 +91,43 @@ class OperationsServiceTest {
 
     // Assert
     assertEquals(fetchedOperation, result);
+  }
+
+  @Test
+  void retryOperation_UpdatesOperationSuccessfully() {
+    // Arrange
+    var operation = new Operation();
+    var operationId = UUID.randomUUID();
+    var totalNumOfRecords = 100;
+    var mappedNumOfRecords = 2;
+    operation.setId(operationId);
+    operation.setStatus(OperationStatusType.DATA_MAPPING_FAILED);
+    operation.setTotalNumOfRecords(totalNumOfRecords);
+    operation.setMappedNumOfRecords(mappedNumOfRecords);
+
+    when(repository.findById(operationId)).thenReturn(Optional.of(operation));
+    when(repository.save(any(Operation.class))).thenReturn(operation);
+    doNothing().when(operationErrorJdbcService).deleteOperationErrorsByReportId(operationId);
+
+    // Act
+    var result = service.retryOperation(operationId);
+
+    // Assert
+    assertEquals(OperationStatusType.DATA_MAPPING, result.getStatus());
+    assertEquals(totalNumOfRecords, result.getTotalNumOfRecords());
+    assertEquals(mappedNumOfRecords, result.getMappedNumOfRecords());
+    verify(repository).save(operation);
+    verify(errorReportService).updateErrorReportStatus(operationId, ErrorReportStatus.NOT_STARTED);
+  }
+
+  @Test
+  void retryOperation_ThrowsNotFoundException_WhenOperationNotFound() {
+    // Arrange
+    var operationId = UUID.randomUUID();
+
+    when(repository.findById(operationId)).thenReturn(Optional.empty());
+
+    // Act & Assert
+    assertThrows(NotFoundException.class, () -> service.retryOperation(operationId));
   }
 }

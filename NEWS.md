@@ -1,3 +1,20 @@
+## v1.0.2 2025-08-21
+### Features
+* Create endpoints that will provide an error report ([MODMARCMIG-52](https://folio-org.atlassian.net/browse/MODMARCMIG-52))
+* Implement endpoint to execute only selected mapping chunks ([MODMARCMIG-47](https://folio-org.atlassian.net/browse/MODMARCMIG-47))
+* Implement endpoint to execute only selected saving chunks ([MODMARCMIG-48](https://folio-org.atlassian.net/browse/MODMARCMIG-48))
+
+### Bug fixes
+* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
+
+### Tech Dept
+* Improved API definition with better descriptions, examples, and consistent error responses
+
+### Dependencies
+* Bump `LIB_NAME` from `OLD_VERSION` to `NEW_VERSION`
+* Add `LIB_NAME` `VERSION`
+* Remove `LIB_NAME`
+
 ## v1.0.1 2024-11-08
 ### Features
 * Add optional API parameter to control Kafka entity change events for remapping operation saving step ([MODMARCMIG-37](https://folio-org.atlassian.net/browse/MODMARCMIG-37))
