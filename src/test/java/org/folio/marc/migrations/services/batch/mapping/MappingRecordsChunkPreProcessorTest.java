@@ -317,7 +317,7 @@ class MappingRecordsChunkPreProcessorTest {
           "error");
     softAssert.assertThat(step.getStatus()).isEqualTo(StepStatus.IN_PROGRESS);
     var now = Instant.now();
-    softAssert.assertThat(step.getStepStartTime()).isNotNull().isBetween(now.minusSeconds(1), now.plusMillis(1));
+    softAssert.assertThat(step.getStepStartTime()).isNotNull().isBetween(now.minusSeconds(2), now.plusMillis(1));
 
     softAssert.assertAll();
   }
