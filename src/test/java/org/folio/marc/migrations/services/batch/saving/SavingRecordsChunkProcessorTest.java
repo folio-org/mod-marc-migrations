@@ -105,7 +105,8 @@ class SavingRecordsChunkProcessorTest {
     softAssert.assertThat(step.getOperationChunkId()).isEqualTo(chunk.getId());
     softAssert.assertThat(step.getOperationStep()).isEqualTo(OperationStep.DATA_SAVING);
     softAssert.assertThat(step.getStatus()).isEqualTo(StepStatus.IN_PROGRESS);
-    softAssert.assertThat(step.getStepStartTime()).isNotNull().isBefore(Instant.now());
+    var now = Instant.now();
+    softAssert.assertThat(step.getStepStartTime()).isNotNull().isBetween(now.minusSeconds(1), now.plusMillis(1));
 
     softAssert.assertAll();
   }
