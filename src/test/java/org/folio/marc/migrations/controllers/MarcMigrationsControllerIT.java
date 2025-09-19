@@ -113,7 +113,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
       .andExpect(jsonPath("operationType", is(OperationType.REMAPPING.getValue())))
       .andExpect(jsonPath("entityType", is(EntityType.AUTHORITY.getValue())))
       .andExpect(operationStatus(NEW))
-      .andExpect(totalRecords(87))
+      .andExpect(totalRecords(81))
       .andExpect(mappedRecords(0))
       .andExpect(savedRecords(0))
       .andReturn();
@@ -124,7 +124,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     doGetUntilMatches(marcMigrationEndpoint(operationId), operationStatus(DATA_MAPPING_COMPLETED));
     doGet(marcMigrationEndpoint(operationId))
       .andExpect(status().isOk())
-      .andExpect(mappedRecords(87));
+      .andExpect(mappedRecords(81));
 
     var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
     assertThat(chunks).hasSize(9)
@@ -209,7 +209,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
       .andExpect(jsonPath("operationType", is(OperationType.REMAPPING.getValue())))
       .andExpect(jsonPath("entityType", is(EntityType.AUTHORITY.getValue())))
       .andExpect(operationStatus(NEW))
-      .andExpect(totalRecords(87))
+      .andExpect(totalRecords(81))
       .andExpect(mappedRecords(0))
       .andExpect(savedRecords(0))
       .andReturn();
@@ -234,7 +234,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
                         && step.getStepEndTime() != null
                         && step.getStepEndTime().after(step.getStepStartTime())
                         && step.getStatus().equals(StepStatus.FAILED)
-                        && step.getNumOfErrors() >= 7);
+                        && step.getNumOfErrors() >= 1);
 
     var fileNames = s3Client.list("operation/" + operationId + "/");
     assertThat(fileNames).hasSize(18);
@@ -258,7 +258,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
       .andExpect(jsonPath("operationType", is(OperationType.REMAPPING.getValue())))
       .andExpect(jsonPath("entityType", is(EntityType.AUTHORITY.getValue())))
       .andExpect(operationStatus(NEW))
-      .andExpect(totalRecords(87))
+      .andExpect(totalRecords(81))
       .andExpect(mappedRecords(0))
       .andExpect(savedRecords(0))
       .andReturn();
@@ -269,7 +269,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     doGetUntilMatches(marcMigrationEndpoint(operationId), operationStatus(DATA_MAPPING_FAILED));
     doGet(marcMigrationEndpoint(operationId))
       .andExpect(status().isOk())
-      .andExpect(mappedRecords(87));
+      .andExpect(mappedRecords(81));
 
     var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
     assertThat(chunks).hasSize(9)
@@ -351,8 +351,8 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
       .andExpect(jsonPath("entityType", is(EntityType.AUTHORITY.getValue())))
       .andExpect(jsonPath("status",
         oneOf(NEW.getValue(), DATA_MAPPING.getValue(), DATA_MAPPING_COMPLETED.getValue())))
-      .andExpect(totalRecords(87))
-      .andExpect(jsonPath("mappedNumOfRecords", lessThanOrEqualTo(87)))
+      .andExpect(totalRecords(81))
+      .andExpect(jsonPath("mappedNumOfRecords", lessThanOrEqualTo(81)))
       .andExpect(savedRecords(0));
 
     awaitUntilAsserted(() ->
@@ -383,14 +383,14 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     // Act & Assert
     var result = doPost(marcMigrationEndpoint(), migrationOperation)
       .andExpect(operationStatus(NEW))
-      .andExpect(totalRecords(87))
+      .andExpect(totalRecords(81))
       .andReturn();
     var operation = contentAsObj(result, MigrationOperation.class);
     var operationId = operation.getId();
 
     doGetUntilMatches(marcMigrationEndpoint(operationId),
       operationStatus(DATA_MAPPING_COMPLETED));
-    doGetUntilMatches(marcMigrationEndpoint(operationId), mappedRecords(87));
+    doGetUntilMatches(marcMigrationEndpoint(operationId), mappedRecords(81));
 
     var saveMigrationOperation = new SaveMigrationOperation()
       .status(DATA_SAVING);
@@ -399,9 +399,9 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     awaitUntilAsserted(() ->
       doGet(marcMigrationEndpoint(operationId))
         .andExpect(operationStatus(DATA_SAVING_COMPLETED))
-        .andExpect(totalRecords(87))
-        .andExpect(mappedRecords(87))
-        .andExpect(savedRecords(87))
+        .andExpect(totalRecords(81))
+        .andExpect(mappedRecords(81))
+        .andExpect(savedRecords(81))
     );
 
     okapi.wireMockServer().verify(postRequestedFor(urlEqualTo("/authority-storage/authorities/bulk")));
@@ -483,14 +483,14 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     // Act & Assert
     var result = doPost(marcMigrationEndpoint(), migrationOperation)
       .andExpect(operationStatus(NEW))
-      .andExpect(totalRecords(87))
+      .andExpect(totalRecords(81))
       .andReturn();
     var operation = contentAsObj(result, MigrationOperation.class);
     var operationId = operation.getId();
 
     doGetUntilMatches(marcMigrationEndpoint(operationId),
       operationStatus(DATA_MAPPING_COMPLETED));
-    doGetUntilMatches(marcMigrationEndpoint(operationId), mappedRecords(87));
+    doGetUntilMatches(marcMigrationEndpoint(operationId), mappedRecords(81));
 
     var saveMigrationOperation = new SaveMigrationOperation()
       .status(DATA_SAVING);
@@ -499,9 +499,9 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     awaitUntilAsserted(() ->
       doGet(marcMigrationEndpoint(operationId))
         .andExpect(operationStatus(DATA_SAVING_FAILED))
-        .andExpect(totalRecords(87))
-        .andExpect(mappedRecords(87))
-        .andExpect(savedRecords(69))
+        .andExpect(totalRecords(81))
+        .andExpect(mappedRecords(81))
+        .andExpect(savedRecords(63))
     );
 
     var chunks = databaseHelper.getOperationChunks(TENANT_ID, operationId);
@@ -1086,18 +1086,18 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
   }
 
   private static Stream<Arguments> provideEntityTypesAndChunkSizes() {
-    return Stream.of(Arguments.of(EntityType.AUTHORITY, 87, 9), Arguments.of(EntityType.INSTANCE, 11, 2));
+    return Stream.of(Arguments.of(EntityType.AUTHORITY, 81, 9), Arguments.of(EntityType.INSTANCE, 11, 2));
   }
 
   private static Stream<Arguments> provideEntityTypesData() {
     return Stream.of(
-        Arguments.of(EntityType.AUTHORITY, 87, 9, 86, "/authority-storage/authorities/bulk"),
+        Arguments.of(EntityType.AUTHORITY, 81, 9, 80, "/authority-storage/authorities/bulk"),
         Arguments.of(EntityType.INSTANCE, 11, 2, 10, "/instance-storage/instances/bulk"));
   }
 
   private static Stream<Arguments> provideEntityTypesDataForNegativeCase() {
     return Stream.of(
-        Arguments.of(EntityType.AUTHORITY, 87, 9, 0),
+        Arguments.of(EntityType.AUTHORITY, 81, 9, 0),
         Arguments.of(EntityType.INSTANCE, 11, 2, 0));
   }
 

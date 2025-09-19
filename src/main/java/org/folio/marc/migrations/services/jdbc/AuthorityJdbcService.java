@@ -39,7 +39,7 @@ public class AuthorityJdbcService extends JdbcService {
          SELECT r.id as marc_id, r.external_id as authority_id, mr.content as marc, r.state, a._version as version
          FROM %1$s.records_lb_view r
          LEFT JOIN %1$s.marc_records_lb_view mr ON mr.id = r.id
-         LEFT JOIN %1$s.authority_view a ON a.id = r.external_id
+         JOIN %1$s.authority_view a ON a.id = r.external_id
          WHERE r.state = 'ACTUAL' AND r.record_type = 'MARC_AUTHORITY'
          ORDER BY r.id;
     """;
