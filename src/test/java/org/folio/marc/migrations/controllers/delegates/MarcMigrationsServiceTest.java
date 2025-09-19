@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -34,6 +35,7 @@ import org.folio.marc.migrations.services.MigrationOrchestrator;
 import org.folio.marc.migrations.services.jdbc.OperationErrorJdbcService;
 import org.folio.marc.migrations.services.operations.OperationErrorReportService;
 import org.folio.marc.migrations.services.operations.OperationsService;
+import org.folio.spring.data.OffsetRequest;
 import org.folio.spring.exception.NotFoundException;
 import org.folio.spring.testing.type.UnitTest;
 import org.junit.jupiter.api.Test;

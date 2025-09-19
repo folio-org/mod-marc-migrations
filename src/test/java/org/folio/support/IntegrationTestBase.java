@@ -19,6 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.Duration;
 import lombok.SneakyThrows;
 import org.awaitility.core.ThrowingRunnable;
@@ -246,6 +247,7 @@ public class IntegrationTestBase {
   @SneakyThrows
   protected static <T> T contentAsObj(MvcResult result, Class<T> objectClass) {
     var contentAsBytes = result.getResponse().getContentAsByteArray();
+    MAPPER.registerModule(new JavaTimeModule());
     return MAPPER.readValue(contentAsBytes, objectClass);
   }
 

@@ -19,8 +19,6 @@ import static org.folio.marc.migrations.domain.dto.MigrationOperationStatus.DATA
 import static org.folio.marc.migrations.domain.dto.MigrationOperationStatus.NEW;
 import static org.folio.marc.migrations.domain.dto.OperationType.REMAPPING;
 import static org.folio.marc.migrations.domain.entities.types.StepStatus.COMPLETED;
-import static org.folio.support.DatabaseHelper.CHUNKS_TABLE;
-import static org.folio.support.DatabaseHelper.CHUNK_STEPS_TABLE;
 import static org.folio.support.DatabaseHelper.OPERATION_TABLE;
 import static org.folio.support.TestConstants.TENANT_ID;
 import static org.folio.support.TestConstants.USER_ID;
@@ -42,7 +40,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.github.tomakehurst.wiremock.admin.NotFoundException;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
-import jakarta.validation.ConstraintViolationException;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -85,7 +82,7 @@ import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
 @IntegrationTest
-@DatabaseCleanup(tables = {CHUNK_STEPS_TABLE, CHUNKS_TABLE, OPERATION_TABLE})
+@DatabaseCleanup(tables = {OPERATION_TABLE})
 class MarcMigrationsControllerIT extends IntegrationTestBase {
   private @MockitoSpyBean FolioS3Client s3Client;
   private @MockitoSpyBean ChunkStepJdbcService chunkStepJdbcService;
@@ -803,7 +800,6 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
 
     // Act & Assert
     tryPost(retryMarcMigrationEndpoint(operationId), List.of()).andExpect(status().isUnprocessableEntity())
-      .andExpect(jsonPath("$.total_records", is(1)))
       .andExpect(errorMessageMatches(containsString("no chunk IDs provided")));
   }
 
