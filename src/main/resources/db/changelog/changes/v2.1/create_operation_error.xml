@@ -1,0 +1,98 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+  <changeSet id="MODMARCMIG-52@@create:type:error_report_status" author="pavlo_smahin">
+    <preConditions onFail="MARK_RAN">
+      <sqlCheck expectedResult="0">
+        SELECT count(*)
+        FROM pg_type t
+               JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+        WHERE t.typname = 'error_report_status'
+          AND n.nspname = '${database.defaultSchemaName}';
+      </sqlCheck>
+    </preConditions>
+
+    <comment>Create error_report_status enum type</comment>
+
+    <sql>CREATE TYPE error_report_status AS enum ('NOT_STARTED', 'IN_PROGRESS', 'COMPLETED')</sql>
+  </changeSet>
+
+  <changeSet id="MODMARCMIG-52@@create:table:operation_error_report" author="pavlo_smahin">
+    <preConditions onFail="MARK_RAN">
+      <not>
+        <tableExists tableName="operation_error_report"/>
+      </not>
+    </preConditions>
+
+    <comment>Create operation error report table</comment>
+
+    <createTable tableName="operation_error_report">
+      <column name="id" type="uuid">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="operation_id" type="uuid">
+        <constraints nullable="false"/>
+      </column>
+      <column name="status" type="error_report_status">
+        <constraints nullable="false"/>
+      </column>
+      <column name="started_at" type="DATETIME"/>
+      <column name="finished_at" type="DATETIME"/>
+    </createTable>
+    <addForeignKeyConstraint baseTableName="operation_error_report"
+                             baseColumnNames="operation_id"
+                             referencedTableName="operation"
+                             referencedColumnNames="id"
+                             constraintName="fx_operation_error_report_operation_id"
+                             onDelete="CASCADE"/>
+  </changeSet>
+
+  <changeSet id="MODMARCMIG-52@@create:trigger:operation_error_report_dates" author="pavlo_smahin">
+    <comment>Create trigger for operation error report dates</comment>
+    <sqlFile path="sql/operation_error_report_dates.sql" relativeToChangelogFile="true" splitStatements="false"/>
+  </changeSet>
+
+  <changeSet id="MODMARCMIG-52@@create:table:operation_error" author="pavlo_smahin">
+    <preConditions onFail="MARK_RAN">
+      <not>
+        <tableExists tableName="operation_error"/>
+      </not>
+    </preConditions>
+
+    <comment>Create operation error table</comment>
+
+    <createTable tableName="operation_error">
+      <column name="id" type="uuid">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="report_id" type="uuid">
+        <constraints nullable="false"/>
+      </column>
+      <column name="operation_chunk_id" type="uuid">
+        <constraints nullable="false"/>
+      </column>
+      <column name="operation_step" type="OperationStep">
+        <constraints nullable="false"/>
+      </column>
+      <column name="chunk_status" type="StepStatus">
+        <constraints nullable="false"/>
+      </column>
+      <column name="record_id" type="varchar(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="error_message" type="text">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+    <addForeignKeyConstraint baseTableName="operation_error"
+                             baseColumnNames="report_id"
+                             referencedTableName="operation_error_report"
+                             referencedColumnNames="id"
+                             constraintName="fx_operation_error_report_id"
+                             onDelete="CASCADE"/>
+  </changeSet>
+
+</databaseChangeLog>

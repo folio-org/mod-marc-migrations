@@ -1,3 +1,12 @@
+## v2.0.3 2025-09-19
+### Features
+* Create endpoints that will provide an error report ([MODMARCMIG-52](https://folio-org.atlassian.net/browse/MODMARCMIG-52))
+* Implement endpoint to execute only selected mapping chunks ([MODMARCMIG-47](https://folio-org.atlassian.net/browse/MODMARCMIG-47))
+* Implement endpoint to execute only selected saving chunks ([MODMARCMIG-48](https://folio-org.atlassian.net/browse/MODMARCMIG-48))
+* Skip SRS MARC-AUTHORITY records if linked entities do not exist ([MODMARCMIG-76](https://folio-org.atlassian.net/browse/MODMARCMIG-76))
+
+---
+
 ## v2.0.2 2025-08-19
 
 ### Features

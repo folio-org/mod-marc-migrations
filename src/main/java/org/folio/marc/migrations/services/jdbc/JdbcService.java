@@ -18,6 +18,12 @@ public abstract class JdbcService {
     return schemaName;
   }
 
+  protected String getSchemaName(String tenantId) {
+    var schemaName = context.getFolioModuleMetadata().getDBSchemaName(tenantId);
+    log.trace("getSchemaName:: tenantId {}, schema name {}", tenantId, schemaName);
+    return schemaName;
+  }
+
   protected void createView(String tenantId, String query) {
     log.info("createView:: Attempting to create view [tenant: {}, query: {}]", tenantId, query);
     jdbcTemplate.execute(query);
