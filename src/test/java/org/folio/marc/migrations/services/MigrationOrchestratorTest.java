@@ -67,10 +67,7 @@ class MigrationOrchestratorTest {
   @SneakyThrows
   void submitMappingTask_positive(EntityType entityType) {
     // Arrange
-    var operation = new Operation();
-    operation.setId(UUID.randomUUID());
-    operation.setStatus(OperationStatusType.DATA_MAPPING);
-    operation.setEntityType(entityType);
+    var operation = prepareOperation(OperationStatusType.DATA_MAPPING, entityType);
     var operationId = operation.getId().toString();
     when(jdbcService.getOperation(operationId)).thenReturn(operation);
     doAnswer(invocation -> {
@@ -123,10 +120,7 @@ class MigrationOrchestratorTest {
   @SneakyThrows
   void submitMappingTask_negative_shouldFailAndUpdateOperationStatus_whenBatchJobFails() {
     // Arrange
-    var operation = new Operation();
-    operation.setId(UUID.randomUUID());
-    operation.setStatus(OperationStatusType.DATA_MAPPING);
-    operation.setEntityType(EntityType.AUTHORITY);
+    var operation = prepareOperation(OperationStatusType.DATA_MAPPING, EntityType.AUTHORITY);
     var operationId = operation.getId().toString();
     doAnswer(invocation -> {
       ((Runnable) invocation.getArgument(0)).run();
@@ -156,10 +150,7 @@ class MigrationOrchestratorTest {
   @SneakyThrows
   void submitMappingSaveTask_positive() {
     // Arrange
-    var operation = new Operation();
-    operation.setId(UUID.randomUUID());
-    operation.setStatus(OperationStatusType.DATA_SAVING);
-    operation.setEntityType(EntityType.AUTHORITY);
+    var operation = prepareOperation(OperationStatusType.DATA_SAVING, EntityType.AUTHORITY);
     var operationId = operation.getId().toString();
     var validSaveOperation = new SaveMigrationOperation()
       .status(MigrationOperationStatus.DATA_SAVING);
@@ -189,10 +180,7 @@ class MigrationOrchestratorTest {
   @SneakyThrows
   void submitMappingSaveTask_negative_shouldFailAndUpdateOperationStatus_whenBatchJobFails() {
     // Arrange
-    var operation = new Operation();
-    operation.setId(UUID.randomUUID());
-    operation.setStatus(OperationStatusType.DATA_SAVING);
-    operation.setEntityType(EntityType.AUTHORITY);
+    var operation = prepareOperation(OperationStatusType.DATA_SAVING, EntityType.AUTHORITY);
     var operationId = operation.getId().toString();
     var validSaveOperation = new SaveMigrationOperation()
       .status(MigrationOperationStatus.DATA_SAVING);
@@ -225,10 +213,7 @@ class MigrationOrchestratorTest {
   @SneakyThrows
   void submitRetryMappingTask_positive() {
     // Arrange
-    var operation = new Operation();
-    operation.setId(UUID.randomUUID());
-    operation.setStatus(OperationStatusType.DATA_MAPPING);
-    operation.setEntityType(EntityType.AUTHORITY);
+    var operation = prepareOperation(OperationStatusType.DATA_MAPPING, EntityType.AUTHORITY);
     var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
     doAnswer(invocation -> {
       ((Runnable) invocation.getArgument(0)).run();
@@ -257,10 +242,7 @@ class MigrationOrchestratorTest {
   @SneakyThrows
   void submitRetryMappingTask_negative_shouldFailAndUpdateOperationStatus_whenBatchJobFails() {
     // Arrange
-    var operation = new Operation();
-    operation.setId(UUID.randomUUID());
-    operation.setStatus(OperationStatusType.DATA_MAPPING);
-    operation.setEntityType(EntityType.AUTHORITY);
+    var operation = prepareOperation(OperationStatusType.DATA_MAPPING, EntityType.AUTHORITY);
     var operationId = operation.getId().toString();
     var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
     doAnswer(invocation -> {
@@ -279,7 +261,7 @@ class MigrationOrchestratorTest {
     verify(chunkService).updateChunkStatus(chunkIds, OperationStatusType.DATA_MAPPING);
     verify(jobLauncher).run(eq(job), jobParametersCaptor.capture());
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING_FAILED),
-        eq(OperationTimeType.MAPPING_END), notNull());
+      eq(OperationTimeType.MAPPING_END), notNull());
     verifyNoMoreInteractions(jdbcService);
 
     // Verify captured JobParameters
@@ -291,14 +273,11 @@ class MigrationOrchestratorTest {
     assertThat(capturedTimestamp).isInstanceOf(String.class);
   }
 
-  @SneakyThrows
   @Test
+  @SneakyThrows
   void submitMappingSaveRetryTask_positive() {
     // Arrange
-    var operation = new Operation();
-    operation.setId(UUID.randomUUID());
-    operation.setStatus(OperationStatusType.DATA_SAVING);
-    operation.setEntityType(EntityType.AUTHORITY);
+    var operation = prepareOperation(OperationStatusType.DATA_SAVING, EntityType.AUTHORITY);
     var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
     var operationId = operation.getId().toString();
 
@@ -306,19 +285,17 @@ class MigrationOrchestratorTest {
     doAnswer(invocation -> {
       ((Runnable) invocation.getArgument(0)).run();
       return null;
-    }).when(remappingExecutor)
-      .execute(any());
+    }).when(remappingExecutor).execute(any());
 
     // Captor for JobParameters
     ArgumentCaptor<JobParameters> jobParametersCaptor = ArgumentCaptor.forClass(JobParameters.class);
 
     // Act
-    service.submitMappingSaveRetryTask(operation, chunkIds)
-      .get(200, TimeUnit.MILLISECONDS);
+    service.submitMappingSaveRetryTask(operation, chunkIds).get(200, TimeUnit.MILLISECONDS);
 
     // Assert
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_SAVING),
-        eq(OperationTimeType.SAVING_START), notNull());
+      eq(OperationTimeType.SAVING_START), notNull());
     verify(jobLauncher).run(eq(job), jobParametersCaptor.capture());
     verifyNoMoreInteractions(jdbcService);
 
@@ -335,36 +312,29 @@ class MigrationOrchestratorTest {
   @Test
   void submitMappingSaveRetryTask_negative_shouldFailAndUpdateOperationStatus_whenBatchJobFails() {
     // Arrange
-    var operation = new Operation();
-    operation.setId(UUID.randomUUID());
-    operation.setStatus(OperationStatusType.DATA_SAVING);
-    operation.setEntityType(EntityType.AUTHORITY);
+    var operation = prepareOperation(OperationStatusType.DATA_SAVING, EntityType.AUTHORITY);
     var chunkIds = List.of(UUID.randomUUID(), UUID.randomUUID());
-    var operationId = operation.getId()
-      .toString();
+    var operationId = operation.getId().toString();
 
     when(executionParamsJdbcService.getBatchExecutionParam(PUBLISH_EVENTS_FLAG, operationId)).thenReturn("true");
     doAnswer(invocation -> {
       ((Runnable) invocation.getArgument(0)).run();
       return null;
-    }).when(remappingExecutor)
-      .execute(any());
-    doThrow(new IllegalStateException()).when(jobLauncher)
-      .run(any(), any());
+    }).when(remappingExecutor).execute(any());
+    doThrow(new IllegalStateException()).when(jobLauncher).run(any(), any());
 
     // Captor for JobParameters
     ArgumentCaptor<JobParameters> jobParametersCaptor = ArgumentCaptor.forClass(JobParameters.class);
 
     // Act
-    service.submitMappingSaveRetryTask(operation, chunkIds)
-      .get(200, TimeUnit.MILLISECONDS);
+    service.submitMappingSaveRetryTask(operation, chunkIds).get(200, TimeUnit.MILLISECONDS);
 
     // Assert
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_SAVING),
-        eq(OperationTimeType.SAVING_START), notNull());
+      eq(OperationTimeType.SAVING_START), notNull());
     verify(jobLauncher).run(eq(job), jobParametersCaptor.capture());
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_SAVING_FAILED),
-        eq(OperationTimeType.SAVING_END), notNull());
+      eq(OperationTimeType.SAVING_END), notNull());
     verifyNoMoreInteractions(jdbcService);
 
     // Verify captured JobParameters
@@ -374,5 +344,13 @@ class MigrationOrchestratorTest {
       .get(JobConstants.JobParameterNames.TIMESTAMP)
       .getValue();
     assertThat(capturedTimestamp).isInstanceOf(String.class);
+  }
+
+  private Operation prepareOperation(OperationStatusType dataSaving, EntityType authority) {
+    var operation = new Operation();
+    operation.setId(UUID.randomUUID());
+    operation.setStatus(dataSaving);
+    operation.setEntityType(authority);
+    return operation;
   }
 }

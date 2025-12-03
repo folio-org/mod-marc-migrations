@@ -26,6 +26,7 @@ import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.domain.entities.types.StepStatus;
 import org.folio.marc.migrations.services.batch.support.MappingMetadataProvider;
 import org.folio.marc.migrations.services.domain.MappingComposite;
+import org.folio.marc.migrations.services.domain.MappingResult;
 import org.folio.marc.migrations.services.domain.RecordsMappingData;
 import org.folio.marc.migrations.services.jdbc.ChunkJdbcService;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
@@ -85,19 +86,19 @@ class MappingRecordsChunkProcessorTest {
     assertThat(actual).isNotNull();
     assertThat(actual.mappingData()).isEqualTo(mappingData);
     assertThat(actual.records())
-        .hasSize(records.size())
-        .allMatch(result -> result.invalidMarcRecord() == null
-            && result.errorCause() == null
-            && result.mappedRecord() != null
-            && result.mappedRecord().contains("\"_version\":1,\"source\":\"MARC\""));
+      .hasSize(records.size())
+      .allMatch(result -> result.invalidMarcRecord() == null
+                          && result.errorCause() == null
+                          && result.mappedRecord() != null
+                          && result.mappedRecord().contains("\"_version\":1,\"source\":\"MARC\""));
 
     records.stream().map(mr -> mr.recordId().toString()).forEach(authorityId ->
-        assertThat(actual.records().stream()
-            .anyMatch(mappingResult -> mappingResult.mappedRecord().contains(authorityId)))
-            .isTrue());
+      assertThat(actual.records().stream()
+        .anyMatch(mappingResult -> mappingResult.mappedRecord().contains(authorityId)))
+        .isTrue());
     verify(jdbcService).addProcessedOperationRecords(mappingData.operationId(), records.size(), 0);
     verify(chunkStepJdbcService)
-        .updateChunkStep(eq(mappingData.stepId()), eq(StepStatus.COMPLETED), any(Timestamp.class), eq(0));
+      .updateChunkStep(eq(mappingData.stepId()), eq(StepStatus.COMPLETED), any(Timestamp.class), eq(0));
     verify(chunkJdbcService).updateChunk(mappingData.chunkId(), OperationStatusType.DATA_MAPPING_COMPLETED);
   }
 
@@ -112,22 +113,7 @@ class MappingRecordsChunkProcessorTest {
     mapper.setEntityType(AUTHORITY);
     var actual = mapper.process(composite);
 
-    assertThat(actual).isNotNull();
-    assertThat(actual.mappingData()).isEqualTo(mappingData);
-    assertThat(actual.records())
-      .hasSize(records.size());
-    var actualRecords = new ArrayList<>(actual.records());
-    assertThat(actualRecords.removeFirst()).matches(result ->
-      result.mappedRecord() == null
-        && result.errorCause().contains("test exc")
-        && result.invalidMarcRecord() != null
-        && result.invalidMarcRecord().contains("\"version\":1"));
-    assertThat(actualRecords).allMatch(result ->
-      result.invalidMarcRecord() == null
-        && result.errorCause() == null
-        && result.mappedRecord() != null
-        && result.mappedRecord().contains("\"_version\":1,\"source\":\"MARC\"")
-    );
+    assertMappingResult(actual, records);
 
     records.stream().map(mr -> mr.recordId().toString()).forEach(authorityId ->
       assertThat(actual.records().stream()
@@ -137,7 +123,7 @@ class MappingRecordsChunkProcessorTest {
         .isTrue());
     verify(jdbcService).addProcessedOperationRecords(mappingData.operationId(), records.size() - 1, 0);
     verify(chunkStepJdbcService)
-        .updateChunkStep(eq(mappingData.stepId()), eq(StepStatus.FAILED), any(Timestamp.class), eq(1));
+      .updateChunkStep(eq(mappingData.stepId()), eq(StepStatus.FAILED), any(Timestamp.class), eq(1));
     verify(chunkJdbcService).updateChunk(mappingData.chunkId(), OperationStatusType.DATA_MAPPING_FAILED);
   }
 
@@ -185,6 +171,25 @@ class MappingRecordsChunkProcessorTest {
     process_negative(excMessage, "\"version\": 1");
   }
 
+  private void assertMappingResult(MappingComposite<MappingResult> actual, List<MarcRecord> records) {
+    assertThat(actual).isNotNull();
+    assertThat(actual.mappingData()).isEqualTo(mappingData);
+    assertThat(actual.records())
+      .hasSize(records.size());
+    var actualRecords = new ArrayList<>(actual.records());
+    assertThat(actualRecords.removeFirst()).matches(result ->
+      result.mappedRecord() == null
+      && result.errorCause().contains("test exc")
+      && result.invalidMarcRecord() != null
+      && result.invalidMarcRecord().contains("\"version\":1"));
+    assertThat(actualRecords).allMatch(result ->
+      result.invalidMarcRecord() == null
+      && result.errorCause() == null
+      && result.mappedRecord() != null
+      && result.mappedRecord().contains("\"_version\":1,\"source\":\"MARC\"")
+    );
+  }
+
   private void process_negative(String errorCause, String marcRecordContains) {
     var records = records();
     var composite = new MappingComposite<>(mappingData, records);
@@ -196,17 +201,17 @@ class MappingRecordsChunkProcessorTest {
     assertThat(actual.records())
       .hasSize(records.size())
       .allMatch(result -> result.mappedRecord() == null
-        && result.errorCause() != null
-        && result.errorCause().contains(errorCause)
-        && result.invalidMarcRecord() != null
-        && result.invalidMarcRecord().contains(marcRecordContains));
+                          && result.errorCause() != null
+                          && result.errorCause().contains(errorCause)
+                          && result.invalidMarcRecord() != null
+                          && result.invalidMarcRecord().contains(marcRecordContains));
 
     records.stream().map(mr -> mr.recordId().toString()).forEach(authorityId ->
       assertThat(actual.records().stream()
         .anyMatch(mappingResult -> mappingResult.invalidMarcRecord().contains(authorityId)))
         .isTrue());
     verify(chunkStepJdbcService)
-        .updateChunkStep(eq(mappingData.stepId()), eq(StepStatus.FAILED), any(Timestamp.class), eq(records.size()));
+      .updateChunkStep(eq(mappingData.stepId()), eq(StepStatus.FAILED), any(Timestamp.class), eq(records.size()));
     verify(chunkJdbcService).updateChunk(mappingData.chunkId(), OperationStatusType.DATA_MAPPING_FAILED);
   }
 

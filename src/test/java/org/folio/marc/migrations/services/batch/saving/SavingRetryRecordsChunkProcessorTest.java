@@ -57,7 +57,7 @@ class SavingRetryRecordsChunkProcessorTest {
     bulkResponse.setErrorsNumber(0);
 
     when(bulkStorageService.saveEntities(any(), any(), eq(Boolean.TRUE)))
-        .thenReturn(bulkResponse);
+      .thenReturn(bulkResponse);
   }
 
   @Test
@@ -88,7 +88,7 @@ class SavingRetryRecordsChunkProcessorTest {
     var chunk = chunk(numOfRecords, operationId, OperationStatusType.DATA_SAVING_FAILED);
     var existingChunkStep = createChunkStep(chunk);
     when(chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_SAVING))
-        .thenReturn(existingChunkStep);
+      .thenReturn(existingChunkStep);
 
     var errorChunkFileName = existingChunkStep.getErrorChunkFileName();
     var entityChunkFileName = chunk.getEntityChunkFileName();
@@ -106,7 +106,7 @@ class SavingRetryRecordsChunkProcessorTest {
     // Assert
     assertThat(result).isNotNull();
     verify(chunkStepJdbcService).updateChunkStep(eq(existingChunkStep.getId()), eq(StepStatus.IN_PROGRESS),
-        any(Timestamp.class));
+      any(Timestamp.class));
     verify(s3Service).writeFile(entityChunkFileName, List.of("record1"));
     verify(bulkStorageService).saveEntities(chunk.getEntityChunkFileName(), entityType, Boolean.TRUE);
   }
@@ -118,7 +118,7 @@ class SavingRetryRecordsChunkProcessorTest {
     int numOfRecords = 5;
     var chunk = chunk(numOfRecords, operationId, OperationStatusType.DATA_SAVING_FAILED);
     when(chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(),
-        OperationStep.DATA_SAVING)).thenReturn(null);
+      OperationStep.DATA_SAVING)).thenReturn(null);
 
     doNothing().when(chunkStepJdbcService).createChunkStep(any());
     processor.setEntityType(entityType);
@@ -141,7 +141,7 @@ class SavingRetryRecordsChunkProcessorTest {
     var chunk = chunk(numOfRecords, operationId, OperationStatusType.DATA_SAVING_FAILED);
     var existingChunkStep = createChunkStep(chunk);
     when(chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_SAVING))
-        .thenReturn(existingChunkStep);
+      .thenReturn(existingChunkStep);
 
     var errorChunkFileName = existingChunkStep.getErrorChunkFileName();
     var entityChunkFileName = chunk.getEntityChunkFileName();
@@ -161,13 +161,12 @@ class SavingRetryRecordsChunkProcessorTest {
     assertThat(result).isNotNull();
     assertThat(result.saveResponse()).isNull();
     var recordsSavingData = result.recordsSavingData();
-    assertThat(recordsSavingData).isNotNull();
-    assertThat(recordsSavingData.chunkId()).isEqualTo(chunk.getId());
-    assertThat(recordsSavingData.operationId()).isEqualTo(operationId);
-    assertThat(recordsSavingData.numberOfRecords()).isEqualTo(existingChunkStep.getNumOfErrors());
+    assertThat(recordsSavingData).isNotNull()
+      .extracting(RecordsSavingData::chunkId, RecordsSavingData::operationId, RecordsSavingData::numberOfRecords)
+      .containsExactly(chunk.getId(), operationId, existingChunkStep.getNumOfErrors());
 
     verify(chunkStepJdbcService).updateChunkStep(eq(existingChunkStep.getId()), eq(StepStatus.IN_PROGRESS),
-        any(Timestamp.class));
+      any(Timestamp.class));
     verify(s3Service).writeFile(entityChunkFileName, List.of("record1"));
     verify(bulkStorageService).saveEntities(chunk.getEntityChunkFileName(), entityType, Boolean.TRUE);
   }
@@ -216,35 +215,35 @@ class SavingRetryRecordsChunkProcessorTest {
 
   private OperationChunk chunk(int numOfRecords, UUID operationId, OperationStatusType status) {
     return OperationChunk.builder()
-        .id(UUID.randomUUID())
-        .operationId(operationId)
-        .startRecordId(UUID.randomUUID())
-        .endRecordId(UUID.randomUUID())
-        .numOfRecords(numOfRecords)
-        .entityChunkFileName("entity" + numOfRecords)
-        .marcChunkFileName("marc" + numOfRecords)
-        .sourceChunkFileName("source" + numOfRecords)
-        .status(status)
-        .build();
+      .id(UUID.randomUUID())
+      .operationId(operationId)
+      .startRecordId(UUID.randomUUID())
+      .endRecordId(UUID.randomUUID())
+      .numOfRecords(numOfRecords)
+      .entityChunkFileName("entity" + numOfRecords)
+      .marcChunkFileName("marc" + numOfRecords)
+      .sourceChunkFileName("source" + numOfRecords)
+      .status(status)
+      .build();
   }
 
   private ChunkStep createChunkStep(OperationChunk chunk) {
     return ChunkStep.builder()
-        .id(UUID.randomUUID())
-        .operationId(chunk.getOperationId())
-        .operationChunkId(chunk.getId())
-        .operationStep(OperationStep.DATA_SAVING)
-        .status(StepStatus.FAILED)
-        .numOfErrors(1)
-        .entityErrorChunkFileName("entity_error")
-        .errorChunkFileName("error")
-        .stepStartTime(Timestamp.from(Instant.now()))
-        .build();
+      .id(UUID.randomUUID())
+      .operationId(chunk.getOperationId())
+      .operationChunkId(chunk.getId())
+      .operationStep(OperationStep.DATA_SAVING)
+      .status(StepStatus.FAILED)
+      .numOfErrors(1)
+      .entityErrorChunkFileName("entity_error")
+      .errorChunkFileName("error")
+      .stepStartTime(Timestamp.from(Instant.now()))
+      .build();
   }
 
   private static Stream<Arguments> chunkArguments() {
     return Stream.of(
-        Arguments.of(AUTHORITY_OPERATION_ID, AUTHORITY),
-        Arguments.of(INSTANCE_OPERATION_ID, INSTANCE));
+      Arguments.of(AUTHORITY_OPERATION_ID, AUTHORITY),
+      Arguments.of(INSTANCE_OPERATION_ID, INSTANCE));
   }
 }

@@ -56,17 +56,10 @@ public class SavingRetryRecordsChunkProcessor implements ItemProcessor<Operation
       log.debug("process:: Updating existing chunk step for operation {} chunk {}", chunk.getOperationId(),
           chunk.getId());
       chunkStepJdbcService.updateChunkStep(chunkStep.getId(), StepStatus.IN_PROGRESS, Timestamp.from(Instant.now()));
-      if (OperationStatusType.DATA_SAVING_FAILED.equals(chunk.getStatus())
-          && chunkStep.getNumOfErrors() != null
-          && chunkStep.getNumOfErrors() > 0
-          && StringUtils.isNotEmpty(chunkStep.getErrorChunkFileName())
-          && isChunkFileUpdated(chunk, chunkStep.getErrorChunkFileName())) {
+      if (isChunkPartialyFailed(chunk, chunkStep)) {
         numOfRecords = chunkStep.getNumOfErrors();
       } else {
-        // reduce the saved_num_of_records if saving is retry for all records in a chunk.
-        var numOfErrors = chunkStep.getNumOfErrors() != null ? chunkStep.getNumOfErrors() : 0;
-        var reducedSavedNumOfRecords = numOfRecords - numOfErrors;
-        operationJdbcService.updateOperationSavedNumber(chunk.getOperationId(), reducedSavedNumOfRecords);
+        reduceRecordCountOnErrors(chunk, chunkStep, numOfRecords);
       }
     } else {
       log.debug("process:: Creating new chunk step for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
@@ -76,6 +69,21 @@ public class SavingRetryRecordsChunkProcessor implements ItemProcessor<Operation
         numOfRecords);
     var saveResponse = bulkStorageService.saveEntities(chunk.getEntityChunkFileName(), entityType, publishEventsFlag);
     return new DataSavingResult(recordsSavingData, saveResponse);
+  }
+
+  private boolean isChunkPartialyFailed(OperationChunk chunk, ChunkStep chunkStep) {
+    return OperationStatusType.DATA_SAVING_FAILED.equals(chunk.getStatus())
+           && chunkStep.getNumOfErrors() != null
+           && chunkStep.getNumOfErrors() > 0
+           && StringUtils.isNotEmpty(chunkStep.getErrorChunkFileName())
+           && isChunkFileUpdated(chunk, chunkStep.getErrorChunkFileName());
+  }
+
+  private void reduceRecordCountOnErrors(OperationChunk chunk, ChunkStep chunkStep, int numOfRecords) {
+    // reduce the saved_num_of_records if saving is retry for all records in a chunk.
+    var numOfErrors = chunkStep.getNumOfErrors() != null ? chunkStep.getNumOfErrors() : 0;
+    var reducedSavedNumOfRecords = numOfRecords - numOfErrors;
+    operationJdbcService.updateOperationSavedNumber(chunk.getOperationId(), reducedSavedNumOfRecords);
   }
 
   private boolean isChunkFileUpdated(OperationChunk chunk, String errorChunkFileName) {

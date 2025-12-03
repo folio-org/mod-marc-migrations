@@ -48,18 +48,28 @@ public class MappingRecordsFileUploadStepListener implements StepExecutionListen
       return new ExitStatus(ExitStatus.FAILED.getExitCode(), "No operationId in job params for jobId " + jobId);
     }
     if (ExitStatus.FAILED.getExitCode().equals(exitStatus.getExitCode())) {
-      log.warn("afterStep:: job {} failed for operation {}: {}", jobId, operationId, exitStatus.getExitDescription());
-      try {
-        log.warn("afterStep:: upload local files even if the job failed.");
-        uploadLocalFiles(filesPath, operationId);
-      } catch (Exception e) {
-        log.error("afterStep:: Failed to upload local files for operation {}: {}", operationId, e.getMessage());
-      }
-      finishOperation(operationId, OperationStatusType.DATA_MAPPING_FAILED);
-      clearLocalFiles(filesPath);
-      return exitStatus;
+      return processFaileExitStatus(jobId, operationId, exitStatus, filesPath);
     }
 
+    return uploadFilesAndFinishOperation(operationId, filesPath, exitStatus);
+  }
+
+  private ExitStatus processFaileExitStatus(Long jobId, String operationId, ExitStatus exitStatus, String filesPath)
+    throws IOException {
+    log.warn("afterStep:: job {} failed for operation {}: {}", jobId, operationId, exitStatus.getExitDescription());
+    try {
+      log.warn("afterStep:: upload local files even if the job failed.");
+      uploadLocalFiles(filesPath, operationId);
+    } catch (Exception e) {
+      log.error("afterStep:: Failed to upload local files for operation {}: {}", operationId, e.getMessage());
+    }
+    finishOperation(operationId, OperationStatusType.DATA_MAPPING_FAILED);
+    clearLocalFiles(filesPath);
+    return exitStatus;
+  }
+
+  private ExitStatus uploadFilesAndFinishOperation(String operationId, String filesPath,
+                                                   ExitStatus exitStatus) throws IOException {
     try {
       log.info("afterStep:: trying to upload and delete local files for operation {}", operationId);
       uploadLocalFiles(filesPath, operationId);
@@ -67,7 +77,7 @@ public class MappingRecordsFileUploadStepListener implements StepExecutionListen
       var operation = jdbcService.getOperation(operationId);
       if (!Objects.equals(operation.getTotalNumOfRecords(), operation.getMappedNumOfRecords())) {
         log.warn("afterStep:: operation.totalNumOfRecords: {}, operation.mappedNumOfRecords: {}",
-            operation.getTotalNumOfRecords(), operation.getMappedNumOfRecords());
+          operation.getTotalNumOfRecords(), operation.getMappedNumOfRecords());
         finishOperation(operationId, OperationStatusType.DATA_MAPPING_FAILED);
       } else {
         finishOperation(operationId, OperationStatusType.DATA_MAPPING_COMPLETED);
@@ -81,7 +91,6 @@ public class MappingRecordsFileUploadStepListener implements StepExecutionListen
     } finally {
       clearLocalFiles(filesPath);
     }
-
     return exitStatus;
   }
 

@@ -24,6 +24,7 @@ import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
 import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
 import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
+import org.jspecify.annotations.NonNull;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Value;
@@ -48,21 +49,36 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
   private EntityType entityType;
 
   @Override
-  public MappingComposite<MarcRecord> process(OperationChunk chunk) {
+  public MappingComposite<@NonNull MarcRecord> process(OperationChunk chunk) {
     log.trace("process:: for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
 
     var records = (entityType == EntityType.AUTHORITY)
-        ? authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()) :
-        instanceJdbcService.getInstancesChunk(chunk.getStartRecordId(), chunk.getEndRecordId());
+                  ? authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId())
+                  : instanceJdbcService.getInstancesChunk(chunk.getStartRecordId(), chunk.getEndRecordId());
     log.debug("process:: retrieved {} records for operation {} chunk {}", records.size(), chunk.getOperationId(),
-        chunk.getId());
+      chunk.getId());
 
+    var chunkStep = getOrCreateChunkStep(chunk, records);
+
+    if (records.size() != chunk.getNumOfRecords()) {
+      log.warn("process:: Wrong number of records [{}] for operation {} chunk {}, step {}; record ids from {} to {},"
+               + " expected - [{}].", records.size(), chunk.getOperationId(), chunk.getId(), chunkStep.getId(),
+        chunk.getStartRecordId(), chunk.getEndRecordId(), chunk.getNumOfRecords());
+    }
+
+    var mappingData = new RecordsMappingData(chunk.getOperationId(), chunk.getId(), chunkStep.getId(),
+      chunk.getEntityChunkFileName(), chunk.getNumOfRecords(), chunkStep.getEntityErrorChunkFileName(),
+      chunkStep.getErrorChunkFileName());
+    return new MappingComposite<>(mappingData, records);
+  }
+
+  private ChunkStep getOrCreateChunkStep(OperationChunk chunk, List<MarcRecord> records) {
     ChunkStep chunkStep;
     if (!OperationStatusType.NEW.equals(chunk.getStatus())) {
       chunkStep = chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_MAPPING);
       if (chunkStep != null) {
         log.debug("process:: Updating existing chunk step for operation {} chunk {}", chunk.getOperationId(),
-            chunk.getId());
+          chunk.getId());
         chunkStepJdbcService.updateChunkStep(chunkStep.getId(), StepStatus.IN_PROGRESS, Timestamp.from(Instant.now()));
         reduceMappedNumOfRecords(chunk, chunkStep.getNumOfErrors(), records);
       } else {
@@ -73,17 +89,7 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
       log.debug("process:: Creating new chunk step for operation {} chunk {}", chunk.getOperationId(), chunk.getId());
       chunkStep = createChunkStep(chunk);
     }
-
-    if (records.size() != chunk.getNumOfRecords()) {
-      log.warn("process:: Wrong number of records [{}] for operation {} chunk {}, step {}; record ids from {} to {},"
-          + " expected - [{}].", records.size(), chunk.getOperationId(), chunk.getId(), chunkStep.getId(),
-        chunk.getStartRecordId(), chunk.getEndRecordId(), chunk.getNumOfRecords());
-    }
-
-    var mappingData = new RecordsMappingData(chunk.getOperationId(), chunk.getId(), chunkStep.getId(),
-      chunk.getEntityChunkFileName(), chunk.getNumOfRecords(), chunkStep.getEntityErrorChunkFileName(),
-      chunkStep.getErrorChunkFileName());
-    return new MappingComposite<>(mappingData, records);
+    return chunkStep;
   }
 
   private void reduceMappedNumOfRecords(OperationChunk chunk, Integer numOfErrors, List<MarcRecord> records) {
@@ -105,9 +111,9 @@ public class MappingRecordsChunkPreProcessor implements ItemProcessor<OperationC
       .operationChunkId(chunk.getId())
       .operationStep(OperationStep.DATA_MAPPING)
       .entityErrorChunkFileName(
-          STEP_FILE_NAME.formatted(s3SubPath, chunk.getOperationId(), chunk.getId(), stepId, "entity-error"))
+        STEP_FILE_NAME.formatted(s3SubPath, chunk.getOperationId(), chunk.getId(), stepId, "entity-error"))
       .errorChunkFileName(
-          STEP_FILE_NAME.formatted(s3SubPath, chunk.getOperationId(), chunk.getId(), stepId, "error"))
+        STEP_FILE_NAME.formatted(s3SubPath, chunk.getOperationId(), chunk.getId(), stepId, "error"))
       .status(StepStatus.IN_PROGRESS)
       .stepStartTime(Timestamp.from(Instant.now()))
       .build();

@@ -73,7 +73,7 @@ class MappingRecordsChunkPreProcessorTest {
     var marcRecords = marcRecords(numOfRecords);
 
     when(instanceJdbcService.getInstancesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
-        .thenReturn(marcRecords);
+      .thenReturn(marcRecords);
     when(props.getS3SubPath()).thenReturn(S3_SUB_PATH);
     processor.setEntityType(INSTANCE);
 
@@ -83,14 +83,7 @@ class MappingRecordsChunkPreProcessorTest {
   @Test
   void process_UpdatesExistingChunkStepForDataMappingStatus() {
     // Arrange
-    var chunk = OperationChunk.builder()
-      .id(UUID.randomUUID())
-      .operationId(UUID.randomUUID())
-      .startRecordId(UUID.randomUUID())
-      .endRecordId(UUID.randomUUID())
-      .numOfRecords(5)
-      .status(OperationStatusType.DATA_MAPPING)
-      .build();
+    var chunk = getOperationChunk();
 
     var existingChunkStep = ChunkStep.builder()
       .id(UUID.randomUUID())
@@ -106,7 +99,7 @@ class MappingRecordsChunkPreProcessorTest {
     when(chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_MAPPING))
       .thenReturn(existingChunkStep);
     when(authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
-        .thenReturn(marcRecords);
+      .thenReturn(marcRecords);
 
     processor.setEntityType(EntityType.AUTHORITY);
 
@@ -116,7 +109,7 @@ class MappingRecordsChunkPreProcessorTest {
     // Assert
     var timestampCaptor = ArgumentCaptor.forClass(Timestamp.class);
     verify(chunkStepJdbcService).updateChunkStep(eq(existingChunkStep.getId()), eq(StepStatus.IN_PROGRESS),
-        timestampCaptor.capture());
+      timestampCaptor.capture());
     assertThat(timestampCaptor.getValue()).isNotNull();
 
     assert result != null;
@@ -127,14 +120,7 @@ class MappingRecordsChunkPreProcessorTest {
   @Test
   void process_UpdatesExistingChunkStepWithReduceMappedNumOfRecords() {
     // Arrange
-    var chunk = OperationChunk.builder()
-      .id(UUID.randomUUID())
-      .operationId(UUID.randomUUID())
-      .startRecordId(UUID.randomUUID())
-      .endRecordId(UUID.randomUUID())
-      .numOfRecords(5)
-      .status(OperationStatusType.DATA_MAPPING)
-      .build();
+    var chunk = getOperationChunk();
 
     var existingChunkStep = ChunkStep.builder()
       .id(UUID.randomUUID())
@@ -149,7 +135,7 @@ class MappingRecordsChunkPreProcessorTest {
     when(chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_MAPPING))
       .thenReturn(existingChunkStep);
     when(authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
-        .thenReturn(marcRecords);
+      .thenReturn(marcRecords);
 
     processor.setEntityType(EntityType.AUTHORITY);
 
@@ -162,7 +148,7 @@ class MappingRecordsChunkPreProcessorTest {
     assertThat(result.records()).hasSize(marcRecords.size()).containsAll(marcRecords);
     var timestampCaptor = ArgumentCaptor.forClass(Timestamp.class);
     verify(chunkStepJdbcService).updateChunkStep(eq(existingChunkStep.getId()), eq(StepStatus.IN_PROGRESS),
-        timestampCaptor.capture());
+      timestampCaptor.capture());
     assertThat(timestampCaptor.getValue()).isNotNull();
     verify(operationJdbcService).updateOperationMappedNumber(chunk.getOperationId(), marcRecords.size());
   }
@@ -170,14 +156,7 @@ class MappingRecordsChunkPreProcessorTest {
   @Test
   void process_UpdatesExistingChunkStepWithoutReduceMappedNumOfRecords() {
     // Arrange
-    var chunk = OperationChunk.builder()
-      .id(UUID.randomUUID())
-      .operationId(UUID.randomUUID())
-      .startRecordId(UUID.randomUUID())
-      .endRecordId(UUID.randomUUID())
-      .numOfRecords(5)
-      .status(OperationStatusType.DATA_MAPPING)
-      .build();
+    var chunk = getOperationChunk();
 
     var existingChunkStep = ChunkStep.builder()
       .id(UUID.randomUUID())
@@ -193,7 +172,7 @@ class MappingRecordsChunkPreProcessorTest {
     when(chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_MAPPING))
       .thenReturn(existingChunkStep);
     when(authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
-        .thenReturn(marcRecords);
+      .thenReturn(marcRecords);
 
     processor.setEntityType(EntityType.AUTHORITY);
 
@@ -206,7 +185,7 @@ class MappingRecordsChunkPreProcessorTest {
     assertThat(result.records()).hasSize(marcRecords.size()).containsAll(marcRecords);
     var timestampCaptor = ArgumentCaptor.forClass(Timestamp.class);
     verify(chunkStepJdbcService).updateChunkStep(eq(existingChunkStep.getId()), eq(StepStatus.IN_PROGRESS),
-        timestampCaptor.capture());
+      timestampCaptor.capture());
     assertThat(timestampCaptor.getValue()).isNotNull();
     verify(operationJdbcService, never()).updateOperationMappedNumber(any(), anyInt());
   }
@@ -214,30 +193,23 @@ class MappingRecordsChunkPreProcessorTest {
   @Test
   void process_UpdatesExistingChunkStepWithErrorsForDataMappingStatus() {
     // Arrange
-    var chunk = OperationChunk.builder()
-        .id(UUID.randomUUID())
-        .operationId(UUID.randomUUID())
-        .startRecordId(UUID.randomUUID())
-        .endRecordId(UUID.randomUUID())
-        .numOfRecords(5)
-        .status(OperationStatusType.DATA_MAPPING)
-        .build();
+    var chunk = getOperationChunk();
 
     var existingChunkStep = ChunkStep.builder()
-        .id(UUID.randomUUID())
-        .operationId(chunk.getOperationId())
-        .operationChunkId(chunk.getId())
-        .operationStep(OperationStep.DATA_MAPPING)
-        .status(StepStatus.IN_PROGRESS)
-        .numOfErrors(3)
-        .build();
+      .id(UUID.randomUUID())
+      .operationId(chunk.getOperationId())
+      .operationChunkId(chunk.getId())
+      .operationStep(OperationStep.DATA_MAPPING)
+      .status(StepStatus.IN_PROGRESS)
+      .numOfErrors(3)
+      .build();
 
     var marcRecords = List.of(new MarcRecord(null, null, null, null, null));
 
     when(chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_MAPPING))
-        .thenReturn(existingChunkStep);
+      .thenReturn(existingChunkStep);
     when(authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
-        .thenReturn(marcRecords);
+      .thenReturn(marcRecords);
 
     processor.setEntityType(EntityType.AUTHORITY);
 
@@ -247,31 +219,24 @@ class MappingRecordsChunkPreProcessorTest {
     // Assert
     var timestampCaptor = ArgumentCaptor.forClass(Timestamp.class);
     verify(chunkStepJdbcService).updateChunkStep(eq(existingChunkStep.getId()), eq(StepStatus.IN_PROGRESS),
-        timestampCaptor.capture());
+      timestampCaptor.capture());
     assertThat(timestampCaptor.getValue()).isNotNull();
 
     assert result != null;
     assertThat(result.records()).hasSize(marcRecords.size())
-        .containsAll(marcRecords);
+      .containsAll(marcRecords);
   }
 
   @Test
   void process_createChunkStepForDataMappingStatus() {
     // Arrange
-    var chunk = OperationChunk.builder()
-      .id(UUID.randomUUID())
-      .operationId(UUID.randomUUID())
-      .startRecordId(UUID.randomUUID())
-      .endRecordId(UUID.randomUUID())
-      .numOfRecords(5)
-      .status(OperationStatusType.DATA_MAPPING)
-      .build();
+    var chunk = getOperationChunk();
 
     var marcRecords = List.of(new MarcRecord(null, null, null, null, null));
     when(chunkStepJdbcService.getChunkStepByChunkIdAndOperationStep(chunk.getId(), OperationStep.DATA_MAPPING))
-        .thenReturn(null);
+      .thenReturn(null);
     when(authorityJdbcService.getAuthoritiesChunk(chunk.getStartRecordId(), chunk.getEndRecordId()))
-        .thenReturn(marcRecords);
+      .thenReturn(marcRecords);
     when(props.getS3SubPath()).thenReturn(S3_SUB_PATH);
 
     processor.setEntityType(EntityType.AUTHORITY);
@@ -302,6 +267,17 @@ class MappingRecordsChunkPreProcessorTest {
     assertThat(actual.records()).hasSize(marcRecords.size()).containsAll(marcRecords);
   }
 
+  private OperationChunk getOperationChunk() {
+    return OperationChunk.builder()
+      .id(UUID.randomUUID())
+      .operationId(UUID.randomUUID())
+      .startRecordId(UUID.randomUUID())
+      .endRecordId(UUID.randomUUID())
+      .numOfRecords(5)
+      .status(OperationStatusType.DATA_MAPPING)
+      .build();
+  }
+
   private void assertChunkStep(OperationChunk chunk, ChunkStep step) {
     var softAssert = new SoftAssertions();
 
@@ -311,10 +287,10 @@ class MappingRecordsChunkPreProcessorTest {
     softAssert.assertThat(step.getOperationStep()).isEqualTo(OperationStep.DATA_MAPPING);
     softAssert.assertThat(step.getEntityErrorChunkFileName())
       .contains(S3_SUB_PATH, chunk.getOperationId().toString(), chunk.getId().toString(), step.getId().toString(),
-          "entity-error");
+        "entity-error");
     softAssert.assertThat(step.getErrorChunkFileName())
       .contains(S3_SUB_PATH, chunk.getOperationId().toString(), chunk.getId().toString(), step.getId().toString(),
-          "error");
+        "error");
     softAssert.assertThat(step.getStatus()).isEqualTo(StepStatus.IN_PROGRESS);
     var now = Instant.now();
     softAssert.assertThat(step.getStepStartTime()).isNotNull().isBetween(now.minusSeconds(2), now.plusMillis(1));
