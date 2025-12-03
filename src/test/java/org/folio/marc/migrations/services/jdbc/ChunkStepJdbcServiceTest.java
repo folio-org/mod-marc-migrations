@@ -33,18 +33,7 @@ class ChunkStepJdbcServiceTest extends JdbcServiceTestBase {
 
   @Test
   void createChunkStep_positive() {
-    var step = ChunkStep.builder()
-      .id(UUID.randomUUID())
-      .operationId(UUID.randomUUID())
-      .operationChunkId(UUID.randomUUID())
-      .operationStep(OperationStep.DATA_MAPPING)
-      .stepStartTime(Timestamp.from(Instant.now()))
-      .stepEndTime(Timestamp.from(Instant.now()))
-      .entityErrorChunkFileName("entityError")
-      .errorChunkFileName("error")
-      .status(StepStatus.IN_PROGRESS)
-      .numOfErrors(3)
-      .build();
+    var step = getChunkStep();
     var expectedParams = new Object[] {step.getId(), step.getOperationId(),
                                        step.getOperationChunkId(), step.getOperationStep(),
                                        step.getEntityErrorChunkFileName(),
@@ -122,9 +111,9 @@ class ChunkStepJdbcServiceTest extends JdbcServiceTestBase {
     var sqlCaptor = ArgumentCaptor.forClass(String.class);
     verify(jdbcTemplate).update(sqlCaptor.capture());
     assertThat(sqlCaptor.getValue())
-        .contains(id.toString())
-        .contains(status.name())
-        .contains(stepEndTime.toString());
+      .contains(id.toString())
+      .contains(status.name())
+      .contains(stepEndTime.toString());
   }
 
   @Test
@@ -133,13 +122,13 @@ class ChunkStepJdbcServiceTest extends JdbcServiceTestBase {
     var chunkId = UUID.randomUUID();
     var operationStep = OperationStep.DATA_MAPPING;
     var expectedChunkStep = ChunkStep.builder()
-        .id(UUID.randomUUID())
-        .operationChunkId(chunkId)
-        .operationStep(operationStep)
-        .build();
+      .id(UUID.randomUUID())
+      .operationChunkId(chunkId)
+      .operationStep(operationStep)
+      .build();
 
     when(jdbcTemplate.query(anyString(), eq(mapper), eq(chunkId), eq(operationStep.name())))
-        .thenReturn(List.of(expectedChunkStep));
+      .thenReturn(List.of(expectedChunkStep));
 
     // Act
     var result = service.getChunkStepByChunkIdAndOperationStep(chunkId, operationStep);
@@ -148,9 +137,9 @@ class ChunkStepJdbcServiceTest extends JdbcServiceTestBase {
     var sqlCaptor = ArgumentCaptor.forClass(String.class);
     verify(jdbcTemplate).query(sqlCaptor.capture(), eq(mapper), eq(chunkId), eq(operationStep.name()));
     assertThat(sqlCaptor.getValue())
-        .contains("operation_chunk_step")
-        .contains("operation_chunk_id")
-        .contains("operation_step");
+      .contains("operation_chunk_step")
+      .contains("operation_chunk_id")
+      .contains("operation_step");
     assertThat(result).isEqualTo(expectedChunkStep);
   }
 
@@ -172,5 +161,20 @@ class ChunkStepJdbcServiceTest extends JdbcServiceTestBase {
       .contains("operation_chunk_id")
       .contains("operation_step");
     assertThat(result).isNull();
+  }
+
+  private ChunkStep getChunkStep() {
+    return ChunkStep.builder()
+      .id(UUID.randomUUID())
+      .operationId(UUID.randomUUID())
+      .operationChunkId(UUID.randomUUID())
+      .operationStep(OperationStep.DATA_MAPPING)
+      .stepStartTime(Timestamp.from(Instant.now()))
+      .stepEndTime(Timestamp.from(Instant.now()))
+      .entityErrorChunkFileName("entityError")
+      .errorChunkFileName("error")
+      .status(StepStatus.IN_PROGRESS)
+      .numOfErrors(3)
+      .build();
   }
 }

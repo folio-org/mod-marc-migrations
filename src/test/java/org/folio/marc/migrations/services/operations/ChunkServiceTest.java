@@ -69,19 +69,7 @@ class ChunkServiceTest {
     var recordIdsPartitioned = Lists.partition(recordIdsMock.stream().flatMap(Collection::stream).toList(), 2);
     var softAssertions = new SoftAssertions();
     for (int i = 0; i < actualChunks.size(); i++) {
-      var chunk = actualChunks.get(i);
-      softAssertions.assertThat(chunk.getId()).isNotNull();
-      softAssertions.assertThat(chunk.getOperationId()).isEqualTo(operation.getId());
-      softAssertions.assertThat(chunk.getStartRecordId()).isEqualTo(recordIdsPartitioned.get(i).get(0));
-      softAssertions.assertThat(chunk.getEndRecordId()).isEqualTo(recordIdsPartitioned.get(i).get(1));
-      softAssertions.assertThat(
-          fileNameValid(chunk.getSourceChunkFileName(), operation.getId(), chunk.getId(), "source")).isTrue();
-      softAssertions.assertThat(
-          fileNameValid(chunk.getMarcChunkFileName(), operation.getId(), chunk.getId(), "marc")).isTrue();
-      softAssertions.assertThat(
-          fileNameValid(chunk.getEntityChunkFileName(), operation.getId(), chunk.getId(), "entity")).isTrue();
-      softAssertions.assertThat(chunk.getStatus()).isEqualTo(NEW);
-      softAssertions.assertThat(chunk.getNumOfRecords()).isEqualTo(2);
+      prepareChunkAssertions(softAssertions, operation, actualChunks.get(i), recordIdsPartitioned.get(i));
     }
     softAssertions.assertAll();
   }
@@ -90,9 +78,9 @@ class ChunkServiceTest {
   void prepareAuthorityChunks_positive() {
     var recordIdsMock = getRecordIdsMocks();
     when(authorityJdbcService.getAuthorityIdsChunk(any()))
-        .thenReturn(recordIdsMock.get(0));
+      .thenReturn(recordIdsMock.get(0));
     when(authorityJdbcService.getAuthorityIdsChunk(any(), any()))
-        .thenReturn(recordIdsMock.get(1), recordIdsMock.get(2), emptyList());
+      .thenReturn(recordIdsMock.get(1), recordIdsMock.get(2), emptyList());
     prepareChunks_positive(EntityType.AUTHORITY, recordIdsMock);
   }
 
@@ -100,9 +88,9 @@ class ChunkServiceTest {
   void prepareInstanceChunks_positive() {
     var recordIdsMock = getRecordIdsMocks();
     when(instanceJdbcService.getInstanceIdsChunk(any()))
-        .thenReturn(recordIdsMock.get(0));
+      .thenReturn(recordIdsMock.get(0));
     when(instanceJdbcService.getInstanceIdsChunk(any(), any()))
-        .thenReturn(recordIdsMock.get(1), recordIdsMock.get(2), emptyList());
+      .thenReturn(recordIdsMock.get(1), recordIdsMock.get(2), emptyList());
     prepareChunks_positive(EntityType.INSTANCE, recordIdsMock);
   }
 
@@ -119,18 +107,34 @@ class ChunkServiceTest {
     verify(chunkJdbcService).updateChunkStatus(chunkIds, status);
   }
 
+  private void prepareChunkAssertions(SoftAssertions softAssertions, Operation operation, OperationChunk chunk,
+                                      List<UUID> uuids) {
+    softAssertions.assertThat(chunk.getId()).isNotNull();
+    softAssertions.assertThat(chunk.getOperationId()).isEqualTo(operation.getId());
+    softAssertions.assertThat(chunk.getStartRecordId()).isEqualTo(uuids.get(0));
+    softAssertions.assertThat(chunk.getEndRecordId()).isEqualTo(uuids.get(1));
+    softAssertions.assertThat(
+      fileNameValid(chunk.getSourceChunkFileName(), operation.getId(), chunk.getId(), "source")).isTrue();
+    softAssertions.assertThat(
+      fileNameValid(chunk.getMarcChunkFileName(), operation.getId(), chunk.getId(), "marc")).isTrue();
+    softAssertions.assertThat(
+      fileNameValid(chunk.getEntityChunkFileName(), operation.getId(), chunk.getId(), "entity")).isTrue();
+    softAssertions.assertThat(chunk.getStatus()).isEqualTo(NEW);
+    softAssertions.assertThat(chunk.getNumOfRecords()).isEqualTo(2);
+  }
+
   private List<List<UUID>> getRecordIdsMocks() {
     return List.of(
-        //returned from first query and partitioned into 2 chunks
-        List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()),
-        //returned from query in a loop and partitioned into 2 chunks. Persisted to db in a loop
-        List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()),
-        //returned from query in a loop, 1 chunk created. Persisted to db after a loop
-        List.of(UUID.randomUUID(), UUID.randomUUID()));
+      //returned from first query and partitioned into 2 chunks
+      List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()),
+      //returned from query in a loop and partitioned into 2 chunks. Persisted to db in a loop
+      List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()),
+      //returned from query in a loop, 1 chunk created. Persisted to db after a loop
+      List.of(UUID.randomUUID(), UUID.randomUUID()));
   }
 
   private boolean fileNameValid(String fileName, UUID operationId, UUID chunkId, String postfix) {
     return fileName.contains(operationId.toString()) && fileName.contains(chunkId.toString())
-        && fileName.endsWith(postfix);
+           && fileName.endsWith(postfix);
   }
 }

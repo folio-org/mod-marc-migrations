@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -85,65 +86,79 @@ public class OperationErrorReportService {
       }
       // Process each failed chunk in parallel
       List<CompletableFuture<Void>> futures = failedChunks.stream()
-        .map(chunkStep -> CompletableFuture.runAsync(() -> tenantContextRunner.runInContext(tenantId, () -> {
-          List<OperationError> operationErrors = new ArrayList<>();
-          if (StringUtils.isEmpty(chunkStep.getErrorChunkFileName())) {
-            operationErrors.add(createErrorForMissingFile(chunkStep, operation));
-          } else {
-            var errorFileLines = s3Service.readFile(chunkStep.getErrorChunkFileName());
-            if (CollectionUtils.isEmpty(errorFileLines)) {
-              log.warn("initiateErrorReport::No error file lines found for chunk step: {}", chunkStep.getId());
-              return;
-            }
-            errorFileLines.forEach(line ->
-                operationErrors.add(createOperationErrorFromLine(line, chunkStep, operation)));
-          }
-          operationErrorJdbcService.saveOperationErrors(operationErrors, tenantId);
-        }))
-          .handle((result, ex) -> {
-            if (ex != null) {
-              log.error("initiateErrorReport::{}{}: {}", ERROR_PROCESSING_MESSAGE, chunkStep.getId(), ex.getMessage());
-              throw new IllegalStateException(ERROR_PROCESSING_MESSAGE + chunkStep.getId(), ex);
-            }
-            return result;
-          }))
+        .map(chunkStep -> CompletableFuture.runAsync(() -> tenantContextRunner.runInContext(tenantId,
+            buildErrorReportRunnable(operation, chunkStep, tenantId)))
+          .handle(errorHandler(chunkStep.getId())))
         .toList();
 
       // Wait for all futures to complete and then update the status
-      return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-        .thenAccept(unused -> tenantContextRunner.runInContext(tenantId,
-            () -> updateErrorReportStatus(operation.getId(), ErrorReportStatus.COMPLETED)))
-        .exceptionally(e -> {
-          handleProcessingError(operation, e);
-          return null;
-        });
+      return completeOperationAndUpdateStatus(operation, tenantId, futures);
     } catch (Exception e) {
       handleProcessingError(operation, e);
       return CompletableFuture.failedFuture(e);
     }
   }
 
+  public Optional<OperationErrorReport> getErrorReport(UUID operationId) {
+    return errorReportRepository.findById(operationId);
+  }
+
+  public List<OperationError> getErrorReportEntries(UUID operationId, OffsetRequest offsetRequest) {
+    return operationErrorJdbcService.getOperationErrors(operationId, offsetRequest);
+  }
+
+  private CompletableFuture<Void> completeOperationAndUpdateStatus(Operation operation, String tenantId,
+                                                                   List<CompletableFuture<Void>> futures) {
+    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+      .thenAccept(unused -> tenantContextRunner.runInContext(tenantId,
+        () -> updateErrorReportStatus(operation.getId(), ErrorReportStatus.COMPLETED)))
+      .exceptionally(e -> {
+        handleProcessingError(operation, e);
+        return null;
+      });
+  }
+
+  private BiFunction<Void, Throwable, Void> errorHandler(UUID chunkStepId) {
+    return (result, ex) -> {
+      if (ex != null) {
+        log.error("initiateErrorReport::{}{}: {}", ERROR_PROCESSING_MESSAGE, chunkStepId, ex.getMessage());
+        throw new IllegalStateException(ERROR_PROCESSING_MESSAGE + chunkStepId, ex);
+      }
+      return result;
+    };
+  }
+
+  private Runnable buildErrorReportRunnable(Operation operation, ChunkStep chunkStep, String tenantId) {
+    return () -> {
+      List<OperationError> operationErrors = new ArrayList<>();
+      if (StringUtils.isEmpty(chunkStep.getErrorChunkFileName())) {
+        operationErrors.add(createErrorForMissingFile(chunkStep, operation));
+      } else {
+        var errorFileLines = s3Service.readFile(chunkStep.getErrorChunkFileName());
+        if (CollectionUtils.isEmpty(errorFileLines)) {
+          log.warn("initiateErrorReport::No error file lines found for chunk step: {}", chunkStep.getId());
+          return;
+        }
+        errorFileLines.forEach(line ->
+          operationErrors.add(createOperationErrorFromLine(line, chunkStep, operation)));
+      }
+      operationErrorJdbcService.saveOperationErrors(operationErrors, tenantId);
+    };
+  }
+
   private boolean isOperationCompleted(Operation operation) {
     return operation.getStatus() == OperationStatusType.DATA_MAPPING_COMPLETED
-        || operation.getStatus() == OperationStatusType.DATA_SAVING_COMPLETED;
+           || operation.getStatus() == OperationStatusType.DATA_SAVING_COMPLETED;
   }
 
   private void handleProcessingError(Operation operation, Throwable e) {
     log.error("initiateErrorReport::Error occurred while processing error report for operation: {}",
-        operation.getId(), e);
+      operation.getId(), e);
     updateErrorReportStatus(operation.getId(), ErrorReportStatus.ERROR);
   }
 
   private OperationError createErrorForMissingFile(ChunkStep chunkStep, Operation operation) {
-    var error = new OperationError();
-    error.setId(UUID.randomUUID());
-    error.setReportId(operation.getId());
-    error.setChunkId(chunkStep.getOperationChunkId());
-    error.setOperationStep(chunkStep.getOperationStep());
-    error.setChunkStatus(chunkStep.getStatus());
-    error.setRecordId(UNKNOWN_RECORD_ID);
-    error.setErrorMessage(ERROR_FILE_NOT_FOUND);
-    return error;
+    return prepareOperationError(operation, chunkStep, UNKNOWN_RECORD_ID, ERROR_FILE_NOT_FOUND);
   }
 
   private OperationError createOperationErrorFromLine(String errorLine, ChunkStep chunkStep, Operation operation) {
@@ -154,6 +169,11 @@ public class OperationErrorReportService {
     } else {
       errorMessage = StringUtils.substringAfter(errorLine, ',');
     }
+    return prepareOperationError(operation, chunkStep, recordId, errorMessage);
+  }
+
+  private OperationError prepareOperationError(Operation operation, ChunkStep chunkStep, String recordId,
+                                               String errorMessage) {
     var error = new OperationError();
     error.setId(UUID.randomUUID());
     error.setReportId(operation.getId());
@@ -163,13 +183,5 @@ public class OperationErrorReportService {
     error.setRecordId(recordId);
     error.setErrorMessage(errorMessage);
     return error;
-  }
-
-  public Optional<OperationErrorReport> getErrorReport(UUID operationId) {
-    return errorReportRepository.findById(operationId);
-  }
-
-  public List<OperationError> getErrorReportEntries(UUID operationId, OffsetRequest offsetRequest) {
-    return operationErrorJdbcService.getOperationErrors(operationId, offsetRequest);
   }
 }

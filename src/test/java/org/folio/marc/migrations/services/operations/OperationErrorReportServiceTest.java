@@ -16,7 +16,6 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import org.folio.marc.migrations.domain.entities.ChunkStep;
 import org.folio.marc.migrations.domain.entities.Operation;
 import org.folio.marc.migrations.domain.entities.OperationError;
@@ -68,18 +67,18 @@ class OperationErrorReportServiceTest {
 
   @Test
   void createErrorReport_Success() {
-    UUID operationId = UUID.randomUUID();
-    Operation operation = new Operation();
+    var operationId = UUID.randomUUID();
+    var operation = new Operation();
     operation.setId(operationId);
 
-    OperationErrorReport expectedReport = new OperationErrorReport();
+    var expectedReport = new OperationErrorReport();
     expectedReport.setId(operationId);
     expectedReport.setOperationId(operationId);
     expectedReport.setStatus(ErrorReportStatus.NOT_STARTED);
 
     when(errorReportRepository.save(any(OperationErrorReport.class))).thenReturn(expectedReport);
 
-    OperationErrorReport result = service.createErrorReport(operation);
+    var result = service.createErrorReport(operation);
 
     assertNotNull(result);
     assertEquals(operationId, result.getId());
@@ -90,7 +89,7 @@ class OperationErrorReportServiceTest {
 
   @Test
   void updateErrorReportStatus_Success() {
-    UUID reportId = UUID.randomUUID();
+    var reportId = UUID.randomUUID();
     when(errorReportRepository.updateStatusById(any(), any())).thenReturn(1);
 
     service.updateErrorReportStatus(reportId, ErrorReportStatus.COMPLETED);
@@ -100,12 +99,10 @@ class OperationErrorReportServiceTest {
 
   @Test
   void initiateErrorReport_CompletedOperation_Success() {
-    UUID operationId = UUID.randomUUID();
-    Operation operation = new Operation();
-    operation.setId(operationId);
-    operation.setStatus(OperationStatusType.DATA_MAPPING_COMPLETED);
+    var operationId = UUID.randomUUID();
+    var operation = prepareOperation(operationId, OperationStatusType.DATA_MAPPING_COMPLETED);
 
-    CompletableFuture<Void> result = service.initiateErrorReport(operation, "testTenant");
+    var result = service.initiateErrorReport(operation, "testTenant");
 
     assertTrue(result.isDone());
     verify(errorReportRepository).updateStatusById(ErrorReportStatus.IN_PROGRESS, operationId);
@@ -114,19 +111,9 @@ class OperationErrorReportServiceTest {
 
   @Test
   void initiateErrorReport_WithFailedChunks_Success() {
-    UUID operationId = UUID.randomUUID();
-    Operation operation = new Operation();
-    operation.setId(operationId);
-    operation.setStatus(OperationStatusType.DATA_MAPPING_FAILED);
-
-    ChunkStep failedChunk = ChunkStep.builder()
-      .id(UUID.randomUUID())
-      .operationId(operationId)
-      .operationChunkId(UUID.randomUUID())
-      .operationStep(OperationStep.DATA_MAPPING)
-      .status(StepStatus.FAILED)
-      .errorChunkFileName("error.txt")
-      .build();
+    var operationId = UUID.randomUUID();
+    var operation = prepareOperation(operationId, OperationStatusType.DATA_MAPPING_FAILED);
+    var failedChunk = prepareFailedChunk(operationId, "error.txt");
 
     when(chunkStepJdbcService.getChunkStepsByOperationIdAndStatus(operationId, StepStatus.FAILED))
       .thenReturn(List.of(failedChunk));
@@ -137,7 +124,7 @@ class OperationErrorReportServiceTest {
       return null;
     }).when(tenantContextRunner).runInContext(anyString(), any(Runnable.class));
 
-    CompletableFuture<Void> result = service.initiateErrorReport(operation, "testTenant");
+    var result = service.initiateErrorReport(operation, "testTenant");
 
     assertNotNull(result);
     verify(errorReportRepository).updateStatusById(ErrorReportStatus.IN_PROGRESS, operationId);
@@ -150,25 +137,16 @@ class OperationErrorReportServiceTest {
     var operation = new Operation();
     operation.setId(operationId);
     operation.setStatus(OperationStatusType.DATA_MAPPING_FAILED);
-
-    var failedChunk = ChunkStep.builder()
-      .id(UUID.randomUUID())
-      .operationId(operationId)
-      .operationChunkId(UUID.randomUUID())
-      .operationStep(OperationStep.DATA_MAPPING)
-      .status(StepStatus.FAILED)
-      .errorChunkFileName(null)
-      .build();
+    var failedChunk = prepareFailedChunk(operationId, null);
 
     when(chunkStepJdbcService.getChunkStepsByOperationIdAndStatus(operationId, StepStatus.FAILED))
-        .thenReturn(List.of(failedChunk));
+      .thenReturn(List.of(failedChunk));
 
     doAnswer(invocation -> {
       Runnable runnable = invocation.getArgument(1);
       runnable.run();
       return null;
-    }).when(tenantContextRunner)
-      .runInContext(anyString(), any(Runnable.class));
+    }).when(tenantContextRunner).runInContext(anyString(), any(Runnable.class));
 
     var result = service.initiateErrorReport(operation, "testTenant");
 
@@ -177,12 +155,9 @@ class OperationErrorReportServiceTest {
     await().untilAsserted(() -> {
       verify(operationErrorJdbcService).saveOperationErrors(argThat(errors -> {
         OperationError error = ((List<OperationError>) errors).getFirst(); // Cast to List
-        return error.getErrorMessage()
-          .equals("Error file not found for chunk")
-            && error.getRecordId()
-              .equals("<unknown>")
-            && error.getChunkId()
-              .equals(failedChunk.getOperationChunkId());
+        return error.getErrorMessage().equals("Error file not found for chunk")
+               && error.getRecordId().equals("<unknown>")
+               && error.getChunkId().equals(failedChunk.getOperationChunkId());
       }), anyString());
     });
   }
@@ -195,7 +170,7 @@ class OperationErrorReportServiceTest {
     operation.setStatus(OperationStatusType.DATA_MAPPING_FAILED);
 
     when(chunkStepJdbcService.getChunkStepsByOperationIdAndStatus(operationId, StepStatus.FAILED))
-        .thenReturn(List.of());
+      .thenReturn(List.of());
 
     var result = service.initiateErrorReport(operation, "testTenant");
 
@@ -226,18 +201,10 @@ class OperationErrorReportServiceTest {
     var operation = new Operation();
     operation.setId(operationId);
     operation.setStatus(OperationStatusType.DATA_MAPPING_FAILED);
-
-    var failedChunk = ChunkStep.builder()
-      .id(UUID.randomUUID())
-      .operationId(operationId)
-      .operationChunkId(UUID.randomUUID())
-      .operationStep(OperationStep.DATA_MAPPING)
-      .status(StepStatus.FAILED)
-      .errorChunkFileName("error.txt")
-      .build();
+    var failedChunk = prepareFailedChunk(operationId, "error.txt");
 
     when(chunkStepJdbcService.getChunkStepsByOperationIdAndStatus(operationId, StepStatus.FAILED))
-        .thenReturn(List.of(failedChunk));
+      .thenReturn(List.of(failedChunk));
 
     var result = service.initiateErrorReport(operation, "testTenant");
 
@@ -248,11 +215,11 @@ class OperationErrorReportServiceTest {
 
   @Test
   void getErrorReport_Success() {
-    UUID operationId = UUID.randomUUID();
-    OperationErrorReport expectedReport = new OperationErrorReport();
+    var operationId = UUID.randomUUID();
+    var expectedReport = new OperationErrorReport();
     when(errorReportRepository.findById(operationId)).thenReturn(Optional.of(expectedReport));
 
-    Optional<OperationErrorReport> result = service.getErrorReport(operationId);
+    var result = service.getErrorReport(operationId);
 
     assertTrue(result.isPresent());
     assertEquals(expectedReport, result.get());
@@ -260,16 +227,34 @@ class OperationErrorReportServiceTest {
 
   @Test
   void getErrorReportEntries_Success() {
-    UUID operationId = UUID.randomUUID();
-    OffsetRequest offsetRequest = mock(OffsetRequest.class);
-    List<OperationError> expectedErrors = List.of(new OperationError());
+    var operationId = UUID.randomUUID();
+    var offsetRequest = mock(OffsetRequest.class);
+    var expectedErrors = List.of(new OperationError());
     when(operationErrorJdbcService.getOperationErrors(operationId, offsetRequest))
       .thenReturn(expectedErrors);
 
-    List<OperationError> result = service.getErrorReportEntries(operationId, offsetRequest);
+    var result = service.getErrorReportEntries(operationId, offsetRequest);
 
     assertNotNull(result);
     assertEquals(expectedErrors, result);
     verify(operationErrorJdbcService).getOperationErrors(operationId, offsetRequest);
+  }
+
+  private ChunkStep prepareFailedChunk(UUID operationId, String errorChunkFileName) {
+    return ChunkStep.builder()
+      .id(UUID.randomUUID())
+      .operationId(operationId)
+      .operationChunkId(UUID.randomUUID())
+      .operationStep(OperationStep.DATA_MAPPING)
+      .status(StepStatus.FAILED)
+      .errorChunkFileName(errorChunkFileName)
+      .build();
+  }
+
+  private Operation prepareOperation(UUID operationId, OperationStatusType dataMappingFailed) {
+    var operation = new Operation();
+    operation.setId(operationId);
+    operation.setStatus(dataMappingFailed);
+    return operation;
   }
 }

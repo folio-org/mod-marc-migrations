@@ -106,14 +106,7 @@ class MappingRecordsFileUploadStepListenerTest {
     Files.createDirectories(directory);
 
     var operationId = UUID.randomUUID().toString();
-    var operation = new Operation();
-    operation.setTotalNumOfRecords(10);
-    operation.setMappedNumOfRecords(10);
-    when(jdbcService.getOperation(operationId)).thenReturn(operation);
-    var jobExecution = new JobExecution(new JobInstance(jobId, "testJob"), 1L,
-        new JobParameters(Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class))));
-    var stepExecution = new StepExecution("testStep", jobExecution);
-    stepExecution.setExitStatus(ExitStatus.COMPLETED);
+    var stepExecution = prepareStepExecution(operationId);
     var path1 = Path.of(customDirectory, "test1");
     var path2 = Path.of(customDirectory, "test2");
     Files.createFile(path1);
@@ -126,7 +119,7 @@ class MappingRecordsFileUploadStepListenerTest {
     verify(s3Service).uploadFile(path1.toFile().getAbsolutePath(), formattedPath + "/test1");
     verify(s3Service).uploadFile(path2.toFile().getAbsolutePath(), formattedPath + "/test2");
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING_COMPLETED),
-        eq(OperationTimeType.MAPPING_END), notNull());
+      eq(OperationTimeType.MAPPING_END), notNull());
     verify(jdbcService).getOperation(operationId);
     assertThat(Files.exists(directory)).isFalse();
   }
@@ -188,7 +181,7 @@ class MappingRecordsFileUploadStepListenerTest {
     // Arrange
     var operationId = UUID.randomUUID().toString();
     var jobExecution = new JobExecution(new JobInstance(jobId, "testJob"), 1L,
-        new JobParameters(Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class))));
+      new JobParameters(Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class))));
     var stepExecution = new StepExecution("testStep", jobExecution);
     stepExecution.setExitStatus(ExitStatus.FAILED);
     when(props.getS3SubPath()).thenReturn(s3SubPath);
@@ -206,7 +199,19 @@ class MappingRecordsFileUploadStepListenerTest {
     verify(s3Service).uploadFile(path1.toFile().getAbsolutePath(), formattedPath + "/test1");
     verify(s3Service).uploadFile(path2.toFile().getAbsolutePath(), formattedPath + "/test2");
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING_FAILED),
-        eq(OperationTimeType.MAPPING_END), notNull());
+      eq(OperationTimeType.MAPPING_END), notNull());
     assertThat(Files.exists(Path.of(jobFilesDirectory))).isFalse();
+  }
+
+  private StepExecution prepareStepExecution(String operationId) {
+    var operation = new Operation();
+    operation.setTotalNumOfRecords(10);
+    operation.setMappedNumOfRecords(10);
+    when(jdbcService.getOperation(operationId)).thenReturn(operation);
+    var jobExecution = new JobExecution(new JobInstance(jobId, "testJob"), 1L,
+      new JobParameters(Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class))));
+    var stepExecution = new StepExecution("testStep", jobExecution);
+    stepExecution.setExitStatus(ExitStatus.COMPLETED);
+    return stepExecution;
   }
 }
