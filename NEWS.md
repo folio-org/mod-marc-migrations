@@ -1,10 +1,15 @@
+## v2.0.4 2025-12-09
+### Features
+* Add default empty values for S3_SECRET_ACCESS_KEY and S3_ACCESS_KEY_ID ([MODMARCMIG-87](https://folio-org.atlassian.net/browse/MODMARCMIG-87))
+
+---
+
 ## v2.0.3 2025-09-19
 ### Features
 * Create endpoints that will provide an error report ([MODMARCMIG-52](https://folio-org.atlassian.net/browse/MODMARCMIG-52))
 * Implement endpoint to execute only selected mapping chunks ([MODMARCMIG-47](https://folio-org.atlassian.net/browse/MODMARCMIG-47))
 * Implement endpoint to execute only selected saving chunks ([MODMARCMIG-48](https://folio-org.atlassian.net/browse/MODMARCMIG-48))
 * Skip SRS MARC-AUTHORITY records if linked entities do not exist ([MODMARCMIG-76](https://folio-org.atlassian.net/browse/MODMARCMIG-76))
-* Add default empty values for S3_SECRET_ACCESS_KEY and S3_ACCESS_KEY_ID ([MODMARCMIG-87](https://folio-org.atlassian.net/browse/MODMARCMIG-87))
 
 ---
 
