@@ -1,3 +1,9 @@
+## v2.0.5 2026-01-02
+### Bugfixes
+* Upgrade di-processing-core to v4.4.8 to fix deserialization errors ([MODMARCMIG-93](https://folio-org.atlassian.net/browse/MODMARCMIG-93))
+
+---
+
 ## v2.0.4 2025-12-09
 ### Features
 * Add default empty values for S3_SECRET_ACCESS_KEY and S3_ACCESS_KEY_ID ([MODMARCMIG-87](https://folio-org.atlassian.net/browse/MODMARCMIG-87))
