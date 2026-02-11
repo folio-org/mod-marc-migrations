@@ -16,7 +16,7 @@ import org.folio.marc.migrations.services.domain.DataSavingResult;
 import org.folio.marc.migrations.services.domain.RecordsSavingData;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
 import org.springframework.batch.core.configuration.annotation.StepScope;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 

@@ -11,9 +11,9 @@ import org.folio.marc.migrations.domain.entities.types.OperationStatusType;
 import org.folio.marc.migrations.services.domain.OperationTimeType;
 import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
 import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.StepExecution;
-import org.springframework.batch.core.StepExecutionListener;
 import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.core.listener.StepExecutionListener;
+import org.springframework.batch.core.step.StepExecution;
 import org.springframework.stereotype.Component;
 
 @Log4j2
@@ -27,7 +27,7 @@ public class SavingRecordsStepListener implements StepExecutionListener {
   @Override
   public ExitStatus afterStep(StepExecution stepExecution) {
     var exitStatus = stepExecution.getExitStatus();
-    var jobId = stepExecution.getJobExecution().getJobId();
+    var jobId = stepExecution.getJobExecution().getJobInstanceId();
     var operationId = stepExecution.getJobParameters().getString(OPERATION_ID);
 
     if (operationId == null) {

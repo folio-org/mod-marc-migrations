@@ -2,8 +2,6 @@ package org.folio.marc.migrations.services.batch.mapping;
 
 import static java.lang.String.format;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.json.JsonObject;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -28,9 +26,11 @@ import org.folio.processing.mapping.defaultmapper.MarcToAuthorityMapper;
 import org.folio.processing.mapping.defaultmapper.MarcToInstanceMapper;
 import org.jspecify.annotations.NonNull;
 import org.springframework.batch.core.configuration.annotation.StepScope;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 @Log4j2
 @Component("mappingRecordsStepProcessor")
@@ -99,7 +99,7 @@ public class MappingRecordsChunkProcessor
 
   private MappingResult processInstance(MarcRecord sourceData,
                                         MappingMetadataProvider.MappingData mappingData,
-                                        JsonObject marcSource) throws JsonProcessingException {
+                                        JsonObject marcSource) {
     var instance = new MarcToInstanceMapper()
       .mapRecord(marcSource, mappingData.mappingParameters(), mappingData.mappingRules());
     if (instance == null) {
@@ -113,7 +113,7 @@ public class MappingRecordsChunkProcessor
 
   private MappingResult processAuthority(MarcRecord sourceData,
                                          MappingMetadataProvider.MappingData mappingData,
-                                         JsonObject marcSource) throws JsonProcessingException {
+                                         JsonObject marcSource) {
     var authority = new MarcToAuthorityMapper()
       .mapRecord(marcSource, mappingData.mappingParameters(), mappingData.mappingRules());
     if (authority == null) {
@@ -139,7 +139,7 @@ public class MappingRecordsChunkProcessor
   private String marcToString(MarcRecord marc) {
     try {
       return objectMapper.writeValueAsString(marc);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       log.warn(
         "Unable to convert invalid marc record to string. marcId {}, recordId {}, state {}, version {}",
         marc.marcId(), marc.recordId(), marc.state(), marc.version());

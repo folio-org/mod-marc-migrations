@@ -14,11 +14,11 @@ import org.folio.marc.migrations.config.MigrationProperties;
 import org.folio.marc.migrations.services.domain.MappingComposite;
 import org.folio.marc.migrations.services.domain.MappingResult;
 import org.folio.marc.migrations.services.domain.RecordsMappingData;
-import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.annotation.BeforeStep;
 import org.springframework.batch.core.configuration.annotation.StepScope;
-import org.springframework.batch.item.Chunk;
-import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.core.step.StepExecution;
+import org.springframework.batch.infrastructure.item.Chunk;
+import org.springframework.batch.infrastructure.item.ItemWriter;
 import org.springframework.stereotype.Component;
 
 @Log4j2
@@ -32,7 +32,7 @@ public class MappingRecordsWriter implements ItemWriter<MappingComposite<Mapping
   @BeforeStep
   public void prepareFilesPath(StepExecution stepExecution) throws IOException {
     var jobExecution = stepExecution.getJobExecution();
-    this.filePath = JOB_FILES_PATH.formatted(props.getS3LocalSubPath(), jobExecution.getJobId());
+    this.filePath = JOB_FILES_PATH.formatted(props.getS3LocalSubPath(), jobExecution.getJobInstanceId());
     Files.createDirectories(Paths.get(filePath));
   }
 

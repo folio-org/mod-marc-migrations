@@ -19,24 +19,21 @@ import org.folio.marc.migrations.services.domain.MappingComposite;
 import org.folio.marc.migrations.services.domain.MappingResult;
 import org.folio.marc.migrations.services.jdbc.ChunkJdbcService;
 import org.folio.spring.scope.FolioExecutionScopeExecutionContextManager;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.builder.JobBuilder;
-import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.step.builder.StepBuilder;
-import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.ItemReader;
-import org.springframework.batch.item.support.CompositeItemProcessor;
-import org.springframework.batch.item.support.SynchronizedItemReader;
-import org.springframework.batch.repeat.RepeatOperations;
-import org.springframework.batch.repeat.support.TaskExecutorRepeatTemplate;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemReader;
+import org.springframework.batch.infrastructure.item.support.CompositeItemProcessor;
+import org.springframework.batch.infrastructure.item.support.SynchronizedItemReader;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.task.TaskExecutor;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -47,9 +44,10 @@ public class SpringBatchConfig {
   /**
    * Pooled, configurable TaskExecutor to provide concurrency for spring batch job.
    * Decorate calls with FolioExecutionContext.
-   * */
+   *
+   */
   @Bean("chunksProcessingExecutor")
-  public TaskExecutor chunksProcessingExecutor(MigrationProperties migrationProperties) {
+  public AsyncTaskExecutor chunksProcessingExecutor(MigrationProperties migrationProperties) {
     var executor = new ThreadPoolTaskExecutor();
     executor.setThreadGroupName("chunksProcessing");
     executor.setCorePoolSize(migrationProperties.getChunkProcessingMaxParallelism());
@@ -60,37 +58,23 @@ public class SpringBatchConfig {
     return executor;
   }
 
-  /**
-   * In order to allow more than default 4 concurrent tasks running - we need to increase throttle limit.
-   * As throttle limit setting has been deprecated - custom repeat operation with pooled TaskExecutor need to be
-   * provided.
-   * */
-  @Bean
-  public RepeatOperations customThrottler(@Qualifier("chunksProcessingExecutor") TaskExecutor executor) {
-    var operations = new TaskExecutorRepeatTemplate();
-    operations.setTaskExecutor(executor);
-    return operations;
-  }
-
   @Bean("remapRecordsStep")
   public Step remapRecordsStep(JobRepository jobRepository,
-                                   PlatformTransactionManager transactionManager,
-                                   @Qualifier("syncReader")
-                                   ItemReader<OperationChunk> reader,
-                                   @Qualifier("remappingStepProcessor")
-                                     ItemProcessor<OperationChunk, MappingComposite<MappingResult>> processor,
-                                   MappingRecordsWriter writer,
-                                   MappingRecordsFileUploadStepListener listener,
-                                   @Qualifier("chunksProcessingExecutor") TaskExecutor executor,
-                                   RepeatOperations customThrottler) {
+                               PlatformTransactionManager transactionManager,
+                               @Qualifier("syncReader") ItemReader<OperationChunk> reader,
+                               @Qualifier("remappingStepProcessor")
+                               ItemProcessor<OperationChunk, MappingComposite<MappingResult>> processor,
+                               MappingRecordsWriter writer,
+                               MappingRecordsFileUploadStepListener listener,
+                               @Qualifier("chunksProcessingExecutor") AsyncTaskExecutor executor) {
     return new StepBuilder("remapRecords", jobRepository)
-      .<OperationChunk, MappingComposite<MappingResult>>chunk(1, transactionManager)
+      .<OperationChunk, MappingComposite<MappingResult>>chunk(1)
+      .transactionManager(transactionManager)
       .reader(reader)
       .processor(processor)
       .writer(writer)
       .listener(listener)
       .taskExecutor(executor)
-      .stepOperations(customThrottler)
       .build();
   }
 
@@ -98,39 +82,36 @@ public class SpringBatchConfig {
   public Job remappingJob(JobRepository jobRepository,
                           @Qualifier("remapRecordsStep") Step remapRecordsStep) {
     return new JobBuilder("remapping", jobRepository)
-      .incrementer(new RunIdIncrementer())
       .start(remapRecordsStep)
       .build();
   }
 
   @Bean(name = "remapSaveRecordsStep")
   public Step remapSaveRecordsStep(JobRepository jobRepository,
-                                       PlatformTransactionManager transactionManager,
-                                       @Qualifier("syncReader")
-                                       ItemReader<OperationChunk> reader,
-                                       SavingRecordsChunkProcessor processor,
-                                       SavingRecordsWriter writer,
-                                       SavingRecordsStepListener listener,
-                                       @Qualifier("chunksProcessingExecutor") TaskExecutor executor,
-                                       RepeatOperations customThrottler) {
+                                   PlatformTransactionManager transactionManager,
+                                   @Qualifier("syncReader")
+                                   ItemReader<OperationChunk> reader,
+                                   SavingRecordsChunkProcessor processor,
+                                   SavingRecordsWriter writer,
+                                   SavingRecordsStepListener listener,
+                                   @Qualifier("chunksProcessingExecutor") AsyncTaskExecutor executor) {
     return new StepBuilder("remapSaveRecords", jobRepository)
-        .<OperationChunk, DataSavingResult>chunk(1, transactionManager)
-        .reader(reader)
-        .processor(processor)
-        .writer(writer)
-        .listener(listener)
-        .taskExecutor(executor)
-        .stepOperations(customThrottler)
-        .build();
+      .<OperationChunk, DataSavingResult>chunk(1)
+      .transactionManager(transactionManager)
+      .reader(reader)
+      .processor(processor)
+      .writer(writer)
+      .listener(listener)
+      .taskExecutor(executor)
+      .build();
   }
 
   @Bean("remappingSaveJob")
   public Job remappingSaveJob(JobRepository jobRepository,
                               @Qualifier("remapSaveRecordsStep") Step remapRecordsStep) {
     return new JobBuilder("remappingSave", jobRepository)
-        .incrementer(new RunIdIncrementer())
-        .start(remapRecordsStep)
-        .build();
+      .start(remapRecordsStep)
+      .build();
   }
 
   @Bean("remappingStepProcessor")
@@ -148,7 +129,8 @@ public class SpringBatchConfig {
 
   /**
    * Synchronized reader to provide safety for multithreaded reads.
-   * */
+   *
+   */
   @Bean("syncReader")
   @StepScope
   public ItemReader<OperationChunk> syncReader(@Value("#{jobParameters['operationId']}") String operationId,
@@ -159,7 +141,7 @@ public class SpringBatchConfig {
   @Bean("retryingSyncReader")
   @StepScope
   public ItemReader<OperationChunk> retryingSyncReader(ChunkJdbcService jdbcService,
-      @Value("#{jobParameters['chunkIds']}") List<UUID> chunkIds) {
+                                                       @Value("#{jobParameters['chunkIds']}") List<UUID> chunkIds) {
     return new SynchronizedItemReader<>(new MappingChunksRetryEntityReader(jdbcService, chunkIds));
   }
 
@@ -167,60 +149,56 @@ public class SpringBatchConfig {
   public Job remappingRetryJob(JobRepository jobRepository,
                                @Qualifier("remapRetryRecordsStep") Step remapRetryRecordsStep) {
     return new JobBuilder("remappingRetry", jobRepository)
-        .incrementer(new RunIdIncrementer())
-        .start(remapRetryRecordsStep)
-        .build();
+      .start(remapRetryRecordsStep)
+      .build();
   }
 
   @Bean("remapRetryRecordsStep")
   public Step remapRetryRecordsStep(JobRepository jobRepository,
                                     PlatformTransactionManager transactionManager,
                                     @Qualifier("retryingSyncReader")
-                                        ItemReader<OperationChunk> reader,
+                                    ItemReader<OperationChunk> reader,
                                     @Qualifier("remappingStepProcessor")
-                                        ItemProcessor<OperationChunk, MappingComposite<MappingResult>> processor,
+                                    ItemProcessor<OperationChunk, MappingComposite<MappingResult>> processor,
                                     MappingRecordsWriter writer,
                                     MappingRecordsFileUploadStepListener listener,
-                                    @Qualifier("chunksProcessingExecutor") TaskExecutor executor,
-                                    RepeatOperations customThrottler) {
+                                    @Qualifier("chunksProcessingExecutor") AsyncTaskExecutor executor) {
     return new StepBuilder("remapRetryRecords", jobRepository)
-        .<OperationChunk, MappingComposite<MappingResult>>chunk(1, transactionManager)
-        .reader(reader)
-        .processor(processor)
-        .writer(writer)
-        .listener(listener)
-        .taskExecutor(executor)
-        .stepOperations(customThrottler)
-        .build();
+      .<OperationChunk, MappingComposite<MappingResult>>chunk(1)
+      .transactionManager(transactionManager)
+      .reader(reader)
+      .processor(processor)
+      .writer(writer)
+      .listener(listener)
+      .taskExecutor(executor)
+      .build();
   }
 
   @Bean("remappingRetrySaveJob")
   public Job remappingRetrySaveJob(JobRepository jobRepository,
-                              @Qualifier("remapRetrySaveRecordsStep") Step remapRetrySaveRecordsStep) {
+                                   @Qualifier("remapRetrySaveRecordsStep") Step remapRetrySaveRecordsStep) {
     return new JobBuilder("remappingRetrySave", jobRepository)
-        .incrementer(new RunIdIncrementer())
-        .start(remapRetrySaveRecordsStep)
-        .build();
+      .start(remapRetrySaveRecordsStep)
+      .build();
   }
 
   @Bean(name = "remapRetrySaveRecordsStep")
   public Step remapRetrySaveRecordsStep(JobRepository jobRepository,
-                                       PlatformTransactionManager transactionManager,
-                                       @Qualifier("retryingSyncReader")
-                                       ItemReader<OperationChunk> reader,
-                                       SavingRetryRecordsChunkProcessor processor,
-                                       SavingRecordsWriter writer,
-                                       SavingRecordsStepListener listener,
-                                       @Qualifier("chunksProcessingExecutor") TaskExecutor executor,
-                                       RepeatOperations customThrottler) {
+                                        PlatformTransactionManager transactionManager,
+                                        @Qualifier("retryingSyncReader")
+                                        ItemReader<OperationChunk> reader,
+                                        SavingRetryRecordsChunkProcessor processor,
+                                        SavingRecordsWriter writer,
+                                        SavingRecordsStepListener listener,
+                                        @Qualifier("chunksProcessingExecutor") AsyncTaskExecutor executor) {
     return new StepBuilder("remapRetrySaveRecords", jobRepository)
-        .<OperationChunk, DataSavingResult>chunk(1, transactionManager)
-        .reader(reader)
-        .processor(processor)
-        .writer(writer)
-        .listener(listener)
-        .taskExecutor(executor)
-        .stepOperations(customThrottler)
-        .build();
+      .<OperationChunk, DataSavingResult>chunk(1)
+      .transactionManager(transactionManager)
+      .reader(reader)
+      .processor(processor)
+      .writer(writer)
+      .listener(listener)
+      .taskExecutor(executor)
+      .build();
   }
 }

@@ -25,10 +25,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobInstance;
-import org.springframework.batch.core.StepExecution;
-import org.springframework.batch.item.Chunk;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.JobInstance;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.step.StepExecution;
+import org.springframework.batch.infrastructure.item.Chunk;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
@@ -38,8 +39,9 @@ class MappingRecordsWriterTest {
   private final String jobFilesDirectory = "mod-marc-migrations/" + jobId;
   private final String defaultFilePath = "mod-marc-migrations";
   private final String customFilePath = "custom";
-  private final JobExecution jobExecution = new JobExecution(new JobInstance(jobId, "testJob"), null);
-  private final StepExecution stepExecution = new StepExecution("testStep", jobExecution);
+  private final JobExecution jobExecution = new JobExecution(1L, new JobInstance(jobId, "testJob"),
+    new JobParameters());
+  private final StepExecution stepExecution = new StepExecution(0L, "testStep", jobExecution);
   private @Mock MigrationProperties props;
   private @InjectMocks MappingRecordsWriter writer;
 

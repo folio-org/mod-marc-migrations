@@ -26,7 +26,7 @@ import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
 import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
 import org.jspecify.annotations.NonNull;
 import org.springframework.batch.core.configuration.annotation.StepScope;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 

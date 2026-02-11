@@ -83,12 +83,14 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
+import org.springframework.batch.core.configuration.annotation.EnableJdbcJobRepository;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+@EnableJdbcJobRepository
 @IntegrationTest
 @DatabaseCleanup(tables = {OPERATION_TABLE})
 class MarcMigrationsControllerIT extends IntegrationTestBase {
@@ -215,7 +217,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
 
     // Act & Assert
     tryPost(marcMigrationEndpoint(), migrationOperation)
-      .andExpect(status().isUnprocessableEntity())
+      .andExpect(status().isUnprocessableContent())
       .andExpect(jsonPath("$.total_records", is(1)))
       .andExpect(errorMessageMatches(containsString("must not be null")))
       .andExpect(errorTypeMatches(MethodArgumentNotValidException.class))
@@ -231,7 +233,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
 
     // Act & Assert
     tryPost(marcMigrationEndpoint(), migrationOperation)
-      .andExpect(status().isUnprocessableEntity())
+      .andExpect(status().isUnprocessableContent())
       .andExpect(jsonPath("$.total_records", is(1)))
       .andExpect(errorMessageMatches(containsString("must not be null")))
       .andExpect(errorTypeMatches(MethodArgumentNotValidException.class))
@@ -249,7 +251,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
 
     // Act & Assert
     tryPost(marcMigrationEndpoint(), migrationOperation)
-      .andExpect(status().isUnprocessableEntity())
+      .andExpect(status().isUnprocessableContent())
       .andExpect(jsonPath("$.total_records", is(1)))
       .andExpect(errorMessageMatches(containsString("Unexpected value")))
       .andExpect(errorTypeMatches(ApiValidationException.class))
@@ -665,7 +667,7 @@ class MarcMigrationsControllerIT extends IntegrationTestBase {
     var operationId = getOperationId(postResult);
 
     // Act & Assert
-    tryPost(retryMarcMigrationEndpoint(operationId), List.of()).andExpect(status().isUnprocessableEntity())
+    tryPost(retryMarcMigrationEndpoint(operationId), List.of()).andExpect(status().isUnprocessableContent())
       .andExpect(jsonPath("$.total_records", is(1)))
       .andExpect(errorMessageMatches(containsString("no chunk IDs provided")));
   }

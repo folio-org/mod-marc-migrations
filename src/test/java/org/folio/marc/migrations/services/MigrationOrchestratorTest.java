@@ -15,7 +15,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.SneakyThrows;
@@ -37,10 +37,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobParameter;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.batch.core.job.Job;
+import org.springframework.batch.core.job.parameters.JobParameter;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.launch.JobOperator;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
@@ -48,7 +48,7 @@ class MigrationOrchestratorTest {
 
   private @Mock ChunkService chunkService;
   private @Mock OperationJdbcService jdbcService;
-  private @Mock JobLauncher jobLauncher;
+  private @Mock JobOperator jobOperator;
   private @Mock Job job;
   private @Mock FolioExecutor remappingExecutor;
   private @Mock SpringBatchExecutionParamsJdbcService executionParamsJdbcService;
@@ -82,10 +82,10 @@ class MigrationOrchestratorTest {
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING),
       eq(OperationTimeType.MAPPING_START), notNull());
     verify(chunkService).prepareChunks(operation);
-    verify(jobLauncher).run(job, new JobParameters(
-      Map.of(
-        OPERATION_ID, new JobParameter<>(operationId, String.class),
-        ENTITY_TYPE, new JobParameter<>(operation.getEntityType(), EntityType.class)
+    verify(jobOperator).start(job, new JobParameters(
+      Set.of(
+        new JobParameter<>(OPERATION_ID, operationId, String.class),
+        new JobParameter<>(ENTITY_TYPE, operation.getEntityType(), EntityType.class)
       )));
     verify(jdbcService).getOperation(operationId);
     verifyNoMoreInteractions(jdbcService);
@@ -113,7 +113,7 @@ class MigrationOrchestratorTest {
     verify(chunkService).prepareChunks(operation);
     verify(jdbcService).updateOperationStatus(eq(operationId),
       eq(OperationStatusType.DATA_MAPPING_FAILED), eq(OperationTimeType.MAPPING_END), notNull());
-    verifyNoInteractions(jobLauncher);
+    verifyNoInteractions(jobOperator);
   }
 
   @Test
@@ -127,7 +127,7 @@ class MigrationOrchestratorTest {
       return null;
     }).when(remappingExecutor).execute(any());
     when(jdbcService.getOperation(operationId)).thenReturn(operation);
-    doThrow(new IllegalStateException()).when(jobLauncher).run(any(), any());
+    doThrow(new IllegalStateException()).when(jobOperator).start(any(Job.class), any(JobParameters.class));
 
     // Act
     service.submitMappingTask(operation).get(200, TimeUnit.MILLISECONDS);
@@ -136,10 +136,10 @@ class MigrationOrchestratorTest {
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING),
       eq(OperationTimeType.MAPPING_START), notNull());
     verify(chunkService).prepareChunks(operation);
-    verify(jobLauncher).run(job, new JobParameters(
-      Map.of(
-        OPERATION_ID, new JobParameter<>(operationId, String.class),
-        ENTITY_TYPE, new JobParameter<>(operation.getEntityType(), EntityType.class)
+    verify(jobOperator).start(job, new JobParameters(
+      Set.of(
+        new JobParameter<>(OPERATION_ID, operationId, String.class),
+        new JobParameter<>(ENTITY_TYPE, operation.getEntityType(), EntityType.class)
       )));
     verify(jdbcService).updateOperationStatus(eq(operationId),
       eq(OperationStatusType.DATA_MAPPING_FAILED), eq(OperationTimeType.MAPPING_END), notNull());
@@ -166,11 +166,11 @@ class MigrationOrchestratorTest {
     // Assert
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_SAVING),
       eq(OperationTimeType.SAVING_START), notNull());
-    verify(jobLauncher).run(job, new JobParameters(
-      Map.of(
-        OPERATION_ID, new JobParameter<>(operationId, String.class),
-        ENTITY_TYPE, new JobParameter<>(operation.getEntityType(), EntityType.class),
-        PUBLISH_EVENTS_FLAG, new JobParameter<>(validSaveOperation.getPublishEvents(), Boolean.class)
+    verify(jobOperator).start(job, new JobParameters(
+      Set.of(
+        new JobParameter<>(OPERATION_ID, operationId, String.class),
+        new JobParameter<>(ENTITY_TYPE, operation.getEntityType(), EntityType.class),
+        new JobParameter<>(PUBLISH_EVENTS_FLAG, validSaveOperation.getPublishEvents(), Boolean.class)
       )));
     verify(jdbcService).getOperation(operationId);
     verifyNoMoreInteractions(jdbcService);
@@ -189,7 +189,7 @@ class MigrationOrchestratorTest {
       ((Runnable) invocation.getArgument(0)).run();
       return null;
     }).when(remappingExecutor).execute(any());
-    doThrow(new IllegalStateException()).when(jobLauncher).run(any(), any());
+    doThrow(new IllegalStateException()).when(jobOperator).start(any(Job.class), any(JobParameters.class));
 
     // Act
     service.submitMappingSaveTask(operation, validSaveOperation).get(200, TimeUnit.MILLISECONDS);
@@ -197,11 +197,11 @@ class MigrationOrchestratorTest {
     // Assert
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_SAVING),
       eq(OperationTimeType.SAVING_START), notNull());
-    verify(jobLauncher).run(job, new JobParameters(
-      Map.of(
-        OPERATION_ID, new JobParameter<>(operationId, String.class),
-        ENTITY_TYPE, new JobParameter<>(operation.getEntityType(), EntityType.class),
-        PUBLISH_EVENTS_FLAG, new JobParameter<>(validSaveOperation.getPublishEvents(), Boolean.class)
+    verify(jobOperator).start(job, new JobParameters(
+      Set.of(
+        new JobParameter<>(OPERATION_ID, operationId, String.class),
+        new JobParameter<>(ENTITY_TYPE, operation.getEntityType(), EntityType.class),
+        new JobParameter<>(PUBLISH_EVENTS_FLAG, validSaveOperation.getPublishEvents(), Boolean.class)
       )));
     verify(jdbcService).getOperation(operationId);
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_SAVING_FAILED),
@@ -228,12 +228,12 @@ class MigrationOrchestratorTest {
 
     // Assert
     verify(chunkService).updateChunkStatus(chunkIds, OperationStatusType.DATA_MAPPING);
-    verify(jobLauncher).run(eq(job), jobParametersCaptor.capture());
+    verify(jobOperator).start(eq(job), jobParametersCaptor.capture());
     verifyNoMoreInteractions(jdbcService);
 
     // Verify captured timestamp
     var capturedParameters = jobParametersCaptor.getValue();
-    var capturedTimestamp = capturedParameters.getParameters().get(JobConstants.JobParameterNames.TIMESTAMP).getValue();
+    var capturedTimestamp = capturedParameters.getParameter(JobConstants.JobParameterNames.TIMESTAMP).value();
     Assertions.assertNotNull(capturedTimestamp);
     Assertions.assertInstanceOf(String.class, capturedTimestamp);
   }
@@ -249,7 +249,7 @@ class MigrationOrchestratorTest {
       ((Runnable) invocation.getArgument(0)).run();
       return null;
     }).when(remappingExecutor).execute(any());
-    doThrow(new IllegalStateException()).when(jobLauncher).run(any(), any());
+    doThrow(new IllegalStateException()).when(jobOperator).start(any(Job.class), any(JobParameters.class));
 
     // Captor for JobParameters
     ArgumentCaptor<JobParameters> jobParametersCaptor = ArgumentCaptor.forClass(JobParameters.class);
@@ -259,17 +259,14 @@ class MigrationOrchestratorTest {
 
     // Assert
     verify(chunkService).updateChunkStatus(chunkIds, OperationStatusType.DATA_MAPPING);
-    verify(jobLauncher).run(eq(job), jobParametersCaptor.capture());
+    verify(jobOperator).start(eq(job), jobParametersCaptor.capture());
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING_FAILED),
       eq(OperationTimeType.MAPPING_END), notNull());
     verifyNoMoreInteractions(jdbcService);
 
     // Verify captured JobParameters
     var capturedParameters = jobParametersCaptor.getValue();
-    assertThat(capturedParameters.getParameters()).containsKey(JobConstants.JobParameterNames.TIMESTAMP);
-    var capturedTimestamp = capturedParameters.getParameters()
-      .get(JobConstants.JobParameterNames.TIMESTAMP)
-      .getValue();
+    var capturedTimestamp = capturedParameters.getParameter(JobConstants.JobParameterNames.TIMESTAMP).value();
     assertThat(capturedTimestamp).isInstanceOf(String.class);
   }
 
@@ -296,15 +293,12 @@ class MigrationOrchestratorTest {
     // Assert
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_SAVING),
       eq(OperationTimeType.SAVING_START), notNull());
-    verify(jobLauncher).run(eq(job), jobParametersCaptor.capture());
+    verify(jobOperator).start(eq(job), jobParametersCaptor.capture());
     verifyNoMoreInteractions(jdbcService);
 
     // Verify captured JobParameters
     var capturedParameters = jobParametersCaptor.getValue();
-    assertThat(capturedParameters.getParameters()).containsKey(JobConstants.JobParameterNames.TIMESTAMP);
-    var capturedTimestamp = capturedParameters.getParameters()
-      .get(JobConstants.JobParameterNames.TIMESTAMP)
-      .getValue();
+    var capturedTimestamp = capturedParameters.getParameter(JobConstants.JobParameterNames.TIMESTAMP).value();
     assertThat(capturedTimestamp).isInstanceOf(String.class);
   }
 
@@ -321,7 +315,7 @@ class MigrationOrchestratorTest {
       ((Runnable) invocation.getArgument(0)).run();
       return null;
     }).when(remappingExecutor).execute(any());
-    doThrow(new IllegalStateException()).when(jobLauncher).run(any(), any());
+    doThrow(new IllegalStateException()).when(jobOperator).start(any(Job.class), any(JobParameters.class));
 
     // Captor for JobParameters
     ArgumentCaptor<JobParameters> jobParametersCaptor = ArgumentCaptor.forClass(JobParameters.class);
@@ -332,17 +326,14 @@ class MigrationOrchestratorTest {
     // Assert
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_SAVING),
       eq(OperationTimeType.SAVING_START), notNull());
-    verify(jobLauncher).run(eq(job), jobParametersCaptor.capture());
+    verify(jobOperator).start(eq(job), jobParametersCaptor.capture());
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_SAVING_FAILED),
       eq(OperationTimeType.SAVING_END), notNull());
     verifyNoMoreInteractions(jdbcService);
 
     // Verify captured JobParameters
     var capturedParameters = jobParametersCaptor.getValue();
-    assertThat(capturedParameters.getParameters()).containsKey(JobConstants.JobParameterNames.TIMESTAMP);
-    var capturedTimestamp = capturedParameters.getParameters()
-      .get(JobConstants.JobParameterNames.TIMESTAMP)
-      .getValue();
+    var capturedTimestamp = capturedParameters.getParameter(JobConstants.JobParameterNames.TIMESTAMP).value();
     assertThat(capturedTimestamp).isInstanceOf(String.class);
   }
 
