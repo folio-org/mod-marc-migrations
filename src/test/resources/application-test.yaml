@@ -1,9 +1,11 @@
 folio:
+  exchange:
+    enabled: true
   logging:
     request:
       enabled: true
       level: full
-    feign:
+    exchange:
       enabled: true
       level: full
   environment: folio

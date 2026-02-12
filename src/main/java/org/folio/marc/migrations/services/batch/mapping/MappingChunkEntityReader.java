@@ -8,7 +8,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.folio.marc.migrations.config.MigrationProperties;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
 import org.folio.marc.migrations.services.jdbc.ChunkJdbcService;
-import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.infrastructure.item.ItemReader;
 
 @Log4j2
 @RequiredArgsConstructor

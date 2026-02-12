@@ -12,7 +12,7 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
@@ -31,11 +31,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobInstance;
-import org.springframework.batch.core.JobParameter;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.JobInstance;
+import org.springframework.batch.core.job.parameters.JobParameter;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.step.StepExecution;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
@@ -74,9 +74,9 @@ class MappingRecordsFileUploadStepListenerTest {
     operation.setMappedNumOfRecords(10);
     when(jdbcService.getOperation(operationId)).thenReturn(operation);
     when(props.getS3SubPath()).thenReturn(s3SubPath);
-    var jobExecution = new JobExecution(new JobInstance(jobId, "testJob"), 1L,
-      new JobParameters(Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class))));
-    var stepExecution = new StepExecution("testStep", jobExecution);
+    var jobExecution = new JobExecution(1L, new JobInstance(jobId, "testJob"),
+      new JobParameters(Set.of(new JobParameter<>(OPERATION_ID, operationId, String.class))));
+    var stepExecution = new StepExecution(0L, "testStep", jobExecution);
     stepExecution.setExitStatus(ExitStatus.COMPLETED);
     var path1 = Path.of(jobFilesDirectory, "test1");
     var path2 = Path.of(jobFilesDirectory, "test2");
@@ -126,8 +126,8 @@ class MappingRecordsFileUploadStepListenerTest {
 
   @Test
   void afterStep_negative_noOperationId() {
-    var jobExecution = new JobExecution(new JobInstance(jobId, "testJob"), 1L, new JobParameters());
-    var stepExecution = new StepExecution("testStep", jobExecution);
+    var jobExecution = new JobExecution(1L, new JobInstance(jobId, "testJob"),  new JobParameters());
+    var stepExecution = new StepExecution(0L, "testStep", jobExecution);
 
     var actual = listener.afterStep(stepExecution);
     assertThat(actual).isNotNull();
@@ -140,9 +140,9 @@ class MappingRecordsFileUploadStepListenerTest {
   @SneakyThrows
   void afterStep_negative_jobFailed() {
     var operationId = UUID.randomUUID().toString();
-    var jobExecution = new JobExecution(new JobInstance(jobId, "testJob"), 1L,
-      new JobParameters(Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class))));
-    var stepExecution = new StepExecution("testStep", jobExecution);
+    var jobExecution = new JobExecution(1L, new JobInstance(jobId, "testJob"),
+      new JobParameters(Set.of(new JobParameter<>(OPERATION_ID, operationId, String.class))));
+    var stepExecution = new StepExecution(0L, "testStep", jobExecution);
     stepExecution.setExitStatus(ExitStatus.FAILED);
 
     var actual = listener.afterStep(stepExecution);
@@ -157,9 +157,9 @@ class MappingRecordsFileUploadStepListenerTest {
   @SneakyThrows
   void afterStep_negative_fileUploadFailed() {
     var operationId = UUID.randomUUID().toString();
-    var jobExecution = new JobExecution(new JobInstance(jobId, "testJob"), 1L,
-      new JobParameters(Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class))));
-    var stepExecution = new StepExecution("testStep", jobExecution);
+    var jobExecution = new JobExecution(1L, new JobInstance(jobId, "testJob"),
+      new JobParameters(Set.of(new JobParameter<>(OPERATION_ID, operationId, String.class))));
+    var stepExecution = new StepExecution(0L, "testStep", jobExecution);
     stepExecution.setExitStatus(ExitStatus.COMPLETED);
     var path1 = Path.of(jobFilesDirectory, "test1");
     Files.createFile(path1);
@@ -168,6 +168,7 @@ class MappingRecordsFileUploadStepListenerTest {
 
     var actual = listener.afterStep(stepExecution);
 
+    assertThat(actual).isNotNull();
     assertThat(actual.getExitCode()).isEqualTo(ExitStatus.FAILED.getExitCode());
     assertThat(actual.getExitDescription()).isEqualTo(failMessage);
     verify(jdbcService).updateOperationStatus(eq(operationId), eq(OperationStatusType.DATA_MAPPING_FAILED),
@@ -180,9 +181,9 @@ class MappingRecordsFileUploadStepListenerTest {
   void afterStep_negative_jobFailed_withFileUpload() {
     // Arrange
     var operationId = UUID.randomUUID().toString();
-    var jobExecution = new JobExecution(new JobInstance(jobId, "testJob"), 1L,
-      new JobParameters(Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class))));
-    var stepExecution = new StepExecution("testStep", jobExecution);
+    var jobExecution = new JobExecution(1L, new JobInstance(jobId, "testJob"),
+      new JobParameters(Set.of(new JobParameter<>(OPERATION_ID, operationId, String.class))));
+    var stepExecution = new StepExecution(0L, "testStep", jobExecution);
     stepExecution.setExitStatus(ExitStatus.FAILED);
     when(props.getS3SubPath()).thenReturn(s3SubPath);
     var path1 = Path.of(jobFilesDirectory, "test1");
@@ -208,9 +209,9 @@ class MappingRecordsFileUploadStepListenerTest {
     operation.setTotalNumOfRecords(10);
     operation.setMappedNumOfRecords(10);
     when(jdbcService.getOperation(operationId)).thenReturn(operation);
-    var jobExecution = new JobExecution(new JobInstance(jobId, "testJob"), 1L,
-      new JobParameters(Map.of(OPERATION_ID, new JobParameter<>(operationId, String.class))));
-    var stepExecution = new StepExecution("testStep", jobExecution);
+    var jobExecution = new JobExecution(1L, new JobInstance(jobId, "testJob"),
+      new JobParameters(Set.of(new JobParameter<>(OPERATION_ID, operationId, String.class))));
+    var stepExecution = new StepExecution(0L, "testStep", jobExecution);
     stepExecution.setExitStatus(ExitStatus.COMPLETED);
     return stepExecution;
   }

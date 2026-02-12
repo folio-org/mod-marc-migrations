@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.folio.marc.migrations.domain.entities.OperationChunk;
 import org.folio.marc.migrations.services.jdbc.ChunkJdbcService;
-import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.infrastructure.item.ItemReader;
 
 @Log4j2
 @RequiredArgsConstructor

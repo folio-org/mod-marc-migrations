@@ -10,8 +10,6 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.json.JsonObject;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -40,6 +38,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 @UnitTest
 @ExtendWith(MockitoExtension.class)
@@ -140,7 +140,7 @@ class MappingRecordsChunkProcessorTest {
   void process_negative_noMappingMetadata_jsonException() {
     when(mappingMetadataProvider.getMappingData(AUTHORITY))
       .thenReturn(null);
-    when(objectMapper.writeValueAsString(any())).thenThrow(JsonProcessingException.class);
+    when(objectMapper.writeValueAsString(any())).thenThrow(JacksonException.class);
 
     process_negative("Failed to fetch mapping metadata", "\"version\": 1");
   }
@@ -164,9 +164,9 @@ class MappingRecordsChunkProcessorTest {
     var excMessage = "test exc";
     when(objectMapper.writeValueAsString(any()))
       .thenThrow(new IllegalStateException(excMessage))
-      .thenThrow(JsonProcessingException.class)
+      .thenThrow(JacksonException.class)
       .thenThrow(new IllegalStateException(excMessage))
-      .thenThrow(JsonProcessingException.class);
+      .thenThrow(JacksonException.class);
 
     process_negative(excMessage, "\"version\": 1");
   }

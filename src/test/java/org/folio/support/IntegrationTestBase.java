@@ -19,7 +19,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.Duration;
 import lombok.SneakyThrows;
 import org.awaitility.core.ThrowingRunnable;
@@ -35,9 +34,9 @@ import org.hamcrest.Matcher;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeAll;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
@@ -100,7 +99,6 @@ public class IntegrationTestBase {
   static void setUpClass(@Autowired MockMvc mockMvc, @Autowired DatabaseHelper databaseHelper) {
     IntegrationTestBase.mockMvc = mockMvc;
     IntegrationTestBase.databaseHelper = databaseHelper;
-    MAPPER.registerModule(new JavaTimeModule());
   }
 
   @SneakyThrows
