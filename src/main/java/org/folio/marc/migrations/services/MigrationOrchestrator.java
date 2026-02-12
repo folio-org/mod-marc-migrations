@@ -9,9 +9,7 @@ import static org.folio.marc.migrations.services.batch.support.JobConstants.JobP
 
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -26,8 +24,7 @@ import org.folio.marc.migrations.services.jdbc.OperationJdbcService;
 import org.folio.marc.migrations.services.jdbc.SpringBatchExecutionParamsJdbcService;
 import org.folio.marc.migrations.services.operations.ChunkService;
 import org.springframework.batch.core.job.Job;
-import org.springframework.batch.core.job.parameters.JobParameter;
-import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.job.parameters.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -155,13 +152,13 @@ public class MigrationOrchestrator {
   private Runnable submitProcessChunksTask(String operationId, EntityType entityType, Boolean publishEvents) {
     return () -> {
       try {
-        Set<JobParameter<?>> parameterMap = new HashSet<>();
-        parameterMap.add(new JobParameter<>(OPERATION_ID, operationId, String.class));
-        parameterMap.add(new JobParameter<>(ENTITY_TYPE, entityType, EntityType.class));
+        var jobParametersBuilder = new JobParametersBuilder()
+          .addString(OPERATION_ID, operationId)
+          .addJobParameter(ENTITY_TYPE, entityType, EntityType.class);
         if (publishEvents != null) {
-          parameterMap.add(new JobParameter<>(PUBLISH_EVENTS_FLAG, publishEvents, Boolean.class));
+          jobParametersBuilder.addJobParameter(PUBLISH_EVENTS_FLAG, publishEvents, Boolean.class);
         }
-        var jobParameters = new JobParameters(parameterMap);
+        var jobParameters = jobParametersBuilder.toJobParameters();
         var currentStatus = jdbcService.getOperation(operationId).getStatus();
         if (currentStatus == OperationStatusType.DATA_MAPPING) {
           jobOperator.start(remappingJob, jobParameters);
@@ -178,13 +175,12 @@ public class MigrationOrchestrator {
   private Runnable submitProcessRetryChunksTask(String operationId, EntityType entityType, List<UUID> chunkIds) {
     return () -> {
       try {
-        Set<JobParameter<?>> parameterMap = new HashSet<>();
-        parameterMap.add(new JobParameter<>(OPERATION_ID, operationId, String.class));
-        parameterMap.add(new JobParameter<>(ENTITY_TYPE, entityType, EntityType.class));
-        parameterMap.add(new JobParameter<>(CHUNK_IDS, chunkIds, List.class));
-        parameterMap.add(new JobParameter<>(TIMESTAMP, Timestamp.from(Instant.now()).toString(), String.class));
-        var jobParameters = new JobParameters(parameterMap);
-        jobOperator.start(remappingRetryJob, jobParameters);
+        var jobParametersBuilder = new JobParametersBuilder()
+          .addString(OPERATION_ID, operationId)
+          .addJobParameter(ENTITY_TYPE, entityType, EntityType.class)
+          .addJobParameter(CHUNK_IDS, chunkIds, List.class)
+          .addJobParameter(TIMESTAMP, Timestamp.from(Instant.now()).toString(), String.class);
+        jobOperator.start(remappingRetryJob, jobParametersBuilder.toJobParameters());
       } catch (Exception ex) {
         log.warn(ERROR_RUNNING_JOB_MESSAGE, operationId, ex.getCause(), ex.getMessage());
         throw new IllegalStateException(ex);
@@ -196,18 +192,17 @@ public class MigrationOrchestrator {
                                                     String publishEvents) {
     return () -> {
       try {
-        Set<JobParameter<?>> parameterMap = new HashSet<>();
-        parameterMap.add(new JobParameter<>(OPERATION_ID, operationId, String.class));
-        parameterMap.add(new JobParameter<>(ENTITY_TYPE, entityType, EntityType.class));
-        parameterMap.add(new JobParameter<>(CHUNK_IDS, chunkIds, List.class));
-        parameterMap.add(new JobParameter<>(TIMESTAMP, Timestamp.from(Instant.now()).toString(), String.class));
+        var jobParametersBuilder = new JobParametersBuilder()
+          .addString(OPERATION_ID, operationId)
+          .addJobParameter(ENTITY_TYPE, entityType, EntityType.class)
+          .addJobParameter(CHUNK_IDS, chunkIds, List.class)
+          .addJobParameter(TIMESTAMP, Timestamp.from(Instant.now()).toString(), String.class);
         if (StringUtils.isNotEmpty(publishEvents)) {
-          parameterMap.add(new JobParameter<>(PUBLISH_EVENTS_FLAG, Boolean.parseBoolean(publishEvents), Boolean.class));
+          jobParametersBuilder.addJobParameter(PUBLISH_EVENTS_FLAG, Boolean.parseBoolean(publishEvents), Boolean.class);
         } else {
-          parameterMap.add(new JobParameter<>(PUBLISH_EVENTS_FLAG, true, Boolean.class));
+          jobParametersBuilder.addJobParameter(PUBLISH_EVENTS_FLAG, Boolean.TRUE, Boolean.class);
         }
-        var jobParameters = new JobParameters(parameterMap);
-        jobOperator.start(remappingRetrySaveJob, jobParameters);
+        jobOperator.start(remappingRetrySaveJob, jobParametersBuilder.toJobParameters());
       } catch (Exception ex) {
         log.warn(ERROR_RUNNING_JOB_MESSAGE, operationId, ex.getCause(), ex.getMessage());
         throw new IllegalStateException(ex);
