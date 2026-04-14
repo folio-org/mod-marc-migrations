@@ -28,7 +28,7 @@
       src/main/java/org/folio/marc/migrations/MarcMigrationsApplication.java
     </sonar.exclusions>
 
-    <folio-spring-support.version>10.0.0-RC1</folio-spring-support.version>
+    <folio-spring-support.version>10.0.0</folio-spring-support.version>
     <data-import-processing-core.version>4.5.0-SNAPSHOT</data-import-processing-core.version>
     <folio-s3-client.version>3.0.0-SNAPSHOT</folio-s3-client.version>
     <aws-sdk-java.version>2.42.18</aws-sdk-java.version>
