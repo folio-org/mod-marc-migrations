@@ -1,10 +1,33 @@
-## v3.0.0 YYYY-mm-DD
+## v3.1.0 YYYY-mm-DD
 ### Breaking changes
-* Migrate to Spring Boot 4 ([MODMARCMIG-85](https://folio-org.atlassian.net/browse/MODMARCMIG-85))
+* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
 
 ### New APIs versions
 * Provides `API_NAME vX.Y`
 * Requires `API_NAME vX.Y`
+
+### Features
+* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
+
+### Bug fixes
+* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
+
+### Tech Dept
+* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
+
+### Dependencies
+* Bump `LIB_NAME` from `OLD_VERSION` to `NEW_VERSION`
+* Add `LIB_NAME VERSION`
+* Remove `LIB_NAME`
+
+---
+
+## v3.0.0 2026-04-16
+### Breaking changes
+* Migrate to Spring Boot 4 ([MODMARCMIG-85](https://folio-org.atlassian.net/browse/MODMARCMIG-85))
+
+### New APIs versions
+* Provides `_timer v1.0`
 
 ### Features
 * Add API to get collection of migrations operations ([MODMARCMIG-51](https://folio-org.atlassian.net/browse/MODMARCMIG-51))
@@ -16,9 +39,6 @@
 * Skip SRS MARC-AUTHORITY records if linked entities do not exist ([MODMARCMIG-76](https://folio-org.atlassian.net/browse/MODMARCMIG-76))
 * Add default empty values for S3_SECRET_ACCESS_KEY and S3_ACCESS_KEY_ID ([MODMARCMIG-87](https://folio-org.atlassian.net/browse/MODMARCMIG-87))
 
-### Bug fixes
-* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
-
 ### Tech Dept
 * Re-work all s3 related envs var and standardization ([MODMARCMIG-58](https://folio-org.atlassian.net/browse/MODMARCMIG-58))
 * Refactor code to comply with Checkstyle method length limit (max 25 lines) ([MODMARCMIG-86](https://folio-org.atlassian.net/browse/MODMARCMIG-86))
@@ -26,9 +46,53 @@
 * Use GitHub workflow for CI/CD ([MODMARCMIG-98](https://folio-org.atlassian.net/browse/MODMARCMIG-98))
 
 ### Dependencies
-* Bump `LIB_NAME` from `OLD_VERSION` to `NEW_VERSION`
-* Add `LIB_NAME VERSION`
-* Remove `LIB_NAME`
+* Bump `spring-boot` from `3.4.3` to `4.0.5`
+* Bump `folio-spring-support` from `9.0.0` to `10.0.0`
+* Bump `data-import-processing-core` from `4.4.8` to `5.0.0`
+* Bump `folio-s3-client` from `2.3.0` to `3.0.0`
+* Bump `aws-sdk-java` from `2.30.38` to `2.42.34`
+* Add `spring-boot-devtools`
+* Add `spring-boot-docker-compose`
+* Replace `spring-batch-core` with `spring-boot-starter-batch`
+* Replace `hibernate-validator` with `spring-boot-starter-validation`
+
+---
+
+## v2.0.5 2026-01-02
+### Bugfixes
+* Upgrade di-processing-core to v4.4.8 to fix deserialization errors ([MODMARCMIG-93](https://folio-org.atlassian.net/browse/MODMARCMIG-93))
+
+---
+
+## v2.0.4 2025-12-09
+### Features
+* Add default empty values for S3_SECRET_ACCESS_KEY and S3_ACCESS_KEY_ID ([MODMARCMIG-87](https://folio-org.atlassian.net/browse/MODMARCMIG-87))
+
+---
+
+## v2.0.3 2025-09-19
+### Features
+* Create endpoints that will provide an error report ([MODMARCMIG-52](https://folio-org.atlassian.net/browse/MODMARCMIG-52))
+* Implement endpoint to execute only selected mapping chunks ([MODMARCMIG-47](https://folio-org.atlassian.net/browse/MODMARCMIG-47))
+* Implement endpoint to execute only selected saving chunks ([MODMARCMIG-48](https://folio-org.atlassian.net/browse/MODMARCMIG-48))
+* Skip SRS MARC-AUTHORITY records if linked entities do not exist ([MODMARCMIG-76](https://folio-org.atlassian.net/browse/MODMARCMIG-76))
+
+---
+
+## v2.0.2 2025-08-19
+
+### Features
+* Skip SRS MARC-BIB records if linked entities do not exist ([MODMARCMIG-68](https://folio-org.atlassian.net/browse/MODMARCMIG-68))
+
+---
+
+## v2.0.1 2025-04-18
+
+### Bugfixes
+* Upgrade di-processing-core to v4.4.1 to fix instance Date type field mapping ([MODMARCMIG-55](https://folio-org.atlassian.net/browse/MODMARCMIG-55))
+
+### Dependencies
+* Bump `data-import-processing-core` from `4.4.0` to `4.4.1`
 
 ---
 
@@ -49,6 +113,26 @@
 * Bump `data-import-processing-core` from `4.3.0` to `4.4.0`
 * Bump `aws-sdk-java` from `2.29.4` to `2.30.38`
 * Bump `mapstruct` from `1.6.2` to `1.6.3`
+
+---
+
+## v1.0.2 2025-08-21
+### Features
+* Create endpoints that will provide an error report ([MODMARCMIG-52](https://folio-org.atlassian.net/browse/MODMARCMIG-52))
+* Implement endpoint to execute only selected mapping chunks ([MODMARCMIG-47](https://folio-org.atlassian.net/browse/MODMARCMIG-47))
+* Implement endpoint to execute only selected saving chunks ([MODMARCMIG-48](https://folio-org.atlassian.net/browse/MODMARCMIG-48))
+
+### Bug fixes
+* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
+
+### Tech Dept
+* Improved API definition with better descriptions, examples, and consistent error responses
+
+---
+
+## v1.0.1 2024-11-08
+### Features
+* Add optional API parameter to control Kafka entity change events for remapping operation saving step ([MODMARCMIG-37](https://folio-org.atlassian.net/browse/MODMARCMIG-37))
 
 ---
 
