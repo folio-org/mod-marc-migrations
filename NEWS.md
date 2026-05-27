@@ -1,3 +1,9 @@
+## v3.0.1 2026-05-28
+### Bug fixes
+* Remove expired data cleanup from tenant update ([MODMARCMIG-104](https://folio-org.atlassian.net/browse/MODMARCMIG-104))
+
+---
+
 ## v3.0.0 2026-04-16
 ### Breaking changes
 * Migrate to Spring Boot 4 ([MODMARCMIG-85](https://folio-org.atlassian.net/browse/MODMARCMIG-85))
