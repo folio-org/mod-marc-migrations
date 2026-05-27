@@ -10,7 +10,7 @@
 * Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
 
 ### Bug fixes
-* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
+* Remove expired data cleanup from tenant update ([MODMARCMIG-104](https://folio-org.atlassian.net/browse/MODMARCMIG-104))
 
 ### Tech Dept
 * Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
