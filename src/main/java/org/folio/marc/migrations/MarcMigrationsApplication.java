@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Isolation;
 @EnableRetry
 @EnableCaching
 @EnableBatchProcessing
-@EnableJdbcJobRepository(isolationLevelForCreate = Isolation.SERIALIZABLE)
+@EnableJdbcJobRepository(isolationLevelForCreate = Isolation.READ_COMMITTED)
 @SpringBootApplication
 public class MarcMigrationsApplication {
 
