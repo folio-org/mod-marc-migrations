@@ -7,6 +7,12 @@ spring:
     virtual:
       enabled: true
   datasource:
+    hikari:
+      connectionTimeout: ${DB_CONNECTION_TIMEOUT:30000}
+      keepaliveTime: ${DB_KEEPALIVE_TIME:0}
+      validationTimeout: ${DB_VALIDATION_TIMEOUT:5000}
+      initializationFailTimeout: ${DB_INITIALIZATION_FAIL_TIMEOUT:30000}
+      leakDetectionThreshold: ${DB_LEAK_DETECTION_THRESHOLD:60000}
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_DATABASE:okapi_modules}
     password: ${DB_PASSWORD:folio_admin}
     username: ${DB_USERNAME:folio_admin}

@@ -46,9 +46,9 @@ class MappingChunkEntityReaderTest {
     var secondChunksRead = chunks(chunksCount - 1);
 
     when(props.getChunkPersistCount()).thenReturn(chunksCount);
-    when(jdbcService.getChunks(operationId, null, chunksCount))
+    when(jdbcService.getChunks(operationId, null, null, chunksCount))
       .thenReturn(firstChunksRead);
-    when(jdbcService.getChunks(operationId, firstChunksRead.get(chunksCount - 1).getId(), chunksCount))
+    when(jdbcService.getChunks(operationId, firstChunksRead.get(chunksCount - 1).getId(), null, chunksCount))
       .thenReturn(secondChunksRead);
 
     var actualChunks = new LinkedList<OperationChunk>();
@@ -59,7 +59,7 @@ class MappingChunkEntityReaderTest {
     assertThat(actualChunks)
       .hasSize(firstChunksRead.size() + secondChunksRead.size())
       .allMatch(Objects::nonNull);
-    verify(jdbcService, times(2)).getChunks(eq(operationId), any(), eq(chunksCount));
+    verify(jdbcService, times(2)).getChunks(eq(operationId), any(), any(), eq(chunksCount));
   }
 
   private List<OperationChunk> chunks(int count) {
