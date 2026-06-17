@@ -110,6 +110,7 @@ public class ChunkJdbcService extends JdbcService {
    * {@code (boundary[k-1], boundary[k]]}. Returns fewer than {@code gridSize} entries when the operation has fewer
    * chunks than partitions, and an empty list when it has none.
    */
+  @SuppressWarnings("java:S2077")
   public List<UUID> getChunkRangeBoundaries(String operationId, int gridSize) {
     var sql = GET_CHUNK_RANGE_BOUNDARIES.formatted(gridSize, getSchemaName(), operationId);
     return jdbcTemplate.queryForList(sql, UUID.class);
