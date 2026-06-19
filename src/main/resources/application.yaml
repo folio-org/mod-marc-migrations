@@ -9,12 +9,8 @@ spring:
   datasource:
     hikari:
       connectionTimeout: ${DB_CONNECTION_TIMEOUT:30000}
-      idleTimeout: ${DB_IDLE_TIMEOUT:600000}
       keepaliveTime: ${DB_KEEPALIVE_TIME:0}
-      maxLifetime: ${DB_MAX_LIFETIME:1800000}
       validationTimeout: ${DB_VALIDATION_TIMEOUT:5000}
-      maximumPoolSize: ${DB_MAXPOOLSIZE:10}
-      minimumIdle: ${DB_MINIMUM_IDLE:10}
       initializationFailTimeout: ${DB_INITIALIZATION_FAIL_TIMEOUT:30000}
       leakDetectionThreshold: ${DB_LEAK_DETECTION_THRESHOLD:60000}
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_DATABASE:okapi_modules}
