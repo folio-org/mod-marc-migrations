@@ -31,6 +31,17 @@ public class ChunkJdbcService extends JdbcService {
       WHERE id IN (%s)
       """;
 
+  private static final String GET_CHUNK_RANGE_BOUNDARIES = """
+      SELECT max(id::text)::uuid AS boundary
+      FROM (
+        SELECT id, ntile(%s) OVER (ORDER BY id) AS bucket
+        FROM %s.operation_chunk
+        WHERE operation_id = '%s'
+      ) t
+      GROUP BY bucket
+      ORDER BY bucket;
+      """;
+
   private static final String UPDATE_CHUNK = """
     UPDATE %s.operation_chunk
     SET status = '%s'
@@ -57,8 +68,25 @@ public class ChunkJdbcService extends JdbcService {
   }
 
   public List<OperationChunk> getChunks(String operationId, UUID idFrom, int count) {
-    log.debug("getChunks:: for operationId {}, id to seek from {}, count {}", operationId, idFrom, count);
-    var idFilter = idFrom == null ? "" : "AND id > '%s'".formatted(idFrom);
+    return getChunks(operationId, idFrom, null, count);
+  }
+
+  /**
+   * Keyset-paged fetch bounded to a partition range: {@code (idFrom, idTo]}.
+   *
+   * @param idFrom exclusive lower bound (cursor); {@code null} means no lower bound
+   * @param idTo   inclusive upper bound; {@code null} means no upper bound
+   */
+  public List<OperationChunk> getChunks(String operationId, UUID idFrom, UUID idTo, int count) {
+    log.debug("getChunks:: for operationId {}, id to seek from {}, id to {}, count {}", operationId, idFrom, idTo,
+      count);
+    var idFilter = "";
+    if (idFrom != null) {
+      idFilter += "AND id > '%s' ".formatted(idFrom);
+    }
+    if (idTo != null) {
+      idFilter += "AND id <= '%s' ".formatted(idTo);
+    }
     var sql = GET_CHUNKS.formatted(getSchemaName(), operationId, idFilter, count);
     return jdbcTemplate.query(sql, mapper);
   }
@@ -74,6 +102,18 @@ public class ChunkJdbcService extends JdbcService {
         .toList());
     var sql = GET_CHUNKS_BY_IDS.formatted(getSchemaName(), placeholders);
     return jdbcTemplate.query(sql, mapper, ids.toArray());
+  }
+
+  /**
+   * Splits an operation's chunks into up to {@code gridSize} contiguous, equally-sized partitions (by {@code id}
+   * order) and returns the inclusive upper-bound id of each partition. Partition {@code k} covers
+   * {@code (boundary[k-1], boundary[k]]}. Returns fewer than {@code gridSize} entries when the operation has fewer
+   * chunks than partitions, and an empty list when it has none.
+   */
+  @SuppressWarnings("java:S2077")
+  public List<UUID> getChunkRangeBoundaries(String operationId, int gridSize) {
+    var sql = GET_CHUNK_RANGE_BOUNDARIES.formatted(gridSize, getSchemaName(), operationId);
+    return jdbcTemplate.queryForList(sql, UUID.class);
   }
 
   public void createChunks(List<OperationChunk> chunks) {

@@ -34,29 +34,26 @@ class ChunkJdbcServiceTest extends JdbcServiceTestBase {
 
   @Test
   void getChunks_positive() {
-    // Arrange
     var operationId = UUID.randomUUID().toString();
     var idFrom = UUID.randomUUID();
+    var idTo = UUID.randomUUID();
     var limit = 5;
     var chunksMock = List.of(OperationChunk.builder().id(UUID.randomUUID()).build(),
       OperationChunk.builder().id(UUID.randomUUID()).build());
     when(jdbcTemplate.query(any(String.class), ArgumentMatchers.<BeanPropertyRowMapper<OperationChunk>>any()))
       .thenReturn(chunksMock);
 
-    // Act
-    var chunks = service.getChunks(operationId, idFrom, limit);
+    var chunks = service.getChunks(operationId, idFrom, idTo, limit);
 
-    // Assert
     assertThat(chunks).isEqualTo(chunksMock);
     var sqlCaptor = ArgumentCaptor.forClass(String.class);
     verify(jdbcTemplate).query(sqlCaptor.capture(), ArgumentMatchers.<BeanPropertyRowMapper<OperationChunk>>any());
     assertThat(sqlCaptor.getValue())
-      .contains(operationId, idFrom.toString(), String.valueOf(limit), TENANT_ID);
+      .contains(operationId, idFrom.toString(), idTo.toString(), String.valueOf(limit), TENANT_ID);
   }
 
   @Test
-  void getChunks_positive_withoutSeek() {
-    // Arrange
+  void getChunks_positive_withoutBounds() {
     var operationId = UUID.randomUUID().toString();
     var limit = 5;
     var chunksMock = List.of(OperationChunk.builder().id(UUID.randomUUID()).build(),
@@ -64,17 +61,32 @@ class ChunkJdbcServiceTest extends JdbcServiceTestBase {
     when(jdbcTemplate.query(any(String.class), ArgumentMatchers.<BeanPropertyRowMapper<OperationChunk>>any()))
       .thenReturn(chunksMock);
 
-    // Act
-    var chunks = service.getChunks(operationId, null, limit);
+    var chunks = service.getChunks(operationId, null, null, limit);
 
-    // Assert
     assertThat(chunks).isEqualTo(chunksMock);
     var sqlCaptor = ArgumentCaptor.forClass(String.class);
     verify(jdbcTemplate).query(sqlCaptor.capture(), ArgumentMatchers.<BeanPropertyRowMapper<OperationChunk>>any());
     assertThat(sqlCaptor.getValue())
-      .doesNotContain("AND id >");
-    assertThat(sqlCaptor.getValue())
+      .doesNotContain("AND id >")
+      .doesNotContain("AND id <=")
       .contains(String.valueOf(limit), TENANT_ID);
+  }
+
+  @Test
+  void getChunkRangeBoundaries_positive() {
+    var operationId = UUID.randomUUID().toString();
+    var gridSize = 4;
+    var boundaries = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+    when(jdbcTemplate.queryForList(any(String.class), eq(UUID.class)))
+      .thenReturn(boundaries);
+
+    var result = service.getChunkRangeBoundaries(operationId, gridSize);
+
+    assertThat(result).isEqualTo(boundaries);
+    var sqlCaptor = ArgumentCaptor.forClass(String.class);
+    verify(jdbcTemplate).queryForList(sqlCaptor.capture(), eq(UUID.class));
+    assertThat(sqlCaptor.getValue())
+      .contains("ntile(" + gridSize + ")", operationId, TENANT_ID, "bucket");
   }
 
   @Test

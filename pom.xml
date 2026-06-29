@@ -11,7 +11,7 @@
 
   <groupId>org.folio</groupId>
   <artifactId>mod-marc-migrations</artifactId>
-  <version>3.0.2-SNAPSHOT</version>
+  <version>3.0.3-SNAPSHOT</version>
   <description>Module for high-performance migration of MARC records</description>
   <packaging>jar</packaging>
 

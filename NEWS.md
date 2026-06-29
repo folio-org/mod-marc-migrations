@@ -1,3 +1,9 @@
+## v3.0.2 2026-06-29
+### Bug fixes
+* Implement spring batch partitioning to support parallel processing in Spring Batch 6 ([MODMARCMIG-107](https://folio-org.atlassian.net/browse/MODMARCMIG-107))
+
+---
+
 ## v3.0.1 2026-05-28
 ### Bug fixes
 * Remove expired data cleanup from tenant update ([MODMARCMIG-104](https://folio-org.atlassian.net/browse/MODMARCMIG-104))
