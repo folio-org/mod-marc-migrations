@@ -14,7 +14,7 @@
 * Implement spring batch partitioning to support parallel processing in Spring Batch 6 ([MODMARCMIG-107](https://folio-org.atlassian.net/browse/MODMARCMIG-107))
 
 ### Tech Dept
-* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
+* Remove use of deprecated folio-spring-system-user ([MODMARCMIG-109](https://folio-org.atlassian.net/browse/MODMARCMIG-109))
 
 ### Dependencies
 * Bump `LIB_NAME` from `OLD_VERSION` to `NEW_VERSION`
