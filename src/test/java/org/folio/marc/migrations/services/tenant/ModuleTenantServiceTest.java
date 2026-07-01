@@ -8,7 +8,6 @@ import static org.mockito.Mockito.when;
 import org.folio.marc.migrations.services.jdbc.AuthorityJdbcService;
 import org.folio.marc.migrations.services.jdbc.InstanceJdbcService;
 import org.folio.spring.FolioExecutionContext;
-import org.folio.spring.service.PrepareSystemUserService;
 import org.folio.spring.testing.type.UnitTest;
 import org.folio.tenant.domain.dto.TenantAttributes;
 import org.junit.jupiter.api.Test;
@@ -21,7 +20,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ModuleTenantServiceTest {
 
-  private @Mock PrepareSystemUserService systemUserService;
   private @Mock FolioExecutionContext context;
   private @Mock AuthorityJdbcService authorityJdbcService;
   private @Mock InstanceJdbcService instanceJdbcService;
@@ -33,7 +31,6 @@ class ModuleTenantServiceTest {
     when(context.getTenantId()).thenReturn(TENANT_ID);
     assertDoesNotThrow(() -> moduleTenantService.createOrUpdateTenant(new TenantAttributes().moduleTo("mod-1.0.0")));
 
-    verify(systemUserService).setupSystemUser();
     verify(authorityJdbcService).initViews(TENANT_ID);
     verify(instanceJdbcService).initViews(TENANT_ID);
   }
