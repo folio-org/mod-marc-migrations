@@ -119,7 +119,6 @@ services:
       ENV: ${ENV}
       JAVA_OPTIONS: -Xmx120m -Xms120m
       OKAPI_URL: ${OKAPI_URL}
-      SYSTEM_USER_PASSWORD: mod-entities-links
     networks:
       - mod-marc-migrations-local
 networks:

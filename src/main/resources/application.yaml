@@ -43,12 +43,6 @@ spring:
 folio:
   environment: ${ENV:folio}
   okapi-url: ${OKAPI_URL:http://localhost:9130}
-  system-user:
-    enabled: ${SYSTEM_USER_ENABLED:false}
-    username: ${SYSTEM_USER_USERNAME:mod-marc-migrations}
-    password: ${SYSTEM_USER_PASSWORD}
-    lastname: MARC Migrations
-    permissionsFilePath: permissions/mod-marc-migrations-permissions.csv
   exchange:
     enabled: true
   tenant:

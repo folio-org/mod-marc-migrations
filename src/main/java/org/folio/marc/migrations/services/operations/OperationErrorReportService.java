@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
+import java.util.regex.Pattern;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -22,7 +23,6 @@ import org.folio.marc.migrations.services.batch.support.FolioS3Service;
 import org.folio.marc.migrations.services.jdbc.ChunkStepJdbcService;
 import org.folio.marc.migrations.services.jdbc.OperationErrorJdbcService;
 import org.folio.spring.data.OffsetRequest;
-import org.folio.util.UuidUtil;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
@@ -30,6 +30,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class OperationErrorReportService {
 
+  private static final Pattern UUID_PATTERN =
+    Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+      Pattern.CASE_INSENSITIVE);
   private static final String UNKNOWN_RECORD_ID = "<unknown>";
   private static final String ERROR_FILE_NOT_FOUND = "Error file not found for chunk";
   private static final String ERROR_PROCESSING_MESSAGE = "Error while processing error report for chunk step ";
@@ -164,7 +167,7 @@ public class OperationErrorReportService {
   private OperationError createOperationErrorFromLine(String errorLine, ChunkStep chunkStep, Operation operation) {
     var errorMessage = errorLine;
     var recordId = StringUtils.substringBefore(errorLine, ',');
-    if (StringUtils.isBlank(recordId) || !UuidUtil.isUuid(recordId)) {
+    if (StringUtils.isBlank(recordId) || !UUID_PATTERN.matcher(recordId).matches()) {
       recordId = UNKNOWN_RECORD_ID;
     } else {
       errorMessage = StringUtils.substringAfter(errorLine, ',');

@@ -82,9 +82,6 @@ docker compose up --build --force-recreate --no-deps
 | DB_INITIALIZATION_FAIL_TIMEOUT   | 30000                    | This property controls whether the pool will "fail fast" if the pool cannot be seeded with an initial connection successfully                                                                                                               |
 | DB_LEAK_DETECTION_THRESHOLD      | 30000                    | This property controls the amount of time that a connection can be out of the pool before a message is logged indicating a possible connection leak (0 - disabled)                                                                          |
 | OKAPI_URL                        | -                        | Okapi URL                                                                                                                                                                                                                                   |
-| SYSTEM_USER_ENABLED              | true                     | Indicate if system user functionality should be enabled                                                                                                                                                                                     |
-| SYSTEM_USER_USERNAME             | mod-marc-migrations      | Username for system user                                                                                                                                                                                                                    |
-| SYSTEM_USER_PASSWORD             | -                        | Password for system user                                                                                                                                                                                                                    |
 | RECORDS_CHUNK_SIZE               | 500                      | Number of records in one chunk for operation processing                                                                                                                                                                                     |
 | CHUNK_FETCH_IDS_COUNT            | 500                      | Number of record ids to fetch per query on chunks preparation phase. RECORDS_CHUNK_SIZE should be a divisor for this in order to maintain proper chunk size                                                                                 |
 | CHUNK_PERSIST_COUNT              | 1_000                    | Number of chunks to be constructed before persisting to db                                                                                                                                                                                  |
@@ -105,9 +102,6 @@ docker compose up --build --force-recreate --no-deps
 ### Folio modules communication
 | Module name               | Interface                 | Notes                                       |
 |---------------------------|---------------------------|---------------------------------------------|
-| mod-login                 | login                     | For system user creation and authentication |
-| mod-permissions           | permissions               | For system user creation                    |
-| mod-users                 | users                     | For system user creation                    |
 | mod-source-record-manager | mapping-metadata-provider | For fetching MARC mapping metadata          |
 | mod-source-record-storage | source-storage-records    | For having access to MARC records           |
 | mod-entities-links        | authority-storage         | For having access to Authority records      |
