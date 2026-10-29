@@ -1,3 +1,12 @@
+## v3.0.3 2026-10-29
+### Dependencies
+* Bump `spring-boot` from `4.0.2` to `4.1.1`
+* Bump `folio-spring-support` from `10.0.0` to `10.0.1`
+* Bump `liquibase` from `5.0.x` to `4.33.0`
+
+---
+
+
 ## v3.0.2 2026-06-29
 ### Bug fixes
 * Implement spring batch partitioning to support parallel processing in Spring Batch 6 ([MODMARCMIG-107](https://folio-org.atlassian.net/browse/MODMARCMIG-107))
